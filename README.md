@@ -1,6 +1,14 @@
 # Context-Ly
 
-Context-Ly is a context-engineering workspace designed to help developers and users construct highly optimized, token-efficient prompts for Large Language Models (LLMs). By organizing intent, background information, and constraints before generating a prompt, Context-Ly ensures that AI models receive maximum signal and minimum noise, resulting in sharper and more accurate responses.
+**Imagine trying to hire a new employee, but instead of giving them an employee handbook, a map of the office, and a list of company rules, you just dump 10,000 loose papers on their desk and say, "figure it out."** 
+
+That is how most people use AI today. They dump raw files into ChatGPT or Claude and hope for the best. The AI gets confused, makes mistakes, and wastes time.
+
+**Context-Ly fixes this.** 
+
+Context-Ly is a tool that automatically reads your project, figures out your unwritten rules, maps out how everything is connected, and packages it perfectly for AI. When you use Context-Ly, the AI instantly understands your project exactly like a senior engineer would—saving you hours of typing, explaining, and correcting.
+
+---
 
 ## Overview
 
@@ -77,13 +85,49 @@ frontend/
 │   └── routes/          # TanStack Start routing layer
 ```
 
-## Future Roadmap: The Context Layer
+## Context-Ly CLI: The Intelligence Layer
 
-The core libraries (`scoring.ts` and `prompt-generator.ts`) have been deliberately constructed as pure TypeScript modules to serve as the foundation for our ultimate goal: **The Context Layer**. 
+The true value of Context-Ly lies in its command-line interface, which transforms the tool from a simple prompt formatter into a persistent **Context Memory Layer** for your entire repository.
 
-While formatting prompts is useful, the true value of Context-Ly lies in **Context Intelligence**. The next major milestone is a powerful Command Line Interface (CLI) designed not just to format text, but to *understand* repositories.
+The CLI acts as a static analysis tool that discovers team conventions, evaluates repository complexity, and generates highly-optimized, token-efficient system prompts (`PROJECT_CONTEXT.md`) tailored to your exact stack.
 
-### Upcoming CLI Features
-- **`contextly analyze`**: The first moment of magic. Instead of manually adding files, the CLI will automatically scan a repository to detect the framework, database layer, architecture, and core business rules, automatically building a smart context map without overwhelming the LLM token limits.
-- **Context Packs**: The ability to export highly compressed, reusable, and model-agnostic packages (e.g., `Architecture Pack`, `API Pack`).
-- **`contextly learn`**: Building persistent **Context Memory**. The CLI will accumulate team conventions, coding patterns, and architectural decisions over time, transforming Context-Ly from a prompt generator into an organizational memory layer.
+### Setup
+
+To begin using the CLI, activate the Python virtual environment located in the `cli` directory:
+
+```bash
+cd cli
+.\venv\Scripts\activate
+```
+
+### Commands
+
+#### 1. `contextly init`
+Initializes Context-as-Code in the current directory. It creates a `.contextly` configuration folder and sets up your environment.
+
+#### 2. `contextly analyze`
+The ultimate context generator. This command automatically:
+- Reads your `README.md`.
+- Scans your entire project tree to build an ASCII architecture map.
+- Inspects your dependencies to determine your language and framework (e.g. TypeScript, React).
+- Pulls in both manually saved rules and statically inferred conventions.
+- Merges everything into a massive, LLM-ready system prompt named `PROJECT_CONTEXT.md`.
+
+#### 3. `contextly discover`
+Runs the Pattern Discovery Engine. It statically analyzes the codebase using dependency heuristics and file-tree structures to figure out your team's unwritten conventions (e.g. "Uses Zustand", "Uses TailwindCSS", "Service Layer Hint").
+
+#### 4. `contextly learn --auto`
+The interactive gatekeeper to the True Memory Engine. It triggers the Discovery Engine and interactively asks if you want to save the discovered conventions:
+```text
+Save convention: TailwindCSS (Uses TailwindCSS for styling.)? [y/N]
+```
+Confirmed conventions are saved permanently to `.contextly/memory/rules.yaml`.
+
+#### 5. `contextly memory`
+Trust requires visibility. Use this command to inspect all rules and conventions that have been permanently saved to the project's memory.
+
+#### 6. `contextly pack <dir>`
+Bundles a specific directory (e.g., `src/components`) into an LLM-ready Context Pack. It reads all files, counts their tokens, and bundles them into `.contextly/packs/` so you can effortlessly copy-paste large portions of your codebase into an LLM without clutter.
+
+#### 7. `contextly inspect`
+Performs a deep-dive analysis on your repository complexity, warning you about excessively large files that will act as "Token Hogs" and consume too much context window.
