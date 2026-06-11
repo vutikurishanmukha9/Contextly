@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Logo } from "@/components/site/Logo";
+import { Logo, BrandName } from "@/components/site/Logo";
 import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
@@ -37,7 +37,7 @@ function AuthPage() {
           </form>
           <p className="mt-6 text-[12.5px] text-muted-foreground">New here? <Link to="/dashboard" className="text-foreground underline-offset-4 hover:underline">Create an account</Link></p>
         </div>
-        <div className="text-[12px] text-muted-foreground">© Context-Ly</div>
+        <div className="text-[12px] text-muted-foreground">© <BrandName /></div>
       </div>
       <div className="hidden border-l border-border bg-surface p-10 md:flex md:flex-col md:justify-between">
         <div />
