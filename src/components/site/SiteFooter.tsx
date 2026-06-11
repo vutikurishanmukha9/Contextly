@@ -1,4 +1,4 @@
-import { Logo } from "./Logo";
+import { Logo, BrandName } from "./Logo";
 import { Link } from "@tanstack/react-router";
 
 export function SiteFooter() {
