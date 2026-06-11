@@ -10,7 +10,7 @@ from ..utils.exceptions import ValidationError
 try:
     import tiktoken
     tokenizer = tiktoken.get_encoding("cl100k_base")
-except ImportError:
+except ImportError:  # pragma: no cover
     tokenizer = None
 
 def pack_cmd(
