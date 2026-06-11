@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
+import { BrandName } from "@/components/site/Logo";
 import {
   Layers3, Library, Database, Gauge, Filter, BarChart3,
   ArrowRight, Check, Play, Layers, Zap, ShieldCheck,
@@ -48,7 +49,7 @@ function Hero() {
             <span className="text-muted-foreground">Start building </span>context.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-[17px] leading-relaxed text-muted-foreground">
-            Context-Ly transforms messy thoughts into AI-ready context that generates sharper answers with fewer tokens. The operating system for context engineering.
+            <BrandName /> transforms messy thoughts into AI-ready context that generates sharper answers with fewer tokens. The operating system for context engineering.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-pill bg-foreground px-5 py-3 text-[14px] font-medium text-background hover:opacity-90">
@@ -96,12 +97,14 @@ function HeroVisual() {
       <div className="grid gap-4 p-6 md:grid-cols-5">
         {steps.map((s, i) => (
           <div key={s.label} className="relative">
-            <div className={`rounded-xl ${s.tone} p-4 ring-1 ring-border/60`}>
+            <div className={`flex h-full flex-col rounded-xl ${s.tone} p-4 ring-1 ring-border/60`}>
               <div className="text-[11px] font-medium uppercase tracking-wider text-foreground/60">Stage {i + 1}</div>
-              <div className="text-display mt-3 text-[18px] font-semibold">{s.label}</div>
-              <div className="text-mono mt-6 text-[13px] text-foreground/80">{s.tokens} tok</div>
-              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-pill bg-foreground/10">
-                <div className="h-full rounded-pill bg-foreground/70" style={{ width: `${100 - i * 18}%` }} />
+              <div className="text-display mt-3 min-h-[44px] text-[17px] font-semibold leading-tight">{s.label}</div>
+              <div className="mt-auto pt-5">
+                <div className="text-mono text-[13px] text-foreground/80">{s.tokens} tok</div>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-foreground/10">
+                  <div className="h-full rounded-pill bg-foreground/70" style={{ width: `${100 - i * 18}%` }} />
+                </div>
               </div>
             </div>
             {i < steps.length - 1 && (
@@ -151,7 +154,7 @@ function PipelineSection() {
           A purpose-built workspace for the work that happens <em className="font-normal text-muted-foreground">before</em> the prompt.
         </h2>
         <p className="mt-5 text-[16px] leading-relaxed text-muted-foreground">
-          Context-Ly sits between your knowledge and your model. Compose context blocks, score them in realtime, and ship optimized packs that any LLM can understand instantly.
+          <BrandName /> sits between your knowledge and your model. Compose context blocks, score them in realtime, and ship optimized packs that any LLM can understand instantly.
         </p>
       </div>
     </section>
@@ -292,7 +295,7 @@ function Comparison() {
       <div className="text-display text-[40px] font-semibold leading-tight">Raw chat vs. context engineering.</div>
       <div className="mt-10 overflow-hidden rounded-xl border border-border">
         <div className="grid grid-cols-3 bg-muted px-6 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
-          <div>Dimension</div><div>Vanilla chatbots</div><div className="text-foreground">With Context-Ly</div>
+          <div>Dimension</div><div>Vanilla chatbots</div><div className="text-foreground">With <BrandName /></div>
         </div>
         {rows.map(([a, b, c]) => (
           <div key={a} className="grid grid-cols-3 items-center border-t border-border bg-surface px-6 py-5 text-[14px]">

@@ -1,4 +1,4 @@
-import { Logo } from "./Logo";
+import { Logo, BrandName } from "./Logo";
 import { Link } from "@tanstack/react-router";
 
 export function SiteFooter() {
@@ -30,7 +30,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 text-[12.5px] text-muted-foreground">
-          <span>© {new Date().getFullYear()} Context-Ly Labs, Inc.</span>
+          <span>© {new Date().getFullYear()} <BrandName /> Labs, Inc.</span>
           <span className="text-mono">v1.0 · context-engine</span>
         </div>
       </div>
