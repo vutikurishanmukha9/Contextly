@@ -135,9 +135,9 @@ function LogoStrip() {
   const names = ["OPENAI", "ANTHROPIC", "MISTRAL", "COHERE", "LLAMA", "GEMINI", "GROQ"];
   return (
     <section className="border-y border-border bg-surface">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-6 py-8">
-        <span className="text-[12px] uppercase tracking-wider text-muted-foreground">Works with every major model</span>
-        <div className="flex flex-wrap items-center gap-x-10 gap-y-3 text-[13px] font-medium tracking-[0.15em] text-foreground/60">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="text-[12px] uppercase tracking-wider text-muted-foreground">Works with every major model</div>
+        <div className="mt-5 flex w-full items-center justify-between gap-4 text-[13px] font-medium tracking-[0.2em] text-foreground/60">
           {names.map((n) => <span key={n}>{n}</span>)}
         </div>
       </div>
