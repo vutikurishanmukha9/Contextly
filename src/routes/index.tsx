@@ -97,12 +97,14 @@ function HeroVisual() {
       <div className="grid gap-4 p-6 md:grid-cols-5">
         {steps.map((s, i) => (
           <div key={s.label} className="relative">
-            <div className={`rounded-xl ${s.tone} p-4 ring-1 ring-border/60`}>
+            <div className={`flex h-full flex-col rounded-xl ${s.tone} p-4 ring-1 ring-border/60`}>
               <div className="text-[11px] font-medium uppercase tracking-wider text-foreground/60">Stage {i + 1}</div>
-              <div className="text-display mt-3 text-[18px] font-semibold">{s.label}</div>
-              <div className="text-mono mt-6 text-[13px] text-foreground/80">{s.tokens} tok</div>
-              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-pill bg-foreground/10">
-                <div className="h-full rounded-pill bg-foreground/70" style={{ width: `${100 - i * 18}%` }} />
+              <div className="text-display mt-3 min-h-[44px] text-[17px] font-semibold leading-tight">{s.label}</div>
+              <div className="mt-auto pt-5">
+                <div className="text-mono text-[13px] text-foreground/80">{s.tokens} tok</div>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-foreground/10">
+                  <div className="h-full rounded-pill bg-foreground/70" style={{ width: `${100 - i * 18}%` }} />
+                </div>
               </div>
             </div>
             {i < steps.length - 1 && (
