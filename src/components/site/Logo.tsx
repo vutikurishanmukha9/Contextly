@@ -2,12 +2,18 @@ import { Link } from "@tanstack/react-router";
 
 export function Logo({ className = "" }: { className?: string }) {
   return (
-    <Link to="/" className={`inline-flex items-center gap-2 ${className}`}>
-      <span className="relative inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-foreground text-background">
-        <span className="text-mono text-[12px] font-semibold">{"{}"}</span>
+    <Link to="/" className={`inline-flex items-baseline ${className}`}>
+      <span
+        className="text-display text-[24px] font-extrabold tracking-[-0.04em] text-foreground"
+        style={{ fontWeight: 900 }}
+      >
+        Context
       </span>
-      <span className="text-display text-[18px] font-semibold tracking-tight">
-        Context<span className="text-primary">·</span>ly
+      <span
+        className="ml-[2px] text-[20px] font-medium italic text-primary"
+        style={{ fontFamily: '"Playfair Display", "Times New Roman", Georgia, serif' }}
+      >
+        ly
       </span>
     </Link>
   );
