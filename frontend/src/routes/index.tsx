@@ -49,7 +49,7 @@ function Hero() {
             <span className="text-muted-foreground">Start building </span>context.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-[17px] leading-relaxed text-muted-foreground">
-            <BrandName /> transforms messy thoughts into AI-ready context that generates sharper answers with fewer tokens. The operating system for context engineering.
+            <BrandName /> is an automated Intelligence CLI that reads your codebase, figures out your unwritten rules, and packages your project perfectly for any LLM—saving you hours of typing and explaining.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-pill bg-foreground px-5 py-3 text-[14px] font-medium text-background hover:opacity-90">
@@ -74,11 +74,11 @@ function Hero() {
 
 function HeroVisual() {
   const steps = [
-    { label: "Raw Information", tokens: "12,480", tone: "bg-peach" },
-    { label: "Context Processing", tokens: "8,210", tone: "bg-cream" },
-    { label: "Compression", tokens: "4,920", tone: "bg-sky" },
-    { label: "Optimization", tokens: "2,140", tone: "bg-lavender" },
-    { label: "AI Response", tokens: "1,420", tone: "bg-mint" },
+    { label: "Initialize Workspace", tokens: "contextly init", tone: "bg-peach" },
+    { label: "Discover Patterns", tokens: "contextly discover", tone: "bg-cream" },
+    { label: "Save to Memory", tokens: "contextly learn --auto", tone: "bg-sky" },
+    { label: "Analyze Repository", tokens: "contextly analyze", tone: "bg-lavender" },
+    { label: "Export Context Pack", tokens: "contextly export", tone: "bg-mint" },
   ];
   return (
     <div className="surface-panel overflow-hidden shadow-lift">
@@ -101,7 +101,7 @@ function HeroVisual() {
               <div className="text-[11px] font-medium uppercase tracking-wider text-foreground/60">Stage {i + 1}</div>
               <div className="text-display mt-3 min-h-[44px] text-[17px] font-semibold leading-tight">{s.label}</div>
               <div className="mt-auto pt-5">
-                <div className="text-mono text-[13px] text-foreground/80">{s.tokens} tok</div>
+                <div className="text-mono text-[13px] text-foreground/80">{s.tokens}</div>
                 <div className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-foreground/10">
                   <div className="h-full rounded-pill bg-foreground/70" style={{ width: `${100 - i * 18}%` }} />
                 </div>
@@ -115,10 +115,10 @@ function HeroVisual() {
       </div>
       <div className="grid gap-px bg-border md:grid-cols-4">
         {[
-          ["Context Score", "94", "/ 100"],
-          ["Tokens saved", "11,060", "this session"],
-          ["Compression", "88.6%", "lossless intent"],
-          ["Quality lift", "+34%", "vs. raw prompt"],
+          ["Context Score", "Max", "Level Intelligence"],
+          ["Tokens saved", "Unlimited", "this session"],
+          ["Compression", "Lossless", "intent & architecture"],
+          ["Quality lift", "+100%", "vs. raw prompt"],
         ].map(([k, v, sub]) => (
           <div key={k} className="bg-surface px-5 py-4">
             <div className="text-[12px] text-muted-foreground">{k}</div>
@@ -132,11 +132,11 @@ function HeroVisual() {
 }
 
 function LogoStrip() {
-  const names = ["OPENAI", "ANTHROPIC", "MISTRAL", "COHERE", "LLAMA", "GEMINI", "GROQ"];
+  const names = ["TYPESCRIPT", "REACT", "PYTHON", "VUE", "FASTAPI", "NEXT.JS", "TAILWINDCSS"];
   return (
     <section className="border-y border-border bg-surface">
       <div className="mx-auto max-w-7xl px-6 py-8">
-        <div className="text-[12px] uppercase tracking-wider text-muted-foreground">Works with every major model</div>
+        <div className="text-[12px] uppercase tracking-wider text-muted-foreground">Automatically detects your stack</div>
         <div className="mt-5 flex w-full items-center justify-between gap-4 text-[13px] font-medium tracking-[0.2em] text-foreground/60">
           {names.map((n) => <span key={n}>{n}</span>)}
         </div>
@@ -149,12 +149,12 @@ function PipelineSection() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-14">
       <div className="max-w-2xl">
-        <div className="text-[12px] font-medium uppercase tracking-wider text-primary">The Context Engine</div>
+        <div className="text-[12px] font-medium uppercase tracking-wider text-primary">The Context Engine CLI</div>
         <h2 className="text-display mt-3 text-[42px] font-semibold leading-tight">
-          A purpose-built workspace for the work that happens <em className="font-normal text-muted-foreground">before</em> the prompt.
+          A purpose-built CLI tool that understands your codebase <em className="font-normal text-muted-foreground">before</em> you write the prompt.
         </h2>
         <p className="mt-5 text-[16px] leading-relaxed text-muted-foreground">
-          <BrandName /> sits between your knowledge and your model. Compose context blocks, score them in realtime, and ship optimized packs that any LLM can understand instantly.
+          <BrandName /> lives in your terminal. It scans your dependencies, discovers your unwritten rules, and outputs perfectly formatted Markdown packs that any LLM can understand instantly.
         </p>
       </div>
     </section>
@@ -162,12 +162,12 @@ function PipelineSection() {
 }
 
 const features = [
-  { icon: Layers3, title: "Context Builder", desc: "Compose goals, constraints, examples and files into a single living canvas.", tone: "bg-lavender" },
-  { icon: Filter, title: "Prompt Optimizer", desc: "Rewrite prompts for clarity and density — side-by-side with token deltas.", tone: "bg-mint" },
-  { icon: Database, title: "Memory Vault", desc: "Persistent project memory, personal facts, reusable snippets and templates.", tone: "bg-sky" },
-  { icon: Gauge, title: "Context Scoring", desc: "Relevance, completeness, redundancy and clarity — graded in realtime.", tone: "bg-peach" },
-  { icon: Library, title: "Context Library", desc: "A searchable, taggable home for every context pack your team ships.", tone: "bg-cream" },
-  { icon: BarChart3, title: "Analytics", desc: "Track tokens saved, quality lift and model performance across projects.", tone: "bg-lavender" },
+  { icon: Layers3, title: "contextly init", desc: "Initialize Context-as-Code in your current directory. Sets up your environment in seconds.", tone: "bg-lavender" },
+  { icon: Database, title: "contextly learn", desc: "The interactive gatekeeper. Run with --auto to permanently save discovered team conventions.", tone: "bg-sky" },
+  { icon: Gauge, title: "contextly analyze", desc: "The ultimate generator. Scans your files to build an ASCII architecture map and stack identity.", tone: "bg-peach" },
+  { icon: Filter, title: "contextly discover", desc: "Runs the Pattern Discovery Engine to statically analyze and figure out your unwritten rules.", tone: "bg-mint" },
+  { icon: Library, title: "contextly pack", desc: "Bundle an entire directory into a highly compressed, LLM-ready Context Pack.", tone: "bg-cream" },
+  { icon: BarChart3, title: "contextly export", desc: "Fuses intelligence and context packs into a massive string copied straight to your clipboard.", tone: "bg-lavender" },
 ];
 
 function FeatureGrid() {
@@ -212,15 +212,15 @@ function ContextScoreSection() {
     <section className="mx-auto max-w-7xl px-6 py-14">
       <div className="grid items-center gap-12 md:grid-cols-2">
         <div>
-          <div className="text-[12px] font-medium uppercase tracking-wider text-primary">Context Score</div>
+          <div className="text-[12px] font-medium uppercase tracking-wider text-primary">The True Memory Engine</div>
           <h2 className="text-display mt-3 text-[40px] font-semibold leading-tight">
-            Every context pack, graded — before it touches a model.
+            Stop repeating yourself to AI. Save your rules permanently.
           </h2>
           <p className="mt-5 text-[16px] leading-relaxed text-muted-foreground">
-            A composite score across four dimensions tells you exactly what to fix. No more guessing why the model went off the rails.
+            Context-Ly doesn't just scan files. It learns how your team works. Discover unwritten conventions and persist them as Context-as-Code.
           </p>
           <ul className="mt-6 space-y-3">
-            {["Relevance — is every block earning its tokens?", "Completeness — does the model have what it needs?", "Redundancy — what can be safely removed?", "Clarity — is intent unambiguous?"].map((t) => (
+            {["Interactive gatekeeper ensures you only save approved rules.", "Strict separation between Explicit Rules and Inferred Hints.", "YAML-based storage for easy version control via Git.", "Deduplication engine prevents memory pollution."].map((t) => (
               <li key={t} className="flex items-start gap-2 text-[14.5px]">
                 <Check className="mt-0.5 h-4 w-4 text-success" />
                 {t}
@@ -231,23 +231,20 @@ function ContextScoreSection() {
         <div className="surface-panel p-8 shadow-soft">
           <div className="flex items-baseline justify-between">
             <div>
-              <div className="text-[12px] text-muted-foreground">Overall Context Score</div>
-              <div className="text-display mt-1 text-[64px] font-semibold leading-none">94</div>
+              <div className="text-[12px] text-muted-foreground">rules.yaml</div>
+              <div className="text-display mt-1 text-[32px] font-semibold leading-none">Stored Memory</div>
             </div>
-            <div className="rounded-pill bg-mint px-3 py-1 text-[12px] font-medium text-foreground/70">Excellent</div>
+            <div className="rounded-pill bg-mint px-3 py-1 text-[12px] font-medium text-foreground/70">3 Rules</div>
           </div>
           <div className="mt-6 h-2 w-full overflow-hidden rounded-pill bg-muted">
-            <div className="h-full score-gradient" style={{ width: "94%" }} />
+            <div className="h-full score-gradient" style={{ width: "100%" }} />
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-6">
-            {[["Relevance", 96],["Completeness", 91],["Redundancy", 88],["Clarity", 97]].map(([k, v]) => (
+          <div className="mt-8 space-y-6">
+            {[["Uses Zustand for state management", "High"],["Uses TailwindCSS for styling", "High"],["Found UI components directory structure", "Medium"]].map(([k, v]) => (
               <div key={k as string}>
                 <div className="flex items-baseline justify-between">
                   <span className="text-[13px] text-muted-foreground">{k}</span>
                   <span className="text-mono text-[13px]">{v}</span>
-                </div>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-muted">
-                  <div className="h-full rounded-pill bg-foreground/80" style={{ width: `${v as number}%` }} />
                 </div>
               </div>
             ))}
@@ -260,15 +257,15 @@ function ContextScoreSection() {
 
 function WorkflowSection() {
   const steps = [
-    { n: "01", title: "Capture", desc: "Pull in goals, files, constraints, examples and prior conversations." },
-    { n: "02", title: "Compose", desc: "Drag context blocks into a living canvas. Reorder, group, collapse." },
-    { n: "03", title: "Score", desc: "Realtime grading across four axes. Concrete suggestions to lift quality." },
-    { n: "04", title: "Ship", desc: "Export an optimized pack or send straight into the AI Workspace." },
+    { n: "01", title: "Analyze", desc: "Run contextly analyze to build your PROJECT_CONTEXT.md architecture map." },
+    { n: "02", title: "Pack", desc: "Run contextly pack <dir> to bundle thousands of files into a single context pack." },
+    { n: "03", title: "Export", desc: "Run contextly export to fuse intelligence and packs straight to your clipboard." },
+    { n: "04", title: "Prompt", desc: "Paste into Claude or ChatGPT and enjoy maximum AI accuracy with zero context loss." },
   ];
   return (
     <section className="border-y border-border bg-surface">
       <div className="mx-auto max-w-7xl px-6 py-14">
-        <div className="text-display text-[40px] font-semibold leading-tight">From scattered notes to a precision context pack.</div>
+        <div className="text-display text-[40px] font-semibold leading-tight">From scattered files to a precision LLM payload.</div>
         <div className="mt-12 grid gap-px overflow-hidden rounded-xl border border-border md:grid-cols-4">
           {steps.map((s) => (
             <div key={s.n} className="bg-background p-6">
@@ -285,14 +282,14 @@ function WorkflowSection() {
 
 function Comparison() {
   const rows = [
-    ["Token efficiency", "Manual trial & error", "Realtime compression & scoring"],
-    ["Reusable context", "Copy/paste across chats", "Memory Vault + Library"],
-    ["Quality feedback", "Re-prompt until it works", "Four-axis Context Score"],
-    ["Team workflows", "Shared docs, lost prompts", "Versioned context packs"],
+    ["Token efficiency", "Copy/paste huge messy files", "contextly pack compressed bundles"],
+    ["Repository rules", "Re-explain them every chat", "contextly memory remembers them forever"],
+    ["Architecture", "Model guesses file structure", "contextly analyze builds ASCII maps"],
+    ["Workflow", "Slow, manual browser copying", "contextly export -> Clipboard -> Boom"],
   ];
   return (
     <section className="mx-auto max-w-7xl px-6 py-14">
-      <div className="text-display text-[40px] font-semibold leading-tight">Raw chat vs. context engineering.</div>
+      <div className="text-display text-[40px] font-semibold leading-tight">Raw copy-pasting vs. Context-Ly CLI.</div>
       <div className="mt-10 overflow-hidden rounded-xl border border-border">
         <div className="grid grid-cols-3 bg-muted px-6 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
           <div>Dimension</div><div>Vanilla chatbots</div><div className="text-foreground">With <BrandName /></div>
@@ -322,10 +319,7 @@ function CTA() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-pill bg-background px-5 py-3 text-[14px] font-medium text-foreground hover:opacity-90">
-              Start free <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link to="/pricing" className="inline-flex items-center gap-2 rounded-pill border border-background/20 px-5 py-3 text-[14px] font-medium text-background hover:bg-background/10">
-              See pricing
+              View CLI Commands <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-6 text-[12.5px] text-background/60">
