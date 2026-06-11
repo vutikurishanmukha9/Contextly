@@ -8,29 +8,7 @@ from contextly.main import app
 
 runner = CliRunner()
 
-@pytest.fixture
-def temp_repo(monkeypatch):
-    with tempfile.TemporaryDirectory() as d:
-        path = Path(d)
-        (path / "src").mkdir()
-        (path / "src" / "index.js").write_text("console.log('test')")
-        (path / "package.json").write_text(json.dumps({"dependencies": {"react": "18.0.0", "tailwindcss": "3.0.0"}}))
-        
-        # Patch the working directory so CLI commands run inside temp_repo
-        monkeypatch.chdir(path)
-        
-        yield path
 
-@pytest.fixture
-def temp_python_repo(monkeypatch):
-    """A temp repo with Python deps to cover the py_count > 0 branch in analyze.py line 80."""
-    with tempfile.TemporaryDirectory() as d:
-        path = Path(d)
-        (path / "src").mkdir()
-        (path / "src" / "main.py").write_text("print('hello')")
-        (path / "requirements.txt").write_text("flask==2.0.0\nrequests==2.28.0")
-        monkeypatch.chdir(path)
-        yield path
 
 def test_init_cmd(temp_repo):
     result = runner.invoke(app, ["init"], catch_exceptions=False)
@@ -48,14 +26,19 @@ def test_init_cmd_already_exists(temp_repo):
 def test_init_cmd_os_error(temp_repo, monkeypatch):
     # init.py: target_dir.exists() check on line 10, then mkdir on line 16,
     # caught by except (OSError, PermissionError) on line 47.
-    # We mock the init_cmd module's Path so mkdir raises inside the try block.
-    import contextly.commands.init as init_mod
-    original_mkdir = Path.mkdir
+    import pathlib
+    original_mkdir = pathlib.Path.mkdir
     def mock_mkdir(self, *args, **kwargs):
-        if self.name == ".contextly":
+        if self.name == ".contextly" or ".contextly" in self.parts:
             raise PermissionError("Access denied")
         return original_mkdir(self, *args, **kwargs)
-    monkeypatch.setattr(Path, "mkdir", mock_mkdir)
+        
+    monkeypatch.setattr(pathlib.Path, "mkdir", mock_mkdir, raising=False)
+    if hasattr(pathlib, "PosixPath"):
+        monkeypatch.setattr(pathlib.PosixPath, "mkdir", mock_mkdir, raising=False)
+    if hasattr(pathlib, "WindowsPath"):
+        monkeypatch.setattr(pathlib.WindowsPath, "mkdir", mock_mkdir, raising=False)
+        
     result = runner.invoke(app, ["init"])
     assert result.exit_code != 0 or "Error initializing" in result.stdout
 

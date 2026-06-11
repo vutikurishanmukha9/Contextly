@@ -1,0 +1,91 @@
+from conftest import runner, app
+
+
+def test_analyze_cmd_claude(temp_repo):
+    runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["analyze", "--model", "claude"])
+    assert result.exit_code == 0
+    assert "Repository scan complete" in result.stdout
+
+    ctx_path = temp_repo / "PROJECT_CONTEXT.md"
+    assert ctx_path.exists()
+
+    content = ctx_path.read_text(encoding="utf-8")
+    assert "<project_context>" in content
+
+
+def test_analyze_cmd_chatgpt(temp_repo):
+    runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["analyze", "--model", "chatgpt"])
+    assert result.exit_code == 0
+
+    ctx_path = temp_repo / "PROJECT_CONTEXT.md"
+    assert ctx_path.exists()
+
+    content = ctx_path.read_text(encoding="utf-8")
+    assert "## Stack Identity" in content
+
+
+def test_analyze_cmd_python_deps(temp_python_repo):
+    """Covers analyze.py line 80: table.add_row('Python Dependencies', ...) when py_count > 0."""
+    runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["analyze"])
+    assert result.exit_code == 0
+    assert "Python Dependencies" in result.stdout
+
+
+def test_analyze_cmd_scanner_error(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+    import contextly.scanners.language as lang_mod
+    from contextly.scanners.base import ScannerError
+
+    def mock_scan(*args, **kwargs):
+        raise ScannerError("Language scan failed")
+
+    monkeypatch.setattr(lang_mod.LanguageScanner, "scan", mock_scan)
+    result = runner.invoke(app, ["analyze"])
+    assert result.exit_code == 1
+    assert "Scanner Error" in result.stdout
+
+
+def test_analyze_cmd_contextly_error(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+    import contextly.utils.memory as mem_mod
+    from contextly.utils.exceptions import ContextlyError
+
+    def mock_load(*args, **kwargs):
+        raise ContextlyError("Memory load failed")
+
+    monkeypatch.setattr(mem_mod.MemoryEngine, "load_memory", mock_load)
+    result = runner.invoke(app, ["analyze"])
+    assert result.exit_code == 1
+    assert "Context-Ly Error" in result.stdout
+
+
+def test_analyze_cmd_unexpected_error(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+    import contextly.scanners.language as lang_mod
+
+    def mock_scan(*args, **kwargs):
+        raise ValueError("Something went completely wrong")
+
+    monkeypatch.setattr(lang_mod.LanguageScanner, "scan", mock_scan)
+    result = runner.invoke(app, ["analyze"])
+    assert result.exit_code == 1
+    assert "Unexpected Error:" in result.stdout
+
+
+def test_analyze_cmd_permission_error(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+
+    import builtins
+    original_open = builtins.open
+    def mock_open(*args, **kwargs):
+        if "PROJECT_CONTEXT.md" in str(args[0]) and "w" in args[1]:
+            raise PermissionError("Access denied")
+        return original_open(*args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", mock_open)
+    result = runner.invoke(app, ["analyze"])
+    assert result.exit_code == 1
+    assert "Failed to write PROJECT_CONTEXT.md" in result.stdout

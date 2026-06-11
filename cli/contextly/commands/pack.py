@@ -18,7 +18,7 @@ def pack_cmd(
     name: str = typer.Option(None, "--name", "-n", help="Name of the context pack (defaults to directory name)")
 ):
     """Bundle a directory into an LLM-ready Context Pack markdown file"""
-    root_dir = Path.cwd()
+    root_dir = Path.cwd().resolve()
     ignorer = IgnoreEngine(root_dir)
     
     try:
