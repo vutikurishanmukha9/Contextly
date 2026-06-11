@@ -31,24 +31,25 @@ class IgnoreEngine:
         gitignore_path = self.root_dir / ".gitignore"
         if gitignore_path.exists():
             try:
-                with open(gitignore_path, "r") as f:
+                with open(gitignore_path, "r", encoding="utf-8") as f:
                     patterns.extend(f.readlines())
-            except Exception:
+            except (FileNotFoundError, PermissionError, UnicodeDecodeError):
                 pass
                 
         # Read .contextlyignore
         contextlyignore_path = self.root_dir / ".contextlyignore"
         if contextlyignore_path.exists():
             try:
-                with open(contextlyignore_path, "r") as f:
+                with open(contextlyignore_path, "r", encoding="utf-8") as f:
                     patterns.extend(f.readlines())
-            except Exception:
+            except (FileNotFoundError, PermissionError, UnicodeDecodeError):
                 pass
                 
         # Filter empty lines
         patterns = [p.strip() for p in patterns if p.strip()]
         
-        return pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, patterns)
+        # Use the modern 'gitignore' identifier to fix deprecation warnings
+        return pathspec.PathSpec.from_lines('gitignore', patterns)
         
     def is_ignored(self, path: Path) -> bool:
         """

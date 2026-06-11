@@ -15,11 +15,14 @@ class LanguageScanner(BaseScanner):
             ignorer = IgnoreEngine(root_dir)
             
             for path in root_dir.rglob('*'):
-                if path.is_file():
-                    if ignorer.is_ignored(path):
-                        continue
-                    if path.suffix:
-                        exts[path.suffix.lower()] += 1
+                try:
+                    if path.is_file():
+                        if ignorer.is_ignored(path):
+                            continue
+                        if path.suffix:
+                            exts[path.suffix.lower()] += 1
+                except PermissionError:
+                    continue
                         
             total = sum(exts.values())
             if total == 0:

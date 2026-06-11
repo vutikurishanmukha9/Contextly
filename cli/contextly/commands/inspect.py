@@ -18,7 +18,7 @@ def inspect_cmd():
                 try:
                     size = path.stat().st_size
                     file_sizes.append((size, path))
-                except Exception:
+                except (FileNotFoundError, PermissionError, OSError):
                     pass
                     
     # Sort by size descending

@@ -26,12 +26,10 @@ def analyze_cmd():
         pat_scanner = PatternScanner()
         
         try:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                lang_future = executor.submit(lang_scanner.scan, root_dir)
-                dep_future = executor.submit(dep_scanner.scan, root_dir)
-                
-                lang_data = lang_future.result()
-                dep_data = dep_future.result()
+            # Running sequentially instead of concurrently due to GIL limitations 
+            # and to prevent disk thrashing on mechanical drives during rglob
+            lang_data = lang_scanner.scan(root_dir)
+            dep_data = dep_scanner.scan(root_dir)
                 
             # Framework and Pattern scanners depend on dependencies being resolved first
             fw_data = fw_scanner.scan(root_dir, deps=dep_data)
@@ -85,5 +83,5 @@ def analyze_cmd():
         with open("PROJECT_CONTEXT.md", "w", encoding="utf-8") as f:
             f.write(ctx_content)
         console.print("[dim]Generated advanced PROJECT_CONTEXT.md in current directory.[/dim]")
-    except Exception as e:
+    except (FileNotFoundError, PermissionError) as e:
         console.print(f"[red]Failed to write PROJECT_CONTEXT.md: {e}[/red]")

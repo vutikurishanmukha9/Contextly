@@ -19,7 +19,7 @@ class ContextGenerator:
                     content = f.read()
                     # Return the first 1000 characters to avoid massive dumps
                     return content[:1000] + ("...\n[truncated]" if len(content) > 1000 else "")
-            except Exception:
+            except (FileNotFoundError, PermissionError, UnicodeDecodeError):
                 pass
         return "No README.md found."
 
