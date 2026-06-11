@@ -10,7 +10,6 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
   return (
@@ -37,9 +36,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -85,8 +81,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Context-Ly — Less Noise. Better Context. Smarter AI." },
       { name: "twitter:description", content: "Context-Ly is the context-engineering workspace for AI. Build, organize, compress and score context to get sharper answers with fewer tokens." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/aac9d234-7cdf-4a0a-8686-70fffd7e7f7f/id-preview-7017a1be--629c3d97-a97c-46e3-9784-59ee842fe906.lovable.app-1781161136279.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/aac9d234-7cdf-4a0a-8686-70fffd7e7f7f/id-preview-7017a1be--629c3d97-a97c-46e3-9784-59ee842fe906.lovable.app-1781161136279.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
