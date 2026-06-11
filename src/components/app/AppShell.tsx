@@ -1,18 +1,18 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Logo } from "@/components/site/Logo";
 import {
-  LayoutDashboard, Wand2, Library, BrainCircuit, Gauge,
-  Sparkles, MessagesSquare, BarChart3, Settings as SettingsIcon, Search, Bell,
+  LayoutDashboard, Layers3, Library, Database, Gauge,
+  Filter, MessagesSquare, BarChart3, Settings as SettingsIcon, Search, Bell,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/builder", label: "Builder", icon: Wand2 },
+  { to: "/builder", label: "Builder", icon: Layers3 },
   { to: "/library", label: "Library", icon: Library },
-  { to: "/memory", label: "Memory", icon: BrainCircuit },
+  { to: "/memory", label: "Memory", icon: Database },
   { to: "/analyzer", label: "Analyzer", icon: Gauge },
-  { to: "/optimizer", label: "Optimizer", icon: Sparkles },
+  { to: "/optimizer", label: "Optimizer", icon: Filter },
   { to: "/workspace", label: "Workspace", icon: MessagesSquare },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
