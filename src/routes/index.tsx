@@ -144,7 +144,7 @@ function LogoStrip() {
 
 function PipelineSection() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24">
+    <section className="mx-auto max-w-7xl px-6 py-14">
       <div className="max-w-2xl">
         <div className="text-[12px] font-medium uppercase tracking-wider text-primary">The Context Engine</div>
         <h2 className="text-display mt-3 text-[42px] font-semibold leading-tight">
@@ -170,7 +170,7 @@ const features = [
 function FeatureGrid() {
   return (
     <section className="border-y border-border bg-surface">
-      <div className="mx-auto max-w-7xl px-6 py-24">
+      <div className="mx-auto max-w-7xl px-6 py-14">
         <div className="grid gap-8 md:grid-cols-3">
           {features.map((f) => {
             const Icon = f.icon;
@@ -206,7 +206,7 @@ function MicroViz() {
 
 function ContextScoreSection() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24">
+    <section className="mx-auto max-w-7xl px-6 py-14">
       <div className="grid items-center gap-12 md:grid-cols-2">
         <div>
           <div className="text-[12px] font-medium uppercase tracking-wider text-primary">Context Score</div>
@@ -264,7 +264,7 @@ function WorkflowSection() {
   ];
   return (
     <section className="border-y border-border bg-surface">
-      <div className="mx-auto max-w-7xl px-6 py-24">
+      <div className="mx-auto max-w-7xl px-6 py-14">
         <div className="text-display text-[40px] font-semibold leading-tight">From scattered notes to a precision context pack.</div>
         <div className="mt-12 grid gap-px overflow-hidden rounded-xl border border-border md:grid-cols-4">
           {steps.map((s) => (
@@ -288,7 +288,7 @@ function Comparison() {
     ["Team workflows", "Shared docs, lost prompts", "Versioned context packs"],
   ];
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24">
+    <section className="mx-auto max-w-7xl px-6 py-14">
       <div className="text-display text-[40px] font-semibold leading-tight">Raw chat vs. context engineering.</div>
       <div className="mt-10 overflow-hidden rounded-xl border border-border">
         <div className="grid grid-cols-3 bg-muted px-6 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -308,7 +308,7 @@ function Comparison() {
 
 function CTA() {
   return (
-    <section className="mx-auto max-w-7xl px-6 pb-24">
+    <section className="mx-auto max-w-7xl px-6 pb-14">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-foreground p-12 text-background md:p-16">
         <div className="relative max-w-2xl">
           <h2 className="text-display text-[44px] font-semibold leading-[1.05]">
