@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import {
-  Wand2, Library, BrainCircuit, Gauge, Sparkles, BarChart3,
+  Layers3, Library, Database, Gauge, Filter, BarChart3,
   ArrowRight, Check, Play, Layers, Zap, ShieldCheck,
 } from "lucide-react";
 
@@ -37,7 +37,7 @@ function Hero() {
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0 grid-bg opacity-60 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
-      <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-16 md:pt-28 md:pb-24">
+      <div className="relative mx-auto max-w-7xl px-6 pt-10 pb-12 md:pt-14 md:pb-16">
         <div className="mx-auto max-w-3xl text-center">
           <div className="inline-flex items-center gap-2 rounded-pill border border-border bg-surface px-3 py-1 text-[12.5px] text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-success" />
@@ -63,7 +63,7 @@ function Hero() {
           </div>
         </div>
 
-        <div className="relative mx-auto mt-16 max-w-6xl">
+        <div className="relative mx-auto mt-12 max-w-6xl">
           <HeroVisual />
         </div>
       </div>
@@ -144,7 +144,7 @@ function LogoStrip() {
 
 function PipelineSection() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24">
+    <section className="mx-auto max-w-7xl px-6 py-14">
       <div className="max-w-2xl">
         <div className="text-[12px] font-medium uppercase tracking-wider text-primary">The Context Engine</div>
         <h2 className="text-display mt-3 text-[42px] font-semibold leading-tight">
@@ -159,9 +159,9 @@ function PipelineSection() {
 }
 
 const features = [
-  { icon: Wand2, title: "Context Builder", desc: "Compose goals, constraints, examples and files into a single living canvas.", tone: "bg-lavender" },
-  { icon: Sparkles, title: "Prompt Optimizer", desc: "Rewrite prompts for clarity and density — side-by-side with token deltas.", tone: "bg-mint" },
-  { icon: BrainCircuit, title: "Memory Vault", desc: "Persistent project memory, personal facts, reusable snippets and templates.", tone: "bg-sky" },
+  { icon: Layers3, title: "Context Builder", desc: "Compose goals, constraints, examples and files into a single living canvas.", tone: "bg-lavender" },
+  { icon: Filter, title: "Prompt Optimizer", desc: "Rewrite prompts for clarity and density — side-by-side with token deltas.", tone: "bg-mint" },
+  { icon: Database, title: "Memory Vault", desc: "Persistent project memory, personal facts, reusable snippets and templates.", tone: "bg-sky" },
   { icon: Gauge, title: "Context Scoring", desc: "Relevance, completeness, redundancy and clarity — graded in realtime.", tone: "bg-peach" },
   { icon: Library, title: "Context Library", desc: "A searchable, taggable home for every context pack your team ships.", tone: "bg-cream" },
   { icon: BarChart3, title: "Analytics", desc: "Track tokens saved, quality lift and model performance across projects.", tone: "bg-lavender" },
@@ -170,7 +170,7 @@ const features = [
 function FeatureGrid() {
   return (
     <section className="border-y border-border bg-surface">
-      <div className="mx-auto max-w-7xl px-6 py-24">
+      <div className="mx-auto max-w-7xl px-6 py-14">
         <div className="grid gap-8 md:grid-cols-3">
           {features.map((f) => {
             const Icon = f.icon;
@@ -206,7 +206,7 @@ function MicroViz() {
 
 function ContextScoreSection() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24">
+    <section className="mx-auto max-w-7xl px-6 py-14">
       <div className="grid items-center gap-12 md:grid-cols-2">
         <div>
           <div className="text-[12px] font-medium uppercase tracking-wider text-primary">Context Score</div>
@@ -264,7 +264,7 @@ function WorkflowSection() {
   ];
   return (
     <section className="border-y border-border bg-surface">
-      <div className="mx-auto max-w-7xl px-6 py-24">
+      <div className="mx-auto max-w-7xl px-6 py-14">
         <div className="text-display text-[40px] font-semibold leading-tight">From scattered notes to a precision context pack.</div>
         <div className="mt-12 grid gap-px overflow-hidden rounded-xl border border-border md:grid-cols-4">
           {steps.map((s) => (
@@ -288,7 +288,7 @@ function Comparison() {
     ["Team workflows", "Shared docs, lost prompts", "Versioned context packs"],
   ];
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24">
+    <section className="mx-auto max-w-7xl px-6 py-14">
       <div className="text-display text-[40px] font-semibold leading-tight">Raw chat vs. context engineering.</div>
       <div className="mt-10 overflow-hidden rounded-xl border border-border">
         <div className="grid grid-cols-3 bg-muted px-6 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -308,7 +308,7 @@ function Comparison() {
 
 function CTA() {
   return (
-    <section className="mx-auto max-w-7xl px-6 pb-24">
+    <section className="mx-auto max-w-7xl px-6 pb-14">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-foreground p-12 text-background md:p-16">
         <div className="relative max-w-2xl">
           <h2 className="text-display text-[44px] font-semibold leading-[1.05]">
