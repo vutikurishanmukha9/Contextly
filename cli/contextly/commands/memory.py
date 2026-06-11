@@ -2,10 +2,20 @@ from pathlib import Path
 from rich.table import Table
 from ..utils.console import console
 from ..utils.memory import MemoryEngine
+from ..utils.exceptions import ValidationError
+from ..utils.validation import require_contextly_initialized
+import typer
 
 def memory_cmd():
     """Inspect the persistently stored team memory and conventions."""
     root_dir = Path.cwd()
+    
+    try:
+        require_contextly_initialized(root_dir)
+    except ValidationError as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(code=1)
+        
     engine = MemoryEngine(root_dir)
     
     memory = engine.load_memory()

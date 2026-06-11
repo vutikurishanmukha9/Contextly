@@ -2,10 +2,18 @@ from pathlib import Path
 from rich.table import Table
 from ..utils.console import console
 from ..utils.ignore import IgnoreEngine
+from ..utils.exceptions import ValidationError
+from ..utils.validation import require_directory_exists
+import typer
 
 def inspect_cmd():
     """Deep dive into repository complexity and structure"""
-    root_dir = Path.cwd()
+    try:
+        root_dir = require_directory_exists(str(Path.cwd()))
+    except ValidationError as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(code=1)
+        
     ignorer = IgnoreEngine(root_dir)
     
     file_sizes = []

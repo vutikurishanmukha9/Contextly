@@ -4,6 +4,9 @@ from rich.table import Table
 from ..utils.console import console
 from ..utils.ignore import IgnoreEngine
 
+from ..utils.validation import require_directory_exists
+from ..utils.exceptions import ValidationError
+
 try:
     import tiktoken
     tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -18,14 +21,10 @@ def pack_cmd(
     root_dir = Path.cwd()
     ignorer = IgnoreEngine(root_dir)
     
-    target_path = Path(target).resolve()
-    
-    if not target_path.exists():
-        console.print(f"[bold red]Error:[/bold red] Target directory '{target}' does not exist.")
-        raise typer.Exit(1)
-        
-    if not target_path.is_dir():
-        console.print(f"[bold red]Error:[/bold red] Target '{target}' is not a directory.")
+    try:
+        target_path = require_directory_exists(target)
+    except ValidationError as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
         
     pack_name = name if name else target_path.name

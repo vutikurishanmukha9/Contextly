@@ -2,6 +2,7 @@ import time
 from pathlib import Path
 import concurrent.futures
 from rich.table import Table
+import typer
 from ..utils.console import console
 
 from ..scanners.dependencies import DependencyScanner
@@ -12,9 +13,12 @@ from ..scanners.base import ScannerError
 from ..types.models import RepositoryIntelligence
 from ..utils.memory import MemoryEngine
 
-from ..generators.context import ContextGenerator
+from ..generators.claude import ClaudeGenerator
+from ..generators.chatgpt import ChatGPTGenerator
+from ..utils.exceptions import ContextlyError
+from ..utils.validation import require_directory_exists
 
-def analyze_cmd():
+def analyze_cmd(model: str = typer.Option("chatgpt", "--model", "-m", help="Target LLM format ('chatgpt' or 'claude')")):
     """Automatically analyze and map the repository"""
     root_dir = Path.cwd()
     
@@ -48,10 +52,13 @@ def analyze_cmd():
             )
         except ScannerError as e:
             console.print(f"\n[bold red]Scanner Error:[/bold red] {e}")
-            return
+            raise typer.Exit(1)
+        except ContextlyError as e:
+            console.print(f"\n[bold red]Context-Ly Error:[/bold red] {e}")
+            raise typer.Exit(1)
         except Exception as e:
             console.print(f"\n[bold red]Unexpected Error:[/bold red] {e}")
-            return
+            raise typer.Exit(1)
             
     console.print("\n[bold green][OK][/bold green] Repository scan complete!\n")
     
@@ -76,12 +83,17 @@ def analyze_cmd():
     console.print()
     
     # Generate Advanced PROJECT_CONTEXT.md
-    generator = ContextGenerator(root_dir, intelligence)
+    if model.lower() == "claude":
+        generator = ClaudeGenerator(root_dir, intelligence)
+    else:
+        generator = ChatGPTGenerator(root_dir, intelligence)
+        
     ctx_content = generator.generate()
     
     try:
         with open("PROJECT_CONTEXT.md", "w", encoding="utf-8") as f:
             f.write(ctx_content)
-        console.print("[dim]Generated advanced PROJECT_CONTEXT.md in current directory.[/dim]")
+        console.print(f"[dim]Generated advanced PROJECT_CONTEXT.md ({model.lower()} format) in current directory.[/dim]")
     except (FileNotFoundError, PermissionError) as e:
         console.print(f"[red]Failed to write PROJECT_CONTEXT.md: {e}[/red]")
+        raise typer.Exit(1)

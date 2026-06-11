@@ -3,6 +3,8 @@ import pyperclip
 from pathlib import Path
 from datetime import datetime
 from ..utils.console import console
+from ..utils.validation import require_contextly_initialized
+from ..utils.exceptions import ValidationError, ContextlyError
 
 def export_cmd(
     pack_name: str = typer.Argument(..., help="The name of the context pack to export (e.g., 'frontend')")
@@ -14,9 +16,10 @@ def export_cmd(
     export_dir = root_dir / ".contextly" / "exports"
     
     # 1. Validation
-    if not project_context_path.exists():
-        console.print("[bold red]Error:[/bold red] PROJECT_CONTEXT.md not found.")
-        console.print("Please run [bold cyan]contextly analyze[/bold cyan] first to generate project intelligence.")
+    try:
+        project_context_path = require_contextly_initialized(root_dir)
+    except ValidationError as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)
         
     if not pack_path.exists():
@@ -33,7 +36,7 @@ def export_cmd(
             
         with open(pack_path, "r", encoding="utf-8") as f:
             pack_layer = f.read()
-    except Exception as e:
+    except (FileNotFoundError, PermissionError) as e:
         console.print(f"[bold red]Error reading files:[/bold red] {e}")
         raise typer.Exit(code=1)
         
@@ -53,7 +56,7 @@ def export_cmd(
     try:
         with open(export_path, "w", encoding="utf-8") as f:
             f.write(fused_content)
-    except Exception as e:
+    except (FileNotFoundError, PermissionError) as e:
         console.print(f"[bold red]Error writing export file:[/bold red] {e}")
         raise typer.Exit(code=1)
         

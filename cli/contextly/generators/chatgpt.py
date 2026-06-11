@@ -1,0 +1,57 @@
+import json
+from .base import BaseGenerator
+
+class ChatGPTGenerator(BaseGenerator):
+    """Generates context using standard Markdown and JSON arrays optimized for OpenAI models."""
+
+    def generate(self) -> str:
+        readme = self._get_readme_content()
+        tree = self._generate_tree()
+        
+        npm_count = len(self.intelligence.dependencies.npm)
+        py_count = len(self.intelligence.dependencies.python)
+
+        has_memory = bool(self.intelligence.memory.rules)
+        has_patterns = bool(self.intelligence.patterns.patterns)
+        
+        conventions_md = ""
+        if has_memory or has_patterns:
+            conventions_md = "## Team Conventions\n\n"
+            if has_memory:
+                conventions_md += "### Explicit Rules (Memory)\n"
+                rules_list = [{"category": r.category, "rule": r.rule} for r in self.intelligence.memory.rules]
+                conventions_md += "```json\n" + json.dumps(rules_list, indent=2) + "\n```\n\n"
+                
+            if has_patterns:
+                saved_descriptions = {r.rule for r in self.intelligence.memory.rules}
+                filtered_patterns = [{"category": p.category, "name": p.name, "description": p.description} 
+                                     for p in self.intelligence.patterns.patterns if p.description not in saved_descriptions]
+                if filtered_patterns:
+                    conventions_md += "### Inferred Conventions (Discovery)\n"
+                    conventions_md += "```json\n" + json.dumps(filtered_patterns, indent=2) + "\n```\n\n"
+
+        markdown = f"""# Project Context Intelligence
+
+## Overview
+{readme}
+
+{conventions_md}
+## Architecture Map
+```text
+{tree}
+```
+
+## Stack Identity
+```json
+{{
+  "primary_language": "{self.intelligence.language.primary}",
+  "frontend_framework": "{self.intelligence.frameworks.frontend}",
+  "backend_tooling": "{self.intelligence.frameworks.backend}"
+}}
+```
+
+## Dependency Weight
+- **NPM Packages**: {npm_count}
+- **Python Packages**: {py_count}
+"""
+        return markdown

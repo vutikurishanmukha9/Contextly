@@ -44,5 +44,5 @@ def init_cmd():
         console.print(f"Created configuration at [cyan].contextly/config.yaml[/cyan]")
         console.print("Edit this file to define your Context-as-Code rules.")
         
-    except Exception as e:
+    except (OSError, PermissionError) as e:
         console.print(f"[bold red]Error initializing Contextly:[/bold red] {str(e)}")
