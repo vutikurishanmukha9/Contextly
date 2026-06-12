@@ -24,6 +24,10 @@ def pack_cmd(
     try:
         require_contextly_initialized(root_dir)
         target_path = require_directory_exists(target)
+        try:
+            target_path.relative_to(root_dir)
+        except ValueError:
+            raise ValidationError("Target directory must be inside the project root directory.")
     except ValidationError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)

@@ -36,3 +36,10 @@ venv.bak/
 
 # Frontend
 frontend/
+
+# Coverage / Testing
+.coverage
+coverage.json
+htmlcov/
+.pytest_cache/
+missing.txt

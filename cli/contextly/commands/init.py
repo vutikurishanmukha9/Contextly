@@ -1,6 +1,7 @@
 import os
 import yaml
 from pathlib import Path
+import typer
 from ..utils.console import console
 
 def init_cmd():

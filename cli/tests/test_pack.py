@@ -122,3 +122,12 @@ def test_pack_cmd_rglob_permission_error(temp_repo, monkeypatch):
     result = runner.invoke(app, ["pack", "forbidden_dir"])
     assert result.exit_code == 0
     assert "Permission error while traversing directories" in result.stdout
+
+
+def test_pack_cmd_outside_root(temp_repo):
+    runner.invoke(app, ["init"])
+    outside_dir = temp_repo.parent
+    result = runner.invoke(app, ["pack", str(outside_dir)])
+    assert result.exit_code == 1
+    assert "Target directory must be inside the project root directory" in result.stdout
+
