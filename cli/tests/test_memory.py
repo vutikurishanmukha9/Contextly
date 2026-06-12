@@ -34,6 +34,7 @@ def test_memory_cmd_with_rules(temp_repo):
     assert result.exit_code == 0
     assert "Stored Memory" in result.stdout
     assert "Found" in result.stdout
+    assert "[rule_" in result.stdout
     assert "TailwindCSS" in result.stdout or "React" in result.stdout
 
 

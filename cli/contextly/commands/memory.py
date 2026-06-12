@@ -41,5 +41,5 @@ def memory_cmd():
             conf_color = "green" if rule.confidence.lower() == "high" else "yellow"
             conf_tag = f"[{conf_color}][{rule.confidence}][/{conf_color}]"
             
-            console.print(f"  - {rule.rule} {conf_tag} {source_tag}")
+            console.print(f"  - [dim]\\[{rule.id}][/dim] {rule.rule} {conf_tag} {source_tag}")
         console.print()

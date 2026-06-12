@@ -69,3 +69,31 @@ def test_discover_cmd_contextly_error(temp_repo, monkeypatch):
     result = runner.invoke(app, ["discover"])
     assert result.exit_code == 1
     assert "Context-Ly Error" in result.stdout
+
+
+def test_discover_cmd_sorting(temp_repo, monkeypatch):
+    """Tests that patterns are sorted by confidence level descending within categories."""
+    runner.invoke(app, ["init"])
+    
+    from contextly.scanners.patterns import PatternScanner
+    from contextly.types.models import PatternScanResult, Pattern
+    
+    def mock_scan(*args, **kwargs):
+        res = PatternScanResult()
+        # Out of order insertion
+        res.patterns.append(Pattern(name="LowPattern", category="Styling", confidence="Low", description="Low description"))
+        res.patterns.append(Pattern(name="HighPattern", category="Styling", confidence="High", description="High description"))
+        res.patterns.append(Pattern(name="MediumPattern", category="Styling", confidence="Medium", description="Medium description"))
+        return res
+        
+    monkeypatch.setattr(PatternScanner, "scan", mock_scan)
+    
+    result = runner.invoke(app, ["discover"])
+    assert result.exit_code == 0
+    
+    # Assert printing order of patterns in stdout
+    high_idx = result.stdout.index("HighPattern")
+    med_idx = result.stdout.index("MediumPattern")
+    low_idx = result.stdout.index("LowPattern")
+    assert high_idx < med_idx < low_idx
+

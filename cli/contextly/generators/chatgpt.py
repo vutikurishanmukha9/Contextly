@@ -1,4 +1,3 @@
-import json
 from .base import BaseGenerator
 
 class ChatGPTGenerator(BaseGenerator):
@@ -19,16 +18,18 @@ class ChatGPTGenerator(BaseGenerator):
             conventions_md = "## Team Conventions\n\n"
             if has_memory:
                 conventions_md += "### Explicit Rules (Memory)\n"
-                rules_list = [{"category": r.category, "rule": r.rule} for r in self.intelligence.memory.rules]
-                conventions_md += "```json\n" + json.dumps(rules_list, indent=2) + "\n```\n\n"
+                for r in self.intelligence.memory.rules:
+                    conventions_md += f"- [{r.category}] {r.rule} [{r.confidence} confidence]\n"
+                conventions_md += "\n"
                 
             if has_patterns:
                 saved_descriptions = {r.rule for r in self.intelligence.memory.rules}
-                filtered_patterns = [{"category": p.category, "name": p.name, "description": p.description} 
-                                     for p in self.intelligence.patterns.patterns if p.description not in saved_descriptions]
+                filtered_patterns = [p for p in self.intelligence.patterns.patterns if p.description not in saved_descriptions]
                 if filtered_patterns:
                     conventions_md += "### Inferred Conventions (Discovery)\n"
-                    conventions_md += "```json\n" + json.dumps(filtered_patterns, indent=2) + "\n```\n\n"
+                    for p in filtered_patterns:
+                        conventions_md += f"- [{p.category}] {p.description} [{p.confidence} confidence]\n"
+                    conventions_md += "\n"
 
         markdown = f"""# Project Context Intelligence
 

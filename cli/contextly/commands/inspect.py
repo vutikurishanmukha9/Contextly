@@ -48,4 +48,4 @@ def inspect_cmd():
         table.add_row(f"{kb_size:.1f}", f"[{style}]{rel_path}[/{style}]")
         
     console.print(table)
-    console.print("\n[dim]Tip: Files over 50KB consume massive LLM context windows. Keep them out of your Context Packs if possible.[/dim]\n")
+    console.print("\n[dim]Tip: Files over 50KB (yellow) or 100KB (red) consume massive LLM context windows. Keep them out of your Context Packs if possible.[/dim]\n")

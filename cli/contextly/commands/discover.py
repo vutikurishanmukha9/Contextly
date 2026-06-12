@@ -48,6 +48,8 @@ def discover_cmd():
         
     for category, patterns in categories.items():
         console.print(f"[bold cyan]{category}:[/bold cyan]")
-        for p in patterns:
+        # Sort by confidence descending (High -> Medium -> Low)
+        sorted_patterns = sorted(patterns, key=lambda p: {"high": 0, "medium": 1, "low": 2}.get(p.confidence.lower(), 3))
+        for p in sorted_patterns:
             console.print(f"  [green]\\[OK][/green] [bold]{p.name}[/bold] ({p.description})")
         console.print()

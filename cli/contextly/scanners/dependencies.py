@@ -85,10 +85,6 @@ class DependencyScanner(BaseScanner):
                     # Catching Exception here is acceptable if we print/log the specific parsing error
                     console.print(f"[yellow]Warning:[/yellow] Could not parse pyproject.toml: {str(e)}")
 
-            # De-duplicate
-            result.npm = list(set(result.npm))
-            result.python = list(set(result.python))
-            
             return result
             
         except Exception as e:
