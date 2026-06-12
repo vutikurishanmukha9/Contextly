@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [1.0.2] - 2024-06-12
+
+#### Fixed
+- **Documentation Polish**: Standardized README Markdown hierarchy to display cleanly on PyPI, correcting inconsistent header sizes and fixing section structures.
+- **Documentation**: Stripped out React/Frontend internal architecture details from the main CLI `README.md` to ensure the PyPI package page is strictly focused on the Python command-line interface.
+
 ### [1.0.0] - 2024-06-12
 
 Initial stable release of Context-Ly on PyPI.
