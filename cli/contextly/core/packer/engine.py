@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Tuple, List, Optional
 
@@ -38,7 +39,6 @@ class PackerEngine:
                 raise ContextlyError(f"Cannot access target directory {target_path}: {e}")
                 
         # Phase 1: Collect all files
-        import os
         all_files = []
         skipped_files = []
         for target_path in target_paths:
@@ -109,20 +109,17 @@ class PackerEngine:
                     
                 out_f.write(f"## File: `{rel_path}`\n")
                 ext = path.suffix.replace('.', '')
-                out_f.write(f"```{ext}\n")
-                
-                # Re-read and re-compress on the fly to avoid OOM
                 try:
                     with open(path, "r", encoding="utf-8") as in_f:
                         raw_code = in_f.read()
                     compressed_code = self.compressor.compress(path, raw_code)
+                    out_f.write(f"```{ext}\n")
                     out_f.write(compressed_code)
                     if not compressed_code.endswith('\n'):
                         out_f.write('\n')
-                except Exception:
-                    out_f.write("// Error reading file during streaming phase\n")
-                    
-                out_f.write(f"```\n\n")
+                    out_f.write(f"```\n\n")
+                except (OSError, IOError):
+                    out_f.write(f"> [!WARNING]\n> File became unreadable during packing.\n\n")
                 
             if excluded_files:
                 out_f.write(f"## Excluded Files (Token Limit)\n")
