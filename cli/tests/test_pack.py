@@ -196,3 +196,68 @@ def test_pack_cmd_profile(temp_repo):
     assert result.exit_code == 1
     assert "Profile 'missing' not found" in result.stdout
 
+def test_pack_cmd_no_target_no_profile(temp_repo):
+    """Covers line 24: if not target and not profile: target = '.'"""
+    runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["pack"])
+    assert result.exit_code == 0
+    assert "Context Pack" in result.stdout
+
+def test_pack_cmd_profile_missing_path(temp_repo):
+    """Covers lines 40-41: Warning about missing profile path."""
+    runner.invoke(app, ["init"])
+    
+    import yaml
+    config_file = temp_repo / ".contextly" / "config.yaml"
+    data = yaml.safe_load(config_file.read_text())
+    data["profiles"] = {"custom": ["non_existent_dir", "."]}
+    config_file.write_text(yaml.dump(data))
+    
+    result = runner.invoke(app, ["pack", "--profile", "custom"])
+    assert result.exit_code == 0
+    assert "Warning: Profile path 'non_existent_dir' does not exist." in result.stdout
+
+def test_pack_cmd_profile_outside_path(temp_repo):
+    """Covers lines 45-46: Profile path must be inside project root."""
+    runner.invoke(app, ["init"])
+    
+    import yaml
+    config_file = temp_repo / ".contextly" / "config.yaml"
+    data = yaml.safe_load(config_file.read_text())
+    data["profiles"] = {"custom": ["../outside_dir", "."]}
+    config_file.write_text(yaml.dump(data))
+    
+    # We must mock outside_dir existence so it doesn't fail the exists() check
+    import pathlib
+    original_exists = pathlib.Path.exists
+    def mock_exists(self):
+        if "outside_dir" in str(self):
+            return True
+        return original_exists(self)
+        
+    import _pytest.monkeypatch
+    monkeypatch = _pytest.monkeypatch.MonkeyPatch()
+    monkeypatch.setattr(pathlib.Path, "exists", mock_exists)
+    
+    try:
+        result = runner.invoke(app, ["pack", "--profile", "custom"])
+        assert result.exit_code == 1
+        assert "must be inside the project root directory" in result.stdout
+    finally:
+        monkeypatch.undo()
+
+def test_pack_cmd_profile_no_valid_paths(temp_repo):
+    """Covers line 49: No valid paths found for profile."""
+    runner.invoke(app, ["init"])
+    
+    import yaml
+    config_file = temp_repo / ".contextly" / "config.yaml"
+    data = yaml.safe_load(config_file.read_text())
+    data["profiles"] = {"custom": ["missing1", "missing2"]}
+    config_file.write_text(yaml.dump(data))
+    
+    result = runner.invoke(app, ["pack", "--profile", "custom"])
+    assert result.exit_code == 1
+    assert "No valid paths found for profile 'custom'" in result.stdout
+
+
