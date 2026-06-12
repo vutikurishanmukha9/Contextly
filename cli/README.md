@@ -80,4 +80,4 @@ Performs a deep-dive analysis on your repository complexity, warning you about e
 
 ## Changelog
 
-For all release notes and version history, please see the [CHANGELOG.md](CHANGELOG.md).
+For all release notes and version history, please see the [CHANGELOG.md](https://github.com/vutikurishanmukha9/Contextly/blob/main/cli/CHANGELOG.md).
