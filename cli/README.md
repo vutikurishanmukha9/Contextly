@@ -36,68 +36,12 @@ Every context pack is graded algorithmically before it touches an LLM. The scori
 ### 3. Prompt Generator
 The generator compiles the active context blocks into a clean, markdown-structured system prompt. It clearly separates the permanent system context (Audience, Tech Stack, Output Style) from the temporary task context, ensuring the output is perfectly formatted for direct integration into tools like ChatGPT, Claude, or API requests.
 
-## Technical Architecture
+## Installation
 
-The application is designed with strict separation of concerns, ensuring that the core business logic remains framework-agnostic. 
-
-- **Frontend Framework**: React with TanStack Start
-- **Styling**: Tailwind CSS and Radix UI (Shadcn components)
-- **State Management**: Zustand with `localStorage` persistence module
-- **Core Engine**: Pure TypeScript logic (`scoring.ts` and `prompt-generator.ts`) completely decoupled from the DOM and React ecosystem, ensuring straightforward migration to alternative interfaces (such as a CLI) in the future.
-
-## Local Development
-
-The web application resides entirely within the `frontend` directory.
-
-### Prerequisites
-- Node.js (v20 or higher recommended)
-- npm
-
-### Installation
-
-1. Clone the repository and navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install the project dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open your browser and navigate to the provided local address (typically `http://localhost:5173`).
-
-## Project Structure
-
-```text
-frontend/
-├── src/
-│   ├── components/      # Reusable UI components (AppShell, Canvas, Optimizer)
-│   ├── lib/
-│   │   ├── prompt-generator.ts  # Logic for formatting the final markdown prompt
-│   │   ├── scoring.ts           # Heuristic mathematical scoring engine
-│   │   └── store.ts             # Zustand state management and persistence
-│   └── routes/          # TanStack Start routing layer
-```
-
-## Context-Ly CLI: The Intelligence Layer
-
-The true value of Context-Ly lies in its command-line interface, which transforms the tool from a simple prompt formatter into a persistent **Context Memory Layer** for your entire repository.
-
-The CLI acts as a static analysis tool that discovers team conventions, evaluates repository complexity, and generates highly-optimized, token-efficient system prompts (`PROJECT_CONTEXT.md`) tailored to your exact stack.
-
-### Setup
-
-To begin using the CLI, activate the Python virtual environment located in the `cli` directory:
+You can install Context-Ly directly from PyPI:
 
 ```bash
-cd cli
-.\venv\Scripts\activate
+pip install contextly
 ```
 
 ### Commands
