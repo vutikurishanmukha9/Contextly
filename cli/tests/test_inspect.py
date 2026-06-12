@@ -83,3 +83,18 @@ def test_inspect_cmd_deep_tree(temp_repo):
     assert result.exit_code == 0
     assert "Inspection complete" in result.stdout
     assert "deep_file.js" in result.stdout
+
+
+def test_inspect_cmd_validation_error(temp_repo, monkeypatch):
+    """Tests inspect command validation error handling."""
+    import contextly.commands.inspect as insp_mod
+    from contextly.utils.exceptions import ValidationError
+    
+    def mock_req(*args, **kwargs):
+        raise ValidationError("Invalid directory mock error")
+        
+    monkeypatch.setattr(insp_mod, "require_directory_exists", mock_req)
+    result = runner.invoke(app, ["inspect"])
+    assert result.exit_code == 1
+    assert "Error:" in result.stdout
+

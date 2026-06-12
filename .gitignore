@@ -32,7 +32,7 @@ env.bak/
 venv.bak/
 
 # Context-Ly
-.contextly/exports/
+.contextly/
 
 # Frontend
 frontend/

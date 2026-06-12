@@ -1,7 +1,7 @@
 from pathlib import Path
 from rich.table import Table
 from ..utils.console import console
-from ..utils.memory import MemoryEngine
+from ..core.memory import MemoryEngine
 from ..utils.exceptions import ValidationError
 from ..utils.validation import require_contextly_initialized
 import typer

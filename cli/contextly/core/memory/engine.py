@@ -2,7 +2,7 @@ import os
 import yaml
 from pathlib import Path
 from datetime import datetime
-from ..types.models import ProjectMemory, MemoryRule
+from ...types.models import ProjectMemory, MemoryRule
 
 class MemoryEngine:
     """Manages the persistence of learned team conventions and architecture hints."""

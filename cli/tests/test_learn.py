@@ -98,3 +98,38 @@ def test_learn_cmd_auto_save_permission_error(temp_repo, monkeypatch):
     
     result = runner.invoke(app, ["learn", "--auto"], input="y\n")
     assert result.exit_code == 1 or "Error" in result.stdout or result.exception is not None
+
+
+def test_learn_cmd_scanner_error(temp_repo, monkeypatch):
+    """Tests learn command scanner error exception handling."""
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["analyze"])
+    
+    import contextly.scanners.patterns as pat_mod
+    from contextly.scanners.base import ScannerError
+    
+    def mock_scan(*args, **kwargs):
+        raise ScannerError("Scanner mock failed")
+        
+    monkeypatch.setattr(pat_mod.PatternScanner, "scan", mock_scan)
+    result = runner.invoke(app, ["learn", "--auto"])
+    assert result.exit_code == 1
+    assert "Scanner Error" in result.stdout
+
+
+def test_learn_cmd_contextly_error(temp_repo, monkeypatch):
+    """Tests learn command contextly error exception handling."""
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["analyze"])
+    
+    import contextly.scanners.patterns as pat_mod
+    from contextly.utils.exceptions import ContextlyError
+    
+    def mock_scan(*args, **kwargs):
+        raise ContextlyError("Contextly mock failed")
+        
+    monkeypatch.setattr(pat_mod.PatternScanner, "scan", mock_scan)
+    result = runner.invoke(app, ["learn", "--auto"])
+    assert result.exit_code == 1
+    assert "Context-Ly Error" in result.stdout
+

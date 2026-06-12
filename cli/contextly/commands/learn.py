@@ -2,7 +2,7 @@ import typer
 from pathlib import Path
 from rich.prompt import Confirm
 from ..utils.console import console
-from ..utils.memory import MemoryEngine
+from ..core.memory import MemoryEngine
 from ..scanners.dependencies import DependencyScanner
 from ..scanners.patterns import PatternScanner
 from ..scanners.base import ScannerError

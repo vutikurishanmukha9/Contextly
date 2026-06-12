@@ -11,7 +11,7 @@ from ..scanners.framework import FrameworkScanner
 from ..scanners.patterns import PatternScanner
 from ..scanners.base import ScannerError
 from ..types.models import RepositoryIntelligence
-from ..utils.memory import MemoryEngine
+from ..core.memory import MemoryEngine
 
 from ..generators.claude import ClaudeGenerator
 from ..generators.chatgpt import ChatGPTGenerator

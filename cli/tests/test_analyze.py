@@ -50,7 +50,7 @@ def test_analyze_cmd_scanner_error(temp_repo, monkeypatch):
 
 def test_analyze_cmd_contextly_error(temp_repo, monkeypatch):
     runner.invoke(app, ["init"])
-    import contextly.utils.memory as mem_mod
+    import contextly.core.memory as mem_mod
     from contextly.utils.exceptions import ContextlyError
 
     def mock_load(*args, **kwargs):
