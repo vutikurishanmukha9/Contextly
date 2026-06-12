@@ -2,8 +2,7 @@ import typer
 from pathlib import Path
 from rich.prompt import Confirm
 from ..utils.console import console
-from ..core.memory.engine import MemoryEngine
-from ..core.discovery.engine import DiscoveryEngine
+from ..core.learner.engine import LearnEngine
 from ..scanners.base import ScannerError
 from ..utils.exceptions import ValidationError, ContextlyError
 from ..utils.validation import require_contextly_initialized
@@ -19,8 +18,7 @@ def learn_cmd(
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)
         
-    engine = MemoryEngine(root_dir)
-    discovery = DiscoveryEngine(root_dir)
+    engine = LearnEngine(root_dir)
     
     if not auto:
         console.print("[yellow]Manual learning is currently disabled in favor of automated discovery.[/yellow]")
@@ -29,7 +27,7 @@ def learn_cmd(
         
     with console.status("[bold blue]Running Pattern Discovery Engine...", spinner="dots"):
         try:
-            patterns_result = discovery.discover()
+            sorted_patterns = engine.discover_conventions()
         except ScannerError as e:
             console.print(f"\n[bold red]Scanner Error:[/bold red] {e}")
             raise typer.Exit(code=1)
@@ -37,25 +35,16 @@ def learn_cmd(
             console.print(f"\n[bold red]Context-Ly Error:[/bold red] {e}")
             raise typer.Exit(code=1)
         
-    if not patterns_result.patterns:
+    if not sorted_patterns:
         console.print("[yellow]No new recognizable conventions discovered to learn.[/yellow]")
         return
         
     console.print("\n[bold green]Discovered Conventions:[/bold green]\n")
     
     saved_count = 0
-    sorted_patterns = sorted(
-        patterns_result.patterns,
-        key=lambda p: {"high": 0, "medium": 1, "low": 2}.get(p.confidence.lower(), 3)
-    )
     for p in sorted_patterns:
         if Confirm.ask(f"Save convention: [cyan]{p.name}[/cyan] ({p.description})?"):
-            added = engine.add_rule(
-                category=p.category,
-                rule_text=p.description,
-                confidence=p.confidence,
-                source=p.source
-            )
+            added = engine.save_convention(p)
             if added:
                 saved_count += 1
                 console.print(f"  [green]\\[OK][/green] Saved to memory.")
