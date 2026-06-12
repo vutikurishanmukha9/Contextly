@@ -33,3 +33,10 @@ def test_init_cmd_os_error(temp_repo, monkeypatch):
     result = runner.invoke(app, ["init"])
     assert result.exit_code == 1
     assert "Error initializing" in result.stdout
+
+
+def test_version_flag():
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert "contextly version" in result.stdout
+

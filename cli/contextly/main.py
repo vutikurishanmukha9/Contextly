@@ -10,6 +10,22 @@ app = typer.Typer(
     add_completion=False,
 )
 
+def version_callback(value: bool):
+    if value:
+        try:
+            from importlib.metadata import version
+            ver = version("contextly")
+        except Exception:
+            ver = "0.1.2"
+        typer.echo(f"contextly version {ver}")
+        raise typer.Exit()
+
+@app.callback()
+def common(
+    version: bool = typer.Option(None, "--version", "-v", callback=version_callback, is_eager=True, help="Show version and exit.")
+):
+    pass
+
 # Add commands
 app.command(name="init", help="Initialize Context-as-Code in the current directory")(init.init_cmd)
 app.command(name="analyze", help="Automatically analyze and map the repository")(analyze.analyze_cmd)
