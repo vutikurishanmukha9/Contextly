@@ -3,10 +3,11 @@ from pathlib import Path
 from ..utils.console import console
 from ..core.initializer.engine import InitEngine
 from ..utils.exceptions import ContextlyError
+from ..utils.fs import find_project_root
 
 def init_cmd():
     """Initialize Context-as-Code in the current directory"""
-    root_dir = Path.cwd()
+    root_dir = find_project_root(Path.cwd())
     engine = InitEngine(root_dir)
     
     try:

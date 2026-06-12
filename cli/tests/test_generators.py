@@ -108,7 +108,7 @@ def test_claude_generator_memory_rules(tmp_path):
     gen = ClaudeGenerator(tmp_path, intel)
     res = gen.generate()
     assert "<explicit_rules source=\"memory\">" in res
-    assert "<rule category=\"Cat\">Rule1</rule>" in res
+    assert "<rule category=\"Cat\"><![CDATA[Rule1]]></rule>" in res
 
 def test_base_generator_exceptions(tmp_path, monkeypatch):
     """Covers base.py 22-23 (README exceptions), 34 (not is_dir inside walk)."""

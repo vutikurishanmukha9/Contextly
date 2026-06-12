@@ -36,9 +36,7 @@ function add(a, b) {
 '''
     compressed = engine.compress(Path("test.js"), code)
     
-    assert "This is a multiline" not in compressed
-    assert "function add(a, b) {" in compressed
-    assert "return a + b;" in compressed
+    assert compressed == code # Returns verbatim
     
 def test_compression_syntax_error():
     engine = CompressionEngine()

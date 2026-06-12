@@ -5,11 +5,16 @@ import typer
 from ..utils.console import console
 from ..scanners.base import ScannerError
 from ..utils.exceptions import ContextlyError
+from ..utils.fs import find_project_root
+from ..utils.validation import require_directory_exists
 from ..core.analyzer.engine import AnalyzerEngine
 
-def analyze_cmd(model: str = typer.Option("chatgpt", "--model", "-m", help="Target LLM format ('chatgpt' or 'claude')")):
-    """Automatically analyze and map the repository"""
-    root_dir = Path.cwd()
+def analyze_cmd(
+    target: str = typer.Argument(".", help="Directory to analyze"),
+    model: str = typer.Option("chatgpt", "--model", "-m", help="Target LLM format ('chatgpt' or 'claude')")
+):
+    """Analyze a repository and print intelligence summary"""
+    root_dir = find_project_root(Path.cwd())
     engine = AnalyzerEngine(root_dir)
     
     with console.status("[bold blue]Scanning repository intelligence (Max Level)...", spinner="dots"):

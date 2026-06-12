@@ -8,6 +8,7 @@ from ..utils.exceptions import ValidationError, ContextlyError
 from ..core.packer.engine import PackerEngine
 
 from ..utils.config import load_config
+from ..utils.fs import find_project_root
 from typing import List, Optional
 
 def pack_cmd(
@@ -17,7 +18,7 @@ def pack_cmd(
     max_tokens: int = typer.Option(None, "--max-tokens", help="Drop least relevant files to fit within this limit")
 ):
     """Bundle a directory into an LLM-ready Context Pack markdown file"""
-    root_dir = Path.cwd().resolve()
+    root_dir = find_project_root(Path.cwd())
     
 
     if not target and not profile:

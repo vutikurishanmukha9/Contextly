@@ -5,13 +5,14 @@ from ..utils.console import console
 from ..core.learner.engine import LearnEngine
 from ..scanners.base import ScannerError
 from ..utils.exceptions import ValidationError, ContextlyError
+from ..utils.fs import find_project_root
 from ..utils.validation import require_contextly_initialized
 
 def learn_cmd(
     auto: bool = typer.Option(False, "--auto", help="Automatically discover and interactively learn conventions.")
 ):
     """Teach Context-Ly new conventions, or use --auto to discover them."""
-    root_dir = Path.cwd()
+    root_dir = find_project_root(Path.cwd())
     try:
         require_contextly_initialized(root_dir)
     except ValidationError as e:

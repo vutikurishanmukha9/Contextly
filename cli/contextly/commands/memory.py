@@ -4,11 +4,12 @@ from ..utils.console import console
 from ..core.memory import MemoryEngine
 from ..utils.exceptions import ValidationError
 from ..utils.validation import require_contextly_initialized
+from ..utils.fs import find_project_root
 import typer
 
 def memory_cmd():
     """Inspect the persistently stored team memory and conventions."""
-    root_dir = Path.cwd()
+    root_dir = find_project_root(Path.cwd())
     
     try:
         require_contextly_initialized(root_dir)

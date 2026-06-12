@@ -1,7 +1,8 @@
 from pathlib import Path
 from rich.table import Table
 from ..utils.console import console
-from ..utils.exceptions import ValidationError
+from ..utils.exceptions import ValidationError, ContextlyError
+from ..utils.fs import find_project_root
 from ..utils.validation import require_directory_exists
 from ..core.inspector.engine import InspectorEngine
 import typer
@@ -9,7 +10,8 @@ import typer
 def inspect_cmd():
     """Deep dive into repository complexity and structure"""
     try:
-        root_dir = require_directory_exists(str(Path.cwd()))
+        root_dir = find_project_root(Path.cwd())
+        require_directory_exists(str(root_dir))
     except ValidationError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)

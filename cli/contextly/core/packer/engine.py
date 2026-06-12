@@ -38,19 +38,27 @@ class PackerEngine:
                 raise ContextlyError(f"Cannot access target directory {target_path}: {e}")
                 
         # Phase 1: Collect all files
+        import os
         all_files = []
         skipped_files = []
         for target_path in target_paths:
             try:
-                for path in target_path.rglob('*'):
-                    try:
-                        if path.is_file():
-                            if self.ignorer.is_ignored(path):
-                                continue
-                            all_files.append(path)
-                    except PermissionError:
-                        continue
-            except PermissionError:
+                if target_path.is_file():
+                    if not self.ignorer.is_ignored(target_path):
+                        all_files.append(target_path)
+                    continue
+                    
+                for root, dirs, files in os.walk(target_path):
+                    root_path = Path(root)
+                    
+                    # Prune ignored directories in-place to avoid deep traversal
+                    dirs[:] = [d for d in dirs if not self.ignorer.is_ignored(root_path / d)]
+                    
+                    for f in files:
+                        file_path = root_path / f
+                        if not self.ignorer.is_ignored(file_path):
+                            all_files.append(file_path)
+            except (PermissionError, OSError):
                 pass
                 
         # Phase 2: Rank files
@@ -61,8 +69,6 @@ class PackerEngine:
         excluded_files = []
         current_tokens = 0
         current_chars = 0
-        
-        file_contents = {}
         
         for path in ranked_files:
             try:
@@ -85,26 +91,37 @@ class PackerEngine:
                     current_chars += file_chars
                     
                 selected_files.append(path)
-                file_contents[path] = compressed_code
                 
             except UnicodeDecodeError:
-                # Skip binary files silently
-                pass
+                skipped_files.append(path)
             except (FileNotFoundError, PermissionError, OSError):
                 skipped_files.append(path)
 
-        # Phase 4: Write Output
+        # Phase 4: Write Output Streamingly
         with open(output_file, "w", encoding="utf-8") as out_f:
             out_f.write(f"# Context Pack: {pack_name}\n\n")
             
             for path in selected_files:
-                rel_path = path.relative_to(self.root_dir).as_posix()
+                try:
+                    rel_path = path.relative_to(self.root_dir).as_posix()
+                except ValueError:
+                    rel_path = path.name
+                    
                 out_f.write(f"## File: `{rel_path}`\n")
                 ext = path.suffix.replace('.', '')
                 out_f.write(f"```{ext}\n")
-                out_f.write(file_contents[path])
-                if not file_contents[path].endswith('\n'):
-                    out_f.write('\n')
+                
+                # Re-read and re-compress on the fly to avoid OOM
+                try:
+                    with open(path, "r", encoding="utf-8") as in_f:
+                        raw_code = in_f.read()
+                    compressed_code = self.compressor.compress(path, raw_code)
+                    out_f.write(compressed_code)
+                    if not compressed_code.endswith('\n'):
+                        out_f.write('\n')
+                except Exception:
+                    out_f.write("// Error reading file during streaming phase\n")
+                    
                 out_f.write(f"```\n\n")
                 
             if excluded_files:

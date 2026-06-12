@@ -2,6 +2,7 @@ import typer
 from pathlib import Path
 from ..utils.console import console
 from ..core.exporter.engine import ExporterEngine
+from ..utils.fs import find_project_root
 from ..utils.validation import require_contextly_initialized
 from ..utils.exceptions import ValidationError, ContextlyError
 
@@ -9,7 +10,7 @@ def export_cmd(
     pack_name: str = typer.Argument(..., help="The name of the context pack to export (e.g., 'frontend')")
 ):
     """Fuses intelligence and context packs, copying the result to your clipboard."""
-    root_dir = Path.cwd()
+    root_dir = find_project_root(Path.cwd())
     
     try:
         require_contextly_initialized(root_dir)

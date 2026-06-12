@@ -30,8 +30,6 @@ class CompressionEngine:
         ext = path.suffix.lower()
         if ext == ".py":
             return self._compress_python(code)
-        elif ext in [".js", ".ts", ".jsx", ".tsx"]:
-            return self._compress_js(code)
         return code
         
     def _compress_python(self, code: str) -> str:
@@ -48,9 +46,3 @@ class CompressionEngine:
             # Fallback if there's a syntax error in the python file
             return code
             
-    def _compress_js(self, code: str) -> str:
-        # Very safe, basic minification: remove multiline comments
-        # and trailing whitespaces. NO regex AST hallucination.
-        code = re.sub(r'/\*[\s\S]*?\*/', '', code)
-        lines = [line.rstrip() for line in code.splitlines()]
-        return "\n".join(lines)

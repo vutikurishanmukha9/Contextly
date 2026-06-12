@@ -5,11 +5,12 @@ from ..utils.console import console
 from ..core.discovery.engine import DiscoveryEngine
 from ..scanners.base import ScannerError
 from ..utils.exceptions import ValidationError, ContextlyError
+from ..utils.fs import find_project_root
 from ..utils.validation import require_contextly_initialized
 
 def discover_cmd():
-    """Statically analyze the repository to discover architectural patterns and conventions"""
-    root_dir = Path.cwd()
+    """Auto-discover technical patterns and update knowledge base"""
+    root_dir = find_project_root(Path.cwd())
     
     try:
         require_contextly_initialized(root_dir)
