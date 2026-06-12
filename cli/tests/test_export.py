@@ -7,6 +7,13 @@ def test_export_cmd_validation(temp_repo):
     assert "Context-Ly is not initialized" in result.stdout
 
 
+def test_export_cmd_not_analyzed(temp_repo):
+    runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["export", "frontend"])
+    assert result.exit_code == 1
+    assert "PROJECT_CONTEXT.md not found" in result.stdout
+
+
 def test_export_cmd_success(temp_repo, monkeypatch):
     runner.invoke(app, ["init"])
     runner.invoke(app, ["analyze"])

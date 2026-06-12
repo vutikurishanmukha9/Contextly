@@ -45,6 +45,8 @@ class BaseGenerator(ABC):
                     extension = "    " if is_last else "│   "
                     _controlled_walk(item, prefix + extension, depth + 1)
                 else:
+                    # To keep the ASCII directory tree compact, we only print files at the root level (depth == 0).
+                    # Subdirectory contents are listed as directories only, preventing token bloat in large codebases.
                     if depth == 0:
                         tree.append(f"{prefix}{connector}{item.name}")
                         

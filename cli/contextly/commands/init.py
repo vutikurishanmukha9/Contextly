@@ -46,3 +46,4 @@ def init_cmd():
         
     except (OSError, PermissionError) as e:
         console.print(f"[bold red]Error initializing Contextly:[/bold red] {str(e)}")
+        raise typer.Exit(code=1)

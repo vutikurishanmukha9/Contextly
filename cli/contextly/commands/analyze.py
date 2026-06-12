@@ -1,6 +1,5 @@
 import time
 from pathlib import Path
-import concurrent.futures
 from rich.table import Table
 import typer
 from ..utils.console import console

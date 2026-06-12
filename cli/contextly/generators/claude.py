@@ -1,4 +1,5 @@
 import json
+import html
 from .base import BaseGenerator
 
 class ClaudeGenerator(BaseGenerator):
@@ -20,7 +21,9 @@ class ClaudeGenerator(BaseGenerator):
             if has_memory:
                 conventions_xml += "<explicit_rules source=\"memory\">\n"
                 for rule in self.intelligence.memory.rules:
-                    conventions_xml += f"<rule category=\"{rule.category}\">{rule.rule}</rule>\n"
+                    cat = html.escape(rule.category)
+                    text = html.escape(rule.rule)
+                    conventions_xml += f"<rule category=\"{cat}\">{text}</rule>\n"
                 conventions_xml += "</explicit_rules>\n"
                 
             if has_patterns:
@@ -29,24 +32,33 @@ class ClaudeGenerator(BaseGenerator):
                 if filtered_patterns:
                     conventions_xml += "<inferred_conventions source=\"discovery\">\n"
                     for p in filtered_patterns:
-                        conventions_xml += f"<pattern category=\"{p.category}\" name=\"{p.name}\">{p.description}</pattern>\n"
+                        p_cat = html.escape(p.category)
+                        p_name = html.escape(p.name)
+                        p_desc = html.escape(p.description)
+                        conventions_xml += f"<pattern category=\"{p_cat}\" name=\"{p_name}\">{p_desc}</pattern>\n"
                     conventions_xml += "</inferred_conventions>\n"
             conventions_xml += "</team_conventions>\n"
 
+        readme_esc = html.escape(readme)
+        tree_esc = html.escape(tree)
+        lang_esc = html.escape(self.intelligence.language.primary)
+        front_esc = html.escape(self.intelligence.frameworks.frontend)
+        back_esc = html.escape(self.intelligence.frameworks.backend)
+
         xml = f"""<project_context>
 <overview>
-{readme}
+{readme_esc}
 </overview>
 
 {conventions_xml}
 <architecture_map>
-{tree}
+{tree_esc}
 </architecture_map>
 
 <stack_identity>
-<primary_language>{self.intelligence.language.primary}</primary_language>
-<frontend_framework>{self.intelligence.frameworks.frontend}</frontend_framework>
-<backend_tooling>{self.intelligence.frameworks.backend}</backend_tooling>
+<primary_language>{lang_esc}</primary_language>
+<frontend_framework>{front_esc}</frontend_framework>
+<backend_tooling>{back_esc}</backend_tooling>
 </stack_identity>
 
 <dependency_weight>

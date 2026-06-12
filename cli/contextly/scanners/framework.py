@@ -42,7 +42,8 @@ class FrameworkScanner(BaseScanner):
                 
             # Python CLI
             if "typer" in deps.python or "click" in deps.python:
-                framework = "Python CLI"
+                if backend == "None detected":
+                    backend = "Python CLI"
                 
             return FrameworkScanResult(
                 frontend=framework,

@@ -14,6 +14,12 @@ def test_pack_cmd(temp_repo):
     assert "## File: `src/index.js`" in content
 
 
+def test_pack_cmd_uninitialized(temp_repo):
+    result = runner.invoke(app, ["pack", "src"])
+    assert result.exit_code == 1
+    assert "Context-Ly is not initialized" in result.stdout
+
+
 def test_pack_cmd_validation(temp_repo):
     runner.invoke(app, ["init"])
     result = runner.invoke(app, ["pack", "non_existent_dir"])

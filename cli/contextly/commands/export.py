@@ -17,9 +17,14 @@ def export_cmd(
     
     # 1. Validation
     try:
-        project_context_path = require_contextly_initialized(root_dir)
+        require_contextly_initialized(root_dir)
     except ValidationError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(code=1)
+        
+    if not project_context_path.exists():
+        console.print(f"[bold red]Error:[/bold red] PROJECT_CONTEXT.md not found in the current directory.")
+        console.print(f"Please run [bold cyan]contextly analyze[/bold cyan] first to generate the repository context.")
         raise typer.Exit(code=1)
         
     if not pack_path.exists():

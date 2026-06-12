@@ -27,7 +27,9 @@ class DependencyScanner(BaseScanner):
                     with open(filepath, 'r', encoding="utf-8") as f:
                         data = json.load(f)
                         deps = list(data.get("dependencies", {}).keys()) + list(data.get("devDependencies", {}).keys())
-                        result.npm.extend(deps)
+                        for d in deps:
+                            if d not in result.npm:
+                                result.npm.append(d)
                 except (FileNotFoundError, json.JSONDecodeError, PermissionError) as e:
                     console.print(f"[yellow]Warning:[/yellow] Could not parse {filepath.relative_to(root_dir)}: {str(e)}")
                 except Exception as e:
@@ -51,8 +53,11 @@ class DependencyScanner(BaseScanner):
             if req_txt.exists():
                 try:
                     with open(req_txt, 'r', encoding="utf-8") as f:
-                        lines = f.readlines()
-                        result.python.extend([line.split("==")[0].strip() for line in lines if line.strip() and not line.startswith("#")])
+                        for line in f:
+                            if line.strip() and not line.startswith("#"):
+                                dep = line.split("==")[0].strip()
+                                if dep not in result.python:
+                                    result.python.append(dep)
                 except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
                     console.print(f"[yellow]Warning:[/yellow] Could not parse requirements.txt: {str(e)}")
                 except Exception as e:
@@ -67,9 +72,11 @@ class DependencyScanner(BaseScanner):
                             data = tomli.load(f)
                             # Extract standard dependencies
                             deps = data.get("project", {}).get("dependencies", [])
-                            # Strip out version constraints
-                            clean_deps = [re.split(r'[=<>~]', dep)[0].strip() for dep in deps]
-                            result.python.extend(clean_deps)
+                            # Strip out version constraints and add safely
+                            for dep in deps:
+                                clean_dep = re.split(r'[=<>~]', dep)[0].strip()
+                                if clean_dep not in result.python:
+                                    result.python.append(clean_dep)
                         else:
                             console.print("[yellow]Warning:[/yellow] `tomli` is not installed. Skipping pyproject.toml parsing.")
                 except (FileNotFoundError, PermissionError) as e:

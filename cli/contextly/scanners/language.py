@@ -43,9 +43,6 @@ class LanguageScanner(BaseScanner):
             
             primary_lang = ext_map.get(primary_ext, primary_ext)
             
-            if primary_ext in ['.ts', '.tsx']:
-                primary_lang = 'TypeScript'
-                
             return LanguageScanResult(
                 primary=primary_lang,
                 breakdown=dict(exts.most_common(5))

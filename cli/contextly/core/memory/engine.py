@@ -35,7 +35,9 @@ class MemoryEngine:
                 if not data:
                     return ProjectMemory()
                 return ProjectMemory.model_validate(data)
-        except Exception:
+        except Exception as e:
+            from ...utils.console import console
+            console.print(f"[yellow]Warning: Failed to load memory ({e}). Falling back to empty memory.[/yellow]")
             return ProjectMemory()
             
     def add_rule(self, category: str, rule_text: str, confidence: str, source: str) -> bool:
@@ -47,8 +49,9 @@ class MemoryEngine:
             if rule.category == category and rule.rule == rule_text:
                 return False # Already exists
                 
-        # Generate ID (simple hash or increment)
-        rule_id = f"rule_{len(memory.rules) + 1:03d}"
+        # Generate ID (unique hash snippet)
+        import uuid
+        rule_id = f"rule_{uuid.uuid4().hex[:8]}"
         
         new_rule = MemoryRule(
             id=rule_id,

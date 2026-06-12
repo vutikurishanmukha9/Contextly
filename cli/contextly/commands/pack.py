@@ -4,7 +4,7 @@ from rich.table import Table
 from ..utils.console import console
 from ..utils.ignore import IgnoreEngine
 
-from ..utils.validation import require_directory_exists
+from ..utils.validation import require_directory_exists, require_contextly_initialized
 from ..utils.exceptions import ValidationError
 
 try:
@@ -22,6 +22,7 @@ def pack_cmd(
     ignorer = IgnoreEngine(root_dir)
     
     try:
+        require_contextly_initialized(root_dir)
         target_path = require_directory_exists(target)
     except ValidationError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")

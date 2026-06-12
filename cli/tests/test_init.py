@@ -31,4 +31,5 @@ def test_init_cmd_os_error(temp_repo, monkeypatch):
         monkeypatch.setattr(pathlib.WindowsPath, "mkdir", mock_mkdir, raising=False)
         
     result = runner.invoke(app, ["init"])
-    assert result.exit_code != 0 or "Error initializing" in result.stdout
+    assert result.exit_code == 1
+    assert "Error initializing" in result.stdout
