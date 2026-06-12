@@ -131,3 +131,21 @@ Bundles a specific directory (e.g., `src/components`) into an LLM-ready Context 
 
 #### 7. `contextly inspect`
 Performs a deep-dive analysis on your repository complexity, warning you about excessively large files that will act as "Token Hogs" and consume too much context window.
+
+---
+
+## Changelog
+
+### [0.1.2] - 2024-06-12
+
+#### Added
+- **Comprehensive Test Suite**: Introduced domain-specific test suites (`test_analyze.py`, `test_discover.py`, `test_export.py`, etc.) ensuring 100% test coverage across all CLI orchestration, generator, and core memory engine components.
+- **Enhanced Data Validation**: Implemented strict default factories in Pydantic models (`RepositoryIntelligence`, `ProjectMemory`) to prevent mutable-default state mutations during context processing.
+
+#### Changed
+- **Architectural Decoupling**: Deprecated monolithic command testing structures in favor of isolated, modular test boundaries for all core system components.
+- **Initialization Workflow**: The `contextly init` command now strictly generates configuration states in `.contextly/config.yaml`, formally deprecating the legacy `PROJECT_CONTEXT.md` initialization artifact requirement.
+
+#### Fixed
+- **Dependency Masking**: Resolved a heuristic bug in `FrameworkScanner` where concurrent backend frameworks (e.g., Django and FastAPI) would overwrite internal detection states.
+- **Exception Taxonomy**: Standardized the internal error hierarchy (`ContextlyError`, `ValidationError`, `ScannerError`) to guarantee deterministic CLI failure reporting and graceful exit codes.

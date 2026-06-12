@@ -48,7 +48,11 @@ def learn_cmd(
     console.print("\n[bold green]Discovered Conventions:[/bold green]\n")
     
     saved_count = 0
-    for p in patterns_result.patterns:
+    sorted_patterns = sorted(
+        patterns_result.patterns,
+        key=lambda p: {"high": 0, "medium": 1, "low": 2}.get(p.confidence.lower(), 3)
+    )
+    for p in sorted_patterns:
         # Prompt for each
         if Confirm.ask(f"Save convention: [cyan]{p.name}[/cyan] ({p.description})?"):
             added = engine.add_rule(

@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Set
-from .base import BaseScanner
+from .base import BaseScanner, ScannerError
 from ..types.models import PatternScanResult, Pattern, DependencyScanResult
 from ..utils.ignore import IgnoreEngine
 
@@ -10,7 +10,6 @@ class PatternScanner(BaseScanner):
         return "Pattern Discovery Engine"
 
     def scan(self, root_dir: Path, dependencies: DependencyScanResult = None, **kwargs) -> PatternScanResult:
-        from .base import ScannerError
         try:
             result = PatternScanResult()
             ignorer = IgnoreEngine(root_dir)
@@ -49,7 +48,11 @@ class PatternScanner(BaseScanner):
                     return
                 if not dir_path.is_dir():
                     return
-                for item in dir_path.iterdir():
+                try:
+                    entries = list(dir_path.iterdir())
+                except PermissionError:
+                    return
+                for item in entries:
                     if item.is_dir() and not ignorer.is_ignored(item):
                         name = item.name.lower()
                         if name == "services":

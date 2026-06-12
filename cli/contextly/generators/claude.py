@@ -1,4 +1,3 @@
-import json
 import html
 from .base import BaseGenerator
 

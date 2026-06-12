@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List
 from pydantic import BaseModel, Field
 
 class LanguageScanResult(BaseModel):
@@ -8,8 +8,6 @@ class LanguageScanResult(BaseModel):
 class DependencyScanResult(BaseModel):
     npm: List[str] = Field(default_factory=list, description="List of NPM dependencies")
     python: List[str] = Field(default_factory=list, description="List of Python dependencies")
-    go: List[str] = Field(default_factory=list, description="List of Go dependencies")
-    rust: List[str] = Field(default_factory=list, description="List of Rust dependencies")
 
 class FrameworkScanResult(BaseModel):
     frontend: str = "None detected"

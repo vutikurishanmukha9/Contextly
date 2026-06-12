@@ -1,10 +1,9 @@
 from pathlib import Path
 from .exceptions import ValidationError
 
-def require_contextly_initialized(root_dir: Path) -> Path:
+def require_contextly_initialized(root_dir: Path) -> None:
     """
     Validates that the directory has been initialized with Context-Ly.
-    Returns the path to the config.yaml file.
     Raises ValidationError if not initialized.
     """
     config_file = root_dir / ".contextly" / "config.yaml"
@@ -13,7 +12,6 @@ def require_contextly_initialized(root_dir: Path) -> Path:
             "Context-Ly is not initialized in this directory.\n"
             "Run 'contextly init' first to generate config.yaml"
         )
-    return config_file
 
 def require_directory_exists(path_str: str) -> Path:
     """

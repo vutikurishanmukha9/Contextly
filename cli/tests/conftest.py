@@ -48,15 +48,3 @@ def temp_python_repo(monkeypatch):
             pass
 
 
-@pytest.fixture
-def initialized_repo(temp_repo):
-    """A temp repo that has already been initialized with contextly init."""
-    runner.invoke(app, ["init"])
-    return temp_repo
-
-
-@pytest.fixture
-def analyzed_repo(initialized_repo):
-    """A temp repo that has been initialized and analyzed."""
-    runner.invoke(app, ["analyze"])
-    return initialized_repo

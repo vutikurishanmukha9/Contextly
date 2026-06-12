@@ -1,5 +1,4 @@
 from pathlib import Path
-from rich.table import Table
 from ..utils.console import console
 from ..scanners.dependencies import DependencyScanner
 from ..scanners.patterns import PatternScanner
@@ -46,7 +45,7 @@ def discover_cmd():
             categories[p.category] = []
         categories[p.category].append(p)
         
-    for category, patterns in categories.items():
+    for category, patterns in sorted(categories.items()):
         console.print(f"[bold cyan]{category}:[/bold cyan]")
         # Sort by confidence descending (High -> Medium -> Low)
         sorted_patterns = sorted(patterns, key=lambda p: {"high": 0, "medium": 1, "low": 2}.get(p.confidence.lower(), 3))

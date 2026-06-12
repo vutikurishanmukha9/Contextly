@@ -25,6 +25,7 @@ def test_export_cmd_success(temp_repo, monkeypatch):
     result = runner.invoke(app, ["export", "frontend"])
     assert result.exit_code == 0
     assert "Successfully copied to clipboard" in result.stdout
+    assert "You can now paste the contents directly into Claude or ChatGPT." in result.stdout
 
     exports_dir = temp_repo / ".contextly" / "exports"
     exports = list(exports_dir.glob("*.md"))
@@ -33,6 +34,25 @@ def test_export_cmd_success(temp_repo, monkeypatch):
     fused_content = exports[0].read_text(encoding="utf-8")
     assert "Architecture Map" in fused_content
     assert '<context_pack name="frontend">' in fused_content
+
+
+def test_export_cmd_success_escaping(temp_repo, monkeypatch):
+    """Verifies that special characters in pack names are HTML escaped."""
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["analyze"])
+    runner.invoke(app, ["pack", "src", "--name", "front & back"])
+
+    import pyperclip
+    monkeypatch.setattr(pyperclip, "copy", lambda x: None)
+
+    result = runner.invoke(app, ["export", "front & back"])
+    assert result.exit_code == 0
+
+    exports_dir = temp_repo / ".contextly" / "exports"
+    exports = list(exports_dir.glob("*.md"))
+    
+    fused_content = exports[0].read_text(encoding="utf-8")
+    assert '<context_pack name="front &amp; back">' in fused_content
 
 
 def test_export_cmd_missing_pack(temp_repo):
@@ -92,6 +112,8 @@ def test_export_cmd_clipboard_error(temp_repo, monkeypatch):
     result = runner.invoke(app, ["export", "src"])
     assert result.exit_code == 0
     assert "Could not copy to clipboard" in result.stdout
+    assert "Open the local export file to copy the contents manually." in result.stdout
+    assert "You can now paste the contents directly" not in result.stdout
 
 
 def test_export_cmd_context_read_error(temp_repo, monkeypatch):

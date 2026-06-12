@@ -46,6 +46,14 @@ def pack_cmd(
     total_chars = 0
     total_tokens = 0
     
+    # Pre-validate access to prevent creating empty files on root-level PermissionError
+    try:
+        if target_path.is_dir():
+            next(target_path.iterdir(), None)
+    except (PermissionError, OSError) as e:
+        console.print(f"[bold red]Error:[/bold red] Cannot access target directory {target}: {e}")
+        raise typer.Exit(1)
+    
     with console.status(f"[bold blue]Packing '{target}' into '{pack_name}'...", spinner="point"):
         with open(output_file, "w", encoding="utf-8") as out_f:
             out_f.write(f"# Context Pack: {pack_name}\n\n")

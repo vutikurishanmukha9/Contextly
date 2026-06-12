@@ -31,6 +31,15 @@ class ChatGPTGenerator(BaseGenerator):
                         conventions_md += f"- [{p.category}] {p.description} [{p.confidence} confidence]\n"
                     conventions_md += "\n"
 
+        import json
+        
+        stack_identity = {
+            "primary_language": self.intelligence.language.primary,
+            "frontend_framework": self.intelligence.frameworks.frontend,
+            "backend_tooling": self.intelligence.frameworks.backend
+        }
+        stack_identity_json = json.dumps(stack_identity, indent=2)
+
         markdown = f"""# Project Context Intelligence
 
 ## Overview
@@ -38,17 +47,13 @@ class ChatGPTGenerator(BaseGenerator):
 
 {conventions_md}
 ## Architecture Map
-```text
+````text
 {tree}
-```
+````
 
 ## Stack Identity
 ```json
-{{
-  "primary_language": "{self.intelligence.language.primary}",
-  "frontend_framework": "{self.intelligence.frameworks.frontend}",
-  "backend_tooling": "{self.intelligence.frameworks.backend}"
-}}
+{stack_identity_json}
 ```
 
 ## Dependency Weight

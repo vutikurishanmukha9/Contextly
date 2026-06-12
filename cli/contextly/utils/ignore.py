@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import pathspec
 
@@ -64,7 +63,12 @@ class IgnoreEngine:
             
         str_path = rel_path.as_posix()
         
-        if path.is_dir() and not str_path.endswith('/'):
+        try:
+            is_directory = path.is_dir()
+        except PermissionError:
+            is_directory = False
+
+        if is_directory and not str_path.endswith('/'):
             str_path += '/'
             
         return self.spec.match_file(str_path)

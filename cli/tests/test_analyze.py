@@ -13,6 +13,15 @@ def test_analyze_cmd_claude(temp_repo):
     content = ctx_path.read_text(encoding="utf-8")
     assert "<project_context>" in content
 
+    # Verify XML is well-formed
+    import xml.etree.ElementTree as ET
+    # Extract just the XML part
+    start_idx = content.find("<project_context>")
+    end_idx = content.find("</project_context>") + len("</project_context>")
+    xml_content = content[start_idx:end_idx]
+    # This will raise ParseError if not well-formed
+    ET.fromstring(xml_content)
+
 
 def test_analyze_cmd_chatgpt(temp_repo):
     runner.invoke(app, ["init"])
@@ -24,6 +33,17 @@ def test_analyze_cmd_chatgpt(temp_repo):
 
     content = ctx_path.read_text(encoding="utf-8")
     assert "## Stack Identity" in content
+
+    # Verify JSON is valid
+    import json
+    import re
+    # Extract the JSON block
+    match = re.search(r"```json\n(.*?)\n```", content, re.DOTALL)
+    assert match is not None
+    json_str = match.group(1)
+    # This will raise JSONDecodeError if not valid
+    parsed = json.loads(json_str)
+    assert "primary_language" in parsed
 
 
 def test_analyze_cmd_python_deps(temp_python_repo):

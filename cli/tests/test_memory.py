@@ -14,8 +14,7 @@ def test_memory_uninitialized(temp_repo):
 def test_memory_cmd_empty(temp_repo):
     """Tests memory command initially when no conventions have been stored."""
     runner.invoke(app, ["init"])
-    runner.invoke(app, ["analyze"]) # Initialize first
-    
+
     result = runner.invoke(app, ["memory"])
     assert result.exit_code == 0
     assert "memory is currently empty" in result.stdout
@@ -24,11 +23,10 @@ def test_memory_cmd_empty(temp_repo):
 def test_memory_cmd_with_rules(temp_repo):
     """Tests memory command when rules of varying confidence levels are stored."""
     runner.invoke(app, ["init"])
-    runner.invoke(app, ["analyze"])
-    
+
     # Learn some rules
     runner.invoke(app, ["learn", "--auto"], input="y\n")
-    
+
     # Verify memory lists the rules
     result = runner.invoke(app, ["memory"])
     assert result.exit_code == 0
@@ -41,13 +39,65 @@ def test_memory_cmd_with_rules(temp_repo):
 def test_memory_cmd_corrupted_yaml(temp_repo):
     """Tests that MemoryEngine loads safely if rules.yaml is corrupted or has bad format."""
     runner.invoke(app, ["init"])
-    runner.invoke(app, ["analyze"]) # Initialize first
-    
+
     rules_file = temp_repo / ".contextly" / "memory" / "rules.yaml"
     rules_file.parent.mkdir(parents=True, exist_ok=True)
     rules_file.write_text("{corrupt-yaml : [ invalid }", encoding="utf-8")
-    
+
     # Gracefully loads empty memory
     result = runner.invoke(app, ["memory"])
     assert result.exit_code == 0
     assert "memory is currently empty" in result.stdout
+
+
+def test_memory_cmd_sorting(temp_repo):
+    """Tests that memory command sorts categories alphabetically and rules within them by confidence descending."""
+    runner.invoke(app, ["init"])
+
+    # Manually write out-of-order categories/rules to rules.yaml
+    rules_file = temp_repo / ".contextly" / "memory" / "rules.yaml"
+    rules_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    mock_rules = {
+        "rules": [
+            {
+                "id": "rule_low_styling",
+                "category": "Styling",
+                "rule": "Low Styling Rule",
+                "confidence": "Low",
+                "source": "discovered",
+                "created_at": "2026-06-12"
+            },
+            {
+                "id": "rule_high_styling",
+                "category": "Styling",
+                "rule": "High Styling Rule",
+                "confidence": "High",
+                "source": "discovered",
+                "created_at": "2026-06-12"
+            },
+            {
+                "id": "rule_high_state",
+                "category": "State Management",
+                "rule": "High State Rule",
+                "confidence": "High",
+                "source": "discovered",
+                "created_at": "2026-06-12"
+            }
+        ]
+    }
+    with open(rules_file, "w", encoding="utf-8") as f:
+        yaml.dump(mock_rules, f)
+
+    result = runner.invoke(app, ["memory"])
+    assert result.exit_code == 0
+
+    # State Management (starts with Sta) comes before Styling (starts with Sty)
+    state_idx = result.stdout.index("State Management")
+    styling_idx = result.stdout.index("Styling")
+    assert state_idx < styling_idx
+
+    # High Styling Rule comes before Low Styling Rule
+    high_styling_idx = result.stdout.index("High Styling Rule")
+    low_styling_idx = result.stdout.index("Low Styling Rule")
+    assert high_styling_idx < low_styling_idx

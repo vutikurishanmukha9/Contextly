@@ -1,4 +1,3 @@
-import time
 from pathlib import Path
 from rich.table import Table
 import typer
@@ -15,14 +14,13 @@ from ..core.memory import MemoryEngine
 from ..generators.claude import ClaudeGenerator
 from ..generators.chatgpt import ChatGPTGenerator
 from ..utils.exceptions import ContextlyError
-from ..utils.validation import require_directory_exists
 
 def analyze_cmd(model: str = typer.Option("chatgpt", "--model", "-m", help="Target LLM format ('chatgpt' or 'claude')")):
     """Automatically analyze and map the repository"""
     root_dir = Path.cwd()
     
     with console.status("[bold blue]Scanning repository intelligence (Max Level)...", spinner="dots"):
-        # We will use ThreadPoolExecutor to run the IO-bound dependency and language scanners concurrently
+        # Initialize all scanners
         lang_scanner = LanguageScanner()
         dep_scanner = DependencyScanner()
         fw_scanner = FrameworkScanner()

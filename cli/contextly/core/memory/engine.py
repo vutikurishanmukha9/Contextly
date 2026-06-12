@@ -1,8 +1,10 @@
-import os
+import uuid
 import yaml
 from pathlib import Path
 from datetime import datetime
 from ...types.models import ProjectMemory, MemoryRule
+from ...utils.console import console
+from ...utils.exceptions import MemoryVaultError
 
 class MemoryEngine:
     """Manages the persistence of learned team conventions and architecture hints."""
@@ -23,9 +25,12 @@ class MemoryEngine:
             
     def _save_memory(self, memory: ProjectMemory):
         """Serializes the ProjectMemory model to YAML."""
-        data = memory.model_dump()
-        with open(self.memory_file, "w", encoding="utf-8") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        try:
+            data = memory.model_dump()
+            with open(self.memory_file, "w", encoding="utf-8") as f:
+                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        except (OSError, PermissionError) as e:
+            raise MemoryVaultError(f"Failed to save memory rules: {e}")
             
     def load_memory(self) -> ProjectMemory:
         """Loads and validates the memory from YAML."""
@@ -36,7 +41,6 @@ class MemoryEngine:
                     return ProjectMemory()
                 return ProjectMemory.model_validate(data)
         except Exception as e:
-            from ...utils.console import console
             console.print(f"[yellow]Warning: Failed to load memory ({e}). Falling back to empty memory.[/yellow]")
             return ProjectMemory()
             
@@ -50,7 +54,6 @@ class MemoryEngine:
                 return False # Already exists
                 
         # Generate ID (unique hash snippet)
-        import uuid
         rule_id = f"rule_{uuid.uuid4().hex[:8]}"
         
         new_rule = MemoryRule(

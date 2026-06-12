@@ -33,7 +33,10 @@ class BaseGenerator(ABC):
             if not dir_path.is_dir():
                 return
                 
-            items = sorted(list(dir_path.iterdir()), key=lambda x: (x.is_file(), x.name))
+            try:
+                items = sorted(list(dir_path.iterdir()), key=lambda x: (x.is_file(), x.name))
+            except PermissionError:
+                return
             valid_items = [item for item in items if not self.ignorer.is_ignored(item)]
             
             for index, item in enumerate(valid_items):

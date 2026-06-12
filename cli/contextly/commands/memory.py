@@ -34,9 +34,11 @@ def memory_cmd():
             categories[rule.category] = []
         categories[rule.category].append(rule)
         
-    for category, rules in categories.items():
+    for category, rules in sorted(categories.items()):
         console.print(f"[bold cyan]{category}[/bold cyan]")
-        for rule in rules:
+        # Sort by confidence descending (High -> Medium -> Low)
+        sorted_rules = sorted(rules, key=lambda r: {"high": 0, "medium": 1, "low": 2}.get(r.confidence.lower(), 3))
+        for rule in sorted_rules:
             source_tag = f"[dim]({rule.source})[/dim]"
             conf_color = "green" if rule.confidence.lower() == "high" else "yellow"
             conf_tag = f"[{conf_color}][{rule.confidence}][/{conf_color}]"

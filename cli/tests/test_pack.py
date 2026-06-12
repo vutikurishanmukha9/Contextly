@@ -124,6 +124,26 @@ def test_pack_cmd_rglob_permission_error(temp_repo, monkeypatch):
     assert "Permission error while traversing directories" in result.stdout
 
 
+def test_pack_cmd_root_permission_error(temp_repo, monkeypatch):
+    """Covers the pre-validation iterdir PermissionError guard in pack.py."""
+    runner.invoke(app, ["init"])
+
+    import pathlib
+    original_iterdir = pathlib.Path.iterdir
+    def mock_iterdir(self):
+        if self.name == "forbidden_dir":
+            raise PermissionError("Access denied")
+        return original_iterdir(self)
+    monkeypatch.setattr(pathlib.Path, "iterdir", mock_iterdir)
+
+    forbidden = temp_repo / "forbidden_dir"
+    forbidden.mkdir()
+
+    result = runner.invoke(app, ["pack", "forbidden_dir"])
+    assert result.exit_code == 1
+    assert "Cannot access target directory" in result.stdout
+
+
 def test_pack_cmd_outside_root(temp_repo):
     runner.invoke(app, ["init"])
     outside_dir = temp_repo.parent

@@ -1,4 +1,5 @@
 import typer
+import html
 import pyperclip
 from pathlib import Path
 from datetime import datetime
@@ -45,10 +46,10 @@ def export_cmd(
         console.print(f"[bold red]Error reading files:[/bold red] {e}")
         raise typer.Exit(code=1)
         
-    # 3. Fuse content
+    safe_pack_name = html.escape(pack_name)
     fused_content = f"""{intelligence_layer}
 
-<context_pack name="{pack_name}">
+<context_pack name="{safe_pack_name}">
 {pack_layer}
 </context_pack>
 """
@@ -66,11 +67,13 @@ def export_cmd(
         raise typer.Exit(code=1)
         
     # 5. Clipboard Integration
+    clipboard_success = True
     try:
         pyperclip.copy(fused_content)
         clipboard_status = "[green]Successfully copied to clipboard![/green]"
     except Exception as e:
-        clipboard_status = "[yellow]Could not copy to clipboard. Ensure a display server/clipboard utility is running.[/yellow]"
+        clipboard_status = f"[yellow]Could not copy to clipboard ({e}). The export file was saved successfully.[/yellow]"
+        clipboard_success = False
         
     # 6. Success Output
     console.print(f"\n[bold green][OK][/bold green] Export Generation Complete!")
@@ -78,4 +81,7 @@ def export_cmd(
     console.print(f"  - [cyan]Context Pack:[/cyan] {pack_name}")
     console.print(f"  - [cyan]Local Export:[/cyan] {export_path.relative_to(root_dir)}")
     console.print(f"\n{clipboard_status}")
-    console.print("\nYou can now paste the contents directly into Claude or ChatGPT.")
+    if clipboard_success:
+        console.print("\nYou can now paste the contents directly into Claude or ChatGPT.")
+    else:
+        console.print("\nOpen the local export file to copy the contents manually.")
