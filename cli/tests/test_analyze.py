@@ -108,4 +108,17 @@ def test_analyze_cmd_permission_error(temp_repo, monkeypatch):
     monkeypatch.setattr(builtins, "open", mock_open)
     result = runner.invoke(app, ["analyze"])
     assert result.exit_code == 1
-    assert "Unexpected Error" in result.stdout
+    assert "Failed to write PROJECT_CONTEXT.md" in result.stdout
+
+def test_analyze_cmd_memory_error(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+    import contextly.core.analyzer.engine as engine_mod
+    from contextly.utils.exceptions import ContextlyError
+
+    def mock_init(self, *args, **kwargs):
+        raise ContextlyError("Memory vault failed to initialize")
+
+    monkeypatch.setattr(engine_mod.MemoryEngine, "__init__", mock_init)
+    result = runner.invoke(app, ["analyze"])
+    assert result.exit_code == 1
+    assert "Context-Ly Error:" in result.stdout

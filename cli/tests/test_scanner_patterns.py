@@ -47,4 +47,7 @@ def test_pattern_scanner_missing_branches(tmp_path):
     assert "Styled Components" in names or "GraphQL" in names
     
     # 78-79 is empty dir handled gracefully
-    s.scan(tmp_path / "empty", dependencies=DependencyScanResult())
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+    res_empty = s.scan(empty_dir, dependencies=DependencyScanResult())
+    assert len(res_empty.patterns) == 0

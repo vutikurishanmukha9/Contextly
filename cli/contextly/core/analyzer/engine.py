@@ -8,6 +8,7 @@ from ...types.models import RepositoryIntelligence
 from ...core.memory.engine import MemoryEngine
 from ...generators.claude import ClaudeGenerator
 from ...generators.chatgpt import ChatGPTGenerator
+from ...utils.exceptions import ContextlyError
 
 class AnalyzerEngine:
     def __init__(self, root_dir: Path):
@@ -47,7 +48,10 @@ class AnalyzerEngine:
         ctx_content = generator.generate()
         
         output_file = self.root_dir / "PROJECT_CONTEXT.md"
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(ctx_content)
+        try:
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(ctx_content)
+        except (FileNotFoundError, PermissionError) as e:
+            raise ContextlyError(f"Failed to write PROJECT_CONTEXT.md: {e}")
             
         return intelligence

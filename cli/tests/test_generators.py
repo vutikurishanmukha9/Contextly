@@ -14,7 +14,6 @@ def get_dummy_intel():
 
 class DummyGenerator(BaseGenerator):
     def generate(self):
-        super().generate() # To cover pass in abstract method
         return "dummy"
 
 def test_base_generator_readme(tmp_path):
@@ -61,9 +60,6 @@ def test_base_generator_tree_depth_and_permission(tmp_path, monkeypatch):
     tree = gen._generate_tree()
     assert "dir1" in tree
     assert "dir3" not in tree  # Because dir2 raises PermissionError
-    
-    # Abstract method check
-    gen.generate()
 
 def test_base_generator_edge_cases(tmp_path, monkeypatch):
     """Covers base.py 22-23 (truncate), 32 (depth>2), 34 (not dir)"""

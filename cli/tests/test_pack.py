@@ -55,14 +55,16 @@ def test_pack_cmd_explicit_empty_name(temp_repo):
 def test_pack_cmd_no_tiktoken(temp_repo, monkeypatch):
     runner.invoke(app, ["init"])
     
-    import builtins
-    original_import = builtins.__import__
-    def mock_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name == "tiktoken":
-            raise ImportError("No module named 'tiktoken'")
-        return original_import(name, globals, locals, fromlist, level)
+    import contextly.core.packer.engine as pack_engine_mod
+    
+    # We patch the engine after it's initialized by the command
+    original_init = pack_engine_mod.PackerEngine.__init__
+    
+    def mock_init(self, root_dir):
+        original_init(self, root_dir)
+        self.tokenizer = None
         
-    monkeypatch.setattr(builtins, "__import__", mock_import)
+    monkeypatch.setattr(pack_engine_mod.PackerEngine, "__init__", mock_init)
     
     result = runner.invoke(app, ["pack", "src"])
     assert result.exit_code == 0
@@ -96,8 +98,7 @@ def test_pack_cmd_read_permission_error(temp_repo, monkeypatch):
     monkeypatch.setattr(builtins, "open", mock_open)
     result = runner.invoke(app, ["pack", "src"])
     assert result.exit_code == 0
-    # No warning printed anymore, should just succeed silently
-    assert "[OK] Context Pack 'src' created!" in result.stdout
+    assert "Warning: Could not read" in result.stdout
 
 
 def test_pack_cmd_is_file_permission_error(temp_repo, monkeypatch):
@@ -159,4 +160,39 @@ def test_pack_cmd_outside_root(temp_repo):
     result = runner.invoke(app, ["pack", str(outside_dir)])
     assert result.exit_code == 1
     assert "Target directory must be inside the project root directory" in result.stdout
+
+def test_pack_cmd_max_tokens(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    # Create some files
+    (temp_repo / "src" / "main.py").write_text("print('hello')\n" * 50)
+    (temp_repo / "src" / "utils.py").write_text("print('utils')\n" * 50)
+    
+    result = runner.invoke(app, ["pack", "src", "--max-tokens", "100"]) # Very low limit
+    assert result.exit_code == 0
+    assert "Files Excluded (Token Limit)" in result.stdout
+    assert "files were automatically excluded" in result.stdout
+
+def test_pack_cmd_profile(temp_repo):
+    # Test valid profile
+    runner.invoke(app, ["init"])
+    
+    # Write a custom profile into config
+    import yaml
+    config_file = temp_repo / ".contextly" / "config.yaml"
+    data = yaml.safe_load(config_file.read_text())
+    data["profiles"] = {"custom": ["src", "tests"]}
+    config_file.write_text(yaml.dump(data))
+    
+    (temp_repo / "tests").mkdir()
+    (temp_repo / "tests" / "test_main.py").write_text("test")
+    
+    result = runner.invoke(app, ["pack", "--profile", "custom"])
+    assert result.exit_code == 0
+    assert "profile 'custom'" in result.stdout
+    
+    # Test missing profile
+    result = runner.invoke(app, ["pack", "--profile", "missing"])
+    assert result.exit_code == 1
+    assert "Profile 'missing' not found" in result.stdout
 

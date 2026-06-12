@@ -30,6 +30,10 @@ class InitEngine:
                     "frontend": "",
                     "backend": ""
                 },
+                "profiles": {
+                    "frontend": ["src/components", "src/pages"],
+                    "backend": ["src/api", "src/models"]
+                },
                 "rules": [
                     "add your coding standards here",
                     "e.g., typescript-only",

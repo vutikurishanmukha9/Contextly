@@ -87,22 +87,7 @@ def test_dependency_scanner_edge_cases(tmp_path):
     
     s.scan(tmp_path)
     
-    # Missing dependencies
-    
-    # 47-49: Cargo.toml
-    cargo = tmp_path / "Cargo.toml"
-    cargo.write_text("[dependencies]\nreqwest = \"1.0\"")
-    
-    # 61-64: go.mod
-    gomod = tmp_path / "go.mod"
-    gomod.write_text("module test\nrequire (\n gin v1.0\n)")
-    
-    # 81, 83, 90-91: pipfile, poetry
-    pipfile = tmp_path / "Pipfile"
-    pipfile.write_text("[packages]\nflask = \"*\"")
-    
-    poetry = tmp_path / "poetry.lock"
-    poetry.write_text("[[package]]\nname = \"fastapi\"")
+    # No longer creating dead files that are not parsed by the scanner
     
     # package.json
     pkg = tmp_path / "package.json"

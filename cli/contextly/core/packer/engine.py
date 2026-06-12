@@ -1,84 +1,127 @@
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List, Optional
 
 from ...utils.ignore import IgnoreEngine
 from ...utils.exceptions import ContextlyError
+from .compression import CompressionEngine
+from .ranking import RankingEngine
 
 class PackerEngine:
     def __init__(self, root_dir: Path):
         self.root_dir = root_dir
         self.ignorer = IgnoreEngine(root_dir)
+        self.compressor = CompressionEngine()
+        self.ranker = RankingEngine(root_dir)
         try:
             import tiktoken
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
         except ImportError:  # pragma: no cover
             self.tokenizer = None
 
-    def pack(self, target_path: Path, pack_name: str) -> Tuple[int, str, int, Path]:
+    def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None) -> Tuple[int, str, int, Path, List[Path], int]:
         """
-        Creates a context pack for the target directory.
+        Creates a context pack for the target directories.
         Returns:
-            tuple: (token_estimate, token_type, file_count, output_file)
+            tuple: (token_estimate, token_type, file_count, output_file, skipped_files, excluded_count)
         """
         packs_dir = self.root_dir / ".contextly" / "packs"
         packs_dir.mkdir(parents=True, exist_ok=True)
         
         output_file = packs_dir / f"{pack_name}.contextpack.md"
         
-        file_count = 0
-        total_chars = 0
-        total_tokens = 0
-        
         # Pre-validate access
-        try:
-            if target_path.is_dir():
-                next(target_path.iterdir(), None)
-        except (PermissionError, OSError) as e:
-            raise ContextlyError(f"Cannot access target directory {target_path}: {e}")
-            
-        with open(output_file, "w", encoding="utf-8") as out_f:
-            out_f.write(f"# Context Pack: {pack_name}\n\n")
-            
+        for target_path in target_paths:
+            try:
+                if target_path.is_dir():
+                    next(target_path.iterdir(), None)
+            except (PermissionError, OSError) as e:
+                raise ContextlyError(f"Cannot access target directory {target_path}: {e}")
+                
+        # Phase 1: Collect all files
+        all_files = []
+        skipped_files = []
+        for target_path in target_paths:
             try:
                 for path in target_path.rglob('*'):
                     try:
                         if path.is_file():
                             if self.ignorer.is_ignored(path):
                                 continue
-                            
-                            try:
-                                rel_path = path.relative_to(self.root_dir).as_posix()
-                                out_f.write(f"## File: `{rel_path}`\n")
-                                ext = path.suffix.replace('.', '')
-                                out_f.write(f"```{ext}\n")
-                                
-                                with open(path, "r", encoding="utf-8") as in_f:
-                                    for line in in_f:
-                                        out_f.write(line)
-                                        if self.tokenizer:
-                                            total_tokens += len(self.tokenizer.encode(line, disallowed_special=()))
-                                        else:
-                                            total_chars += len(line)
-                                            
-                                out_f.write(f"\n```\n\n")
-                                file_count += 1
-                                
-                            except UnicodeDecodeError:
-                                # Skip binary files silently
-                                pass
-                            except (FileNotFoundError, PermissionError, OSError):
-                                # Ignore unreadable individual files
-                                pass
+                            all_files.append(path)
                     except PermissionError:
                         continue
             except PermissionError:
                 pass
                 
+        # Phase 2: Rank files
+        ranked_files = self.ranker.rank(all_files)
+        
+        # Phase 3: Compress, Measure, and Select
+        selected_files = []
+        excluded_files = []
+        current_tokens = 0
+        current_chars = 0
+        
+        file_contents = {}
+        
+        for path in ranked_files:
+            try:
+                with open(path, "r", encoding="utf-8") as in_f:
+                    raw_code = in_f.read()
+                    
+                compressed_code = self.compressor.compress(path, raw_code)
+                
+                if self.tokenizer:
+                    file_tokens = len(self.tokenizer.encode(compressed_code, disallowed_special=()))
+                    if max_tokens and current_tokens + file_tokens > max_tokens:
+                        excluded_files.append(path)
+                        continue
+                    current_tokens += file_tokens
+                else:
+                    file_chars = len(compressed_code)
+                    if max_tokens and (current_chars + file_chars) // 4 > max_tokens:
+                        excluded_files.append(path)
+                        continue
+                    current_chars += file_chars
+                    
+                selected_files.append(path)
+                file_contents[path] = compressed_code
+                
+            except UnicodeDecodeError:
+                # Skip binary files silently
+                pass
+            except (FileNotFoundError, PermissionError, OSError):
+                skipped_files.append(path)
+
+        # Phase 4: Write Output
+        with open(output_file, "w", encoding="utf-8") as out_f:
+            out_f.write(f"# Context Pack: {pack_name}\n\n")
+            
+            for path in selected_files:
+                rel_path = path.relative_to(self.root_dir).as_posix()
+                out_f.write(f"## File: `{rel_path}`\n")
+                ext = path.suffix.replace('.', '')
+                out_f.write(f"```{ext}\n")
+                out_f.write(file_contents[path])
+                if not file_contents[path].endswith('\n'):
+                    out_f.write('\n')
+                out_f.write(f"```\n\n")
+                
+            if excluded_files:
+                out_f.write(f"## Excluded Files (Token Limit)\n")
+                out_f.write(f"The following {len(excluded_files)} files were excluded to fit within the {max_tokens} token limit:\n")
+                for path in excluded_files:
+                    try:
+                        rel_path = path.relative_to(self.root_dir).as_posix()
+                    except ValueError:
+                        rel_path = path.name
+                    out_f.write(f"- `{rel_path}`\n")
+                
         if self.tokenizer:
-            token_estimate = total_tokens
+            token_estimate = current_tokens
             token_type = "Exact Tokens (cl100k_base)"
         else:
-            token_estimate = total_chars // 4
+            token_estimate = current_chars // 4
             token_type = "Estimated Tokens (chars / 4)"
             
-        return token_estimate, token_type, file_count, output_file
+        return token_estimate, token_type, len(selected_files), output_file, skipped_files, len(excluded_files)

@@ -9,7 +9,7 @@ def test_framework_scanner_edge_cases(tmp_path):
     assert s.name == "Framework Scanner"
     
     deps = DependencyScanResult()
-    deps.npm.extend(["next", "vue", "nuxt", "react", "angular", "svelte", "gatsby", "express", "nestjs", "koa", "fastify"])
+    deps.npm.extend(["next", "vue", "nuxt", "react", "angular", "svelte", "gatsby", "express", "@nestjs/core", "koa", "fastify"])
     deps.python.extend(["fastapi", "spring-boot-starter-web", "gin", "echo", "fiber", "rails", "sinatra", "laravel", "actix-web"])
     
     res = s.scan(tmp_path, deps=deps)
