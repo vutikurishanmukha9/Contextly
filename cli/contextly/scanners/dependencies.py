@@ -7,9 +7,12 @@ from ..utils.ignore import IgnoreEngine
 from ..utils.console import console
 
 try:
-    import tomli
+    import tomllib
 except ImportError:
-    tomli = None
+    try:
+        import tomli as tomllib
+    except ImportError:
+        tomllib = None
 
 class DependencyScanner(BaseScanner):
     @property
@@ -26,10 +29,11 @@ class DependencyScanner(BaseScanner):
                 try:
                     with open(filepath, 'r', encoding="utf-8") as f:
                         data = json.load(f)
-                        deps = list(data.get("dependencies", {}).keys()) + list(data.get("devDependencies", {}).keys())
-                        for d in deps:
-                            if d not in result.npm:
-                                result.npm.append(d)
+                        if isinstance(data, dict):
+                            deps = list(data.get("dependencies", {}).keys()) + list(data.get("devDependencies", {}).keys())
+                            for d in deps:
+                                if d not in result.npm:
+                                    result.npm.append(d)
                 except (FileNotFoundError, json.JSONDecodeError, PermissionError) as e:
                     console.print(f"[yellow]Warning:[/yellow] Could not parse {filepath.relative_to(root_dir)}: {str(e)}")
                 except Exception as e:
@@ -68,8 +72,8 @@ class DependencyScanner(BaseScanner):
             if pyproject.exists():
                 try:
                     with open(pyproject, 'rb') as f:
-                        if tomli is not None:
-                            data = tomli.load(f)
+                        if tomllib is not None:
+                            data = tomllib.load(f)
                             # Extract standard dependencies
                             deps = data.get("project", {}).get("dependencies", [])
                             # Strip out version constraints and add safely
@@ -78,7 +82,7 @@ class DependencyScanner(BaseScanner):
                                 if clean_dep not in result.python:
                                     result.python.append(clean_dep)
                         else:
-                            console.print("[yellow]Warning:[/yellow] `tomli` is not installed. Skipping pyproject.toml parsing.")
+                            console.print("[yellow]Warning:[/yellow] `tomllib` (or `tomli`) is not installed. Skipping pyproject.toml parsing.")
                 except (FileNotFoundError, PermissionError) as e:
                     console.print(f"[yellow]Warning:[/yellow] Could not access pyproject.toml: {str(e)}")
                 except Exception as e:

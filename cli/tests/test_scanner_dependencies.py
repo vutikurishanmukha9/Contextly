@@ -112,9 +112,9 @@ def test_dependency_scanner_exceptions(tmp_path, monkeypatch):
     s.scan(tmp_path)
     monkeypatch.undo()
     
-    # tomli is None
+    # tomllib is None
     import contextly.scanners.dependencies as dep_module
-    monkeypatch.setattr(dep_module, "tomli", None)
+    monkeypatch.setattr(dep_module, "tomllib", None)
     s.scan(tmp_path)
     monkeypatch.undo()
     

@@ -43,22 +43,23 @@ def test_language_scanner_exceptions(tmp_path, monkeypatch):
     """Covers language.py 24-25, 50-51."""
     s = LanguageScanner()
     
-    # 24-25 PermissionError on path.is_file
+    # 24-25 PermissionError inside loop
     import pathlib
-    original_is_file = pathlib.Path.is_file
-    def mock_is_file(self):
+    original_suffix = pathlib.Path.suffix
+    def mock_suffix(self):
         if self.name == "test.py":
             raise PermissionError("Denied")
-        return original_is_file(self)
-    monkeypatch.setattr(pathlib.Path, "is_file", mock_is_file)
+        return original_suffix.__get__(self)
+    monkeypatch.setattr(pathlib.Path, "suffix", property(mock_suffix))
     
     (tmp_path / "test.py").write_text("a")
     res = s.scan(tmp_path)
     
     # 50-51 global Exception
-    def mock_rglob(*args, **kwargs):
+    import os
+    def mock_walk(*args, **kwargs):
         raise Exception("Mock crash")
-    monkeypatch.setattr(pathlib.Path, "rglob", mock_rglob)
+    monkeypatch.setattr(os, "walk", mock_walk)
     
     with pytest.raises(ScannerError):
         s.scan(tmp_path)

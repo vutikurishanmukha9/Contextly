@@ -13,14 +13,15 @@ class InitEngine:
         Raises ContextlyError on IO errors.
         """
         target_dir = self.root_dir / ".contextly"
+        config_path = target_dir / "config.yaml"
         
-        if target_dir.exists():
+        if config_path.exists():
             return False
             
         try:
-            target_dir.mkdir(parents=True)
-            (target_dir / "memory").mkdir()
-            (target_dir / "packs").mkdir()
+            target_dir.mkdir(parents=True, exist_ok=True)
+            (target_dir / "memory").mkdir(exist_ok=True)
+            (target_dir / "packs").mkdir(exist_ok=True)
             
             config = {
                 "project": {

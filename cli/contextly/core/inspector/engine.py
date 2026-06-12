@@ -14,13 +14,20 @@ class InspectorEngine:
         Returns a list of (size_in_bytes, file_path) sorted by size descending.
         """
         file_sizes = []
-        for path in self.root_dir.rglob('*'):
-            if path.is_file():
-                if self.ignorer.is_ignored(path):
+        import os
+        for root, dirs, files in os.walk(self.root_dir):
+            root_path = Path(root)
+            
+            # Prune ignored directories in-place
+            dirs[:] = [d for d in dirs if not self.ignorer.is_ignored(root_path / d)]
+            
+            for f in files:
+                file_path = root_path / f
+                if self.ignorer.is_ignored(file_path):
                     continue
                 try:
-                    size = path.stat().st_size
-                    file_sizes.append((size, path))
+                    size = file_path.stat().st_size
+                    file_sizes.append((size, file_path))
                 except (FileNotFoundError, PermissionError, OSError):
                     pass
                     

@@ -118,7 +118,7 @@ class PackerEngine:
                     if not compressed_code.endswith('\n'):
                         out_f.write('\n')
                     out_f.write(f"```\n\n")
-                except (OSError, IOError):
+                except (OSError, IOError, UnicodeDecodeError):
                     out_f.write(f"> [!WARNING]\n> File became unreadable during packing.\n\n")
                 
             if excluded_files:
