@@ -1,9 +1,9 @@
 from pathlib import Path
 from rich.table import Table
 from ..utils.console import console
-from ..utils.ignore import IgnoreEngine
 from ..utils.exceptions import ValidationError
 from ..utils.validation import require_directory_exists
+from ..core.inspector.engine import InspectorEngine
 import typer
 
 def inspect_cmd():
@@ -14,23 +14,10 @@ def inspect_cmd():
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)
         
-    ignorer = IgnoreEngine(root_dir)
-    
-    file_sizes = []
+    engine = InspectorEngine(root_dir)
     
     with console.status("[bold blue]Inspecting repository file tree...", spinner="bouncingBar"):
-        for path in root_dir.rglob('*'):
-            if path.is_file():
-                if ignorer.is_ignored(path):
-                    continue
-                try:
-                    size = path.stat().st_size
-                    file_sizes.append((size, path))
-                except (FileNotFoundError, PermissionError, OSError):
-                    pass
-                    
-    # Sort by size descending
-    file_sizes.sort(key=lambda x: x[0], reverse=True)
+        file_sizes = engine.inspect()
     
     console.print("\n[bold green][OK][/bold green] Inspection complete!\n")
     
@@ -49,3 +36,4 @@ def inspect_cmd():
         
     console.print(table)
     console.print("\n[dim]Tip: Files over 50KB (yellow) or 100KB (red) consume massive LLM context windows. Keep them out of your Context Packs if possible.[/dim]\n")
+

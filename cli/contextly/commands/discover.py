@@ -1,11 +1,11 @@
 from pathlib import Path
+import typer
+
 from ..utils.console import console
-from ..scanners.dependencies import DependencyScanner
-from ..scanners.patterns import PatternScanner
+from ..core.discovery.engine import DiscoveryEngine
 from ..scanners.base import ScannerError
 from ..utils.exceptions import ValidationError, ContextlyError
 from ..utils.validation import require_contextly_initialized
-import typer
 
 def discover_cmd():
     """Statically analyze the repository to discover architectural patterns and conventions"""
@@ -17,14 +17,11 @@ def discover_cmd():
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)
         
+    engine = DiscoveryEngine(root_dir)
+        
     with console.status("[bold blue]Running Pattern Discovery Engine...", spinner="dots"):
         try:
-            dep_scanner = DependencyScanner()
-            pat_scanner = PatternScanner()
-            
-            # We need dependencies first to infer patterns
-            deps_result = dep_scanner.scan(root_dir)
-            patterns_result = pat_scanner.scan(root_dir, dependencies=deps_result)
+            patterns_result = engine.discover()
         except ScannerError as e:
             console.print(f"\n[bold red]Scanner Error:[/bold red] {e}")
             raise typer.Exit(code=1)

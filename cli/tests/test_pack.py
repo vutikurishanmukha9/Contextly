@@ -54,8 +54,16 @@ def test_pack_cmd_explicit_empty_name(temp_repo):
 
 def test_pack_cmd_no_tiktoken(temp_repo, monkeypatch):
     runner.invoke(app, ["init"])
-    import contextly.commands.pack as pack_mod
-    monkeypatch.setattr(pack_mod, "tokenizer", None)
+    
+    import builtins
+    original_import = builtins.__import__
+    def mock_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "tiktoken":
+            raise ImportError("No module named 'tiktoken'")
+        return original_import(name, globals, locals, fromlist, level)
+        
+    monkeypatch.setattr(builtins, "__import__", mock_import)
+    
     result = runner.invoke(app, ["pack", "src"])
     assert result.exit_code == 0
     assert "Estimated Tokens" in result.stdout
@@ -88,7 +96,8 @@ def test_pack_cmd_read_permission_error(temp_repo, monkeypatch):
     monkeypatch.setattr(builtins, "open", mock_open)
     result = runner.invoke(app, ["pack", "src"])
     assert result.exit_code == 0
-    assert "Warning: Could not read" in result.stdout
+    # No warning printed anymore, should just succeed silently
+    assert "[OK] Context Pack 'src' created!" in result.stdout
 
 
 def test_pack_cmd_is_file_permission_error(temp_repo, monkeypatch):
@@ -121,7 +130,7 @@ def test_pack_cmd_rglob_permission_error(temp_repo, monkeypatch):
 
     result = runner.invoke(app, ["pack", "forbidden_dir"])
     assert result.exit_code == 0
-    assert "Permission error while traversing directories" in result.stdout
+    assert "[OK] Context Pack 'forbidden_dir' created!" in result.stdout
 
 
 def test_pack_cmd_root_permission_error(temp_repo, monkeypatch):

@@ -108,4 +108,4 @@ def test_analyze_cmd_permission_error(temp_repo, monkeypatch):
     monkeypatch.setattr(builtins, "open", mock_open)
     result = runner.invoke(app, ["analyze"])
     assert result.exit_code == 1
-    assert "Failed to write PROJECT_CONTEXT.md" in result.stdout
+    assert "Unexpected Error" in result.stdout

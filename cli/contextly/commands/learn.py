@@ -2,9 +2,8 @@ import typer
 from pathlib import Path
 from rich.prompt import Confirm
 from ..utils.console import console
-from ..core.memory import MemoryEngine
-from ..scanners.dependencies import DependencyScanner
-from ..scanners.patterns import PatternScanner
+from ..core.memory.engine import MemoryEngine
+from ..core.discovery.engine import DiscoveryEngine
 from ..scanners.base import ScannerError
 from ..utils.exceptions import ValidationError, ContextlyError
 from ..utils.validation import require_contextly_initialized
@@ -21,6 +20,7 @@ def learn_cmd(
         raise typer.Exit(code=1)
         
     engine = MemoryEngine(root_dir)
+    discovery = DiscoveryEngine(root_dir)
     
     if not auto:
         console.print("[yellow]Manual learning is currently disabled in favor of automated discovery.[/yellow]")
@@ -29,11 +29,7 @@ def learn_cmd(
         
     with console.status("[bold blue]Running Pattern Discovery Engine...", spinner="dots"):
         try:
-            dep_scanner = DependencyScanner()
-            pat_scanner = PatternScanner()
-            
-            deps_result = dep_scanner.scan(root_dir)
-            patterns_result = pat_scanner.scan(root_dir, dependencies=deps_result)
+            patterns_result = discovery.discover()
         except ScannerError as e:
             console.print(f"\n[bold red]Scanner Error:[/bold red] {e}")
             raise typer.Exit(code=1)
@@ -53,7 +49,6 @@ def learn_cmd(
         key=lambda p: {"high": 0, "medium": 1, "low": 2}.get(p.confidence.lower(), 3)
     )
     for p in sorted_patterns:
-        # Prompt for each
         if Confirm.ask(f"Save convention: [cyan]{p.name}[/cyan] ({p.description})?"):
             added = engine.add_rule(
                 category=p.category,
@@ -74,3 +69,4 @@ def learn_cmd(
         console.print("Run [bold cyan]contextly memory[/bold cyan] to view them.")
     else:
         console.print("\n[dim]No new rules were saved.[/dim]")
+
