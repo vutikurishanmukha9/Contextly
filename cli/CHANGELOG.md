@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [1.0.3] - 2026-06-13
+
+#### Fixed
+- **Initialization Deadlock**: Resolved a paradoxical validation bug where running `contextly init` would prematurely abort if a partial/corrupted `.contextly` directory existed, while subsequent commands (`discover`, `learn`) would simultaneously fail due to the missing `config.yaml` file. 
+- **State Recovery**: The `InitEngine` now specifically targets the presence of the `config.yaml` file rather than just the parent directory. It gracefully recovers partial states, rebuilds missing core directories (`memory/`, `packs/`), and successfully generates the configuration file using `exist_ok=True`.
+
 ### [1.0.2] - 2026-06-12
 
 #### Fixed
