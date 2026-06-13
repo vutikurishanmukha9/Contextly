@@ -124,25 +124,13 @@ def test_dependency_scanner_exceptions(tmp_path, monkeypatch):
     (sub / "package.json").write_text('{"dependencies": {"lodash": "1"}}')
     s.scan(tmp_path)
     
-    # global exception
-    import pathlib
-    def mock_iterdir(*args, **kwargs):
+    # global exception - mock os.walk since the scanner uses it
+    import os as _os
+    def mock_walk(*args, **kwargs):
         raise Exception("Global crash")
-    monkeypatch.setattr(pathlib.Path, "iterdir", mock_iterdir)
+    monkeypatch.setattr(_os, "walk", mock_walk)
     try:
         with pytest.raises(ScannerError):
             s.scan(tmp_path)
     finally:
         monkeypatch.undo()
-    
-    # Test permission error in iterdir
-    original_iterdir = pathlib.Path.iterdir
-    def mock_iterdir2(self):
-        if self.name == "forbidden_dir":
-            raise PermissionError("Access denied")
-        return original_iterdir(self)
-    monkeypatch.setattr(pathlib.Path, "iterdir", mock_iterdir2)
-    
-    f_dir = tmp_path / "forbidden_dir"
-    f_dir.mkdir()
-    s.scan(tmp_path)

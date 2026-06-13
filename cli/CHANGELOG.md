@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [1.0.4] - 2026-06-13
+
+#### Fixed
+- **Discovery Engine Blindspot**: The `DependencyScanner` and `PatternScanner` were using `.gitignore` rules during discovery, causing them to skip subdirectories like `frontend/` or `cli/` that users legitimately gitignore but still want Context-Ly to understand. Both scanners now use a lightweight, hardcoded skip-list (only truly toxic directories like `node_modules`, `.venv`, `.git`) decoupled from `.gitignore`.
+- **Recursive Manifest Search**: The `DependencyScanner` previously only checked for `pyproject.toml` and `requirements.txt` at the project root. It now uses `os.walk` with depth-limited traversal (up to 3 levels) to find manifest files in subdirectories like `cli/pyproject.toml` or `frontend/package.json`.
+
+#### Added
+- **Expanded Pattern Recognition**: The `PatternScanner` now detects additional dependency-based patterns (`Typer`, `Rich`, `React`, `Vite`, `TypeScript`) and directory-based architectural hints (`scanners/`, `commands/`, `core/`, `utils/`, `tests/`, `routes/`, `generators/`).
+
 ### [1.0.3] - 2026-06-13
 
 #### Fixed

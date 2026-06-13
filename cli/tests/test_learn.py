@@ -24,7 +24,14 @@ def test_learn_cmd_auto_confirm_all(temp_repo):
     """Tests learn --auto with interactive confirmation to save conventions."""
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["learn", "--auto"], input="y\n")
+    # Seed the temp repo with a manifest so the discovery engine finds patterns
+    import json
+    (temp_repo / "package.json").write_text(json.dumps({
+        "dependencies": {"react": "18.0.0"},
+        "devDependencies": {"tailwindcss": "3.0.0"}
+    }))
+
+    result = runner.invoke(app, ["learn", "--auto"], input="y\ny\ny\ny\ny\ny\n")
     assert result.exit_code == 0
     assert "Discovered Conventions:" in result.stdout
     assert "Saved to memory." in result.stdout
@@ -42,7 +49,12 @@ def test_learn_cmd_auto_skip(temp_repo):
     """Tests learn --auto when user chooses to skip conventions."""
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["learn", "--auto"], input="n\n")
+    import json
+    (temp_repo / "package.json").write_text(json.dumps({
+        "dependencies": {"react": "18.0.0"}
+    }))
+
+    result = runner.invoke(app, ["learn", "--auto"], input="n\nn\n")
     assert result.exit_code == 0
     assert "Skipped." in result.stdout
     assert "No new rules were saved" in result.stdout
@@ -52,9 +64,14 @@ def test_learn_cmd_auto_duplicate(temp_repo):
     """Tests that duplicate conventions are skipped and not saved repeatedly."""
     runner.invoke(app, ["init"])
 
-    runner.invoke(app, ["learn", "--auto"], input="y\n")
+    import json
+    (temp_repo / "package.json").write_text(json.dumps({
+        "dependencies": {"react": "18.0.0"}
+    }))
 
-    result = runner.invoke(app, ["learn", "--auto"], input="y\n")
+    runner.invoke(app, ["learn", "--auto"], input="y\ny\n")
+
+    result = runner.invoke(app, ["learn", "--auto"], input="y\ny\n")
     assert result.exit_code == 0
     assert "Already in memory" in result.stdout
 
