@@ -55,44 +55,70 @@ class ImportGraphBuilder:
             "py", "ts", "tsx", "js", "jsx"
         }
 
-    def build(self) -> KnowledgeGraph:
+    def build(self, file_paths: Optional[List[str]] = None) -> KnowledgeGraph:
         """
         Builds the entire repository AST graph concurrently.
         """
-        def skip_predicate(path: Path) -> bool:
-            name = path.name.lower()
-            return name in self._ALWAYS_SKIP or name.endswith(".egg-info")
-
-        walker = RepoWalker(self.root_dir, max_depth=6, skip_predicate=skip_predicate)
         target_files = []
 
-        # 1. Discover all parseable files
-        for dirpath, _, filenames in walker.walk():
-            rel_path = str(Path(dirpath).relative_to(self.root_dir))
-            for filename in filenames:
-                ext = filename.lower().split('.')[-1]
+        if file_paths is not None:
+            for p in file_paths:
+                ext = p.lower().split('.')[-1]
                 if ext in self._SUPPORTED_EXTENSIONS:
-                    full_rel = os.path.join(rel_path, filename).replace("\\", "/")
-                    if full_rel.startswith("./"):
-                        full_rel = full_rel[2:]
-                    target_files.append(full_rel)
+                    target_files.append(p)
+        else:
+            def skip_predicate(path: Path) -> bool:
+                name = path.name.lower()
+                return name in self._ALWAYS_SKIP or name.endswith(".egg-info")
+
+            walker = RepoWalker(self.root_dir, max_depth=6, skip_predicate=skip_predicate)
+
+            # 1. Discover all parseable files
+            for dirpath, _, filenames in walker.walk():
+                rel_path = str(Path(dirpath).relative_to(self.root_dir))
+                for filename in filenames:
+                    ext = filename.lower().split('.')[-1]
+                    if ext in self._SUPPORTED_EXTENSIONS:
+                        full_rel = os.path.join(rel_path, filename).replace("\\", "/")
+                        if full_rel.startswith("./"):
+                            full_rel = full_rel[2:]
+                        target_files.append(full_rel)
 
         # 2. Concurrently parse files into DTOs
         # Using ProcessPoolExecutor to bypass GIL for CPU-bound AST parsing
         # Limit to 4 workers to prevent starving user systems
         dtos: List[ParsedFileDTO] = []
-        ctx = multiprocessing.get_context("spawn")
-        with concurrent.futures.ProcessPoolExecutor(max_workers=4, mp_context=ctx) as executor:
-            # Pass root_dir as string to bypass path pickling issues on some systems
-            root_str = str(self.root_dir)
-            futures = [
-                executor.submit(_parse_file, file_path, root_str) 
-                for file_path in target_files
-            ]
-            
-            for future in concurrent.futures.as_completed(futures):
+        
+        # Heuristic: For small repositories, sequential is faster. 
+        # Also provides fallback if multiprocessing fails.
+        use_pool = len(target_files) > 20
+        root_str = str(self.root_dir)
+        
+        if use_pool:
+            try:
+                ctx = multiprocessing.get_context("spawn")
+                with concurrent.futures.ProcessPoolExecutor(max_workers=4, mp_context=ctx) as executor:
+                    futures = [
+                        executor.submit(_parse_file, file_path, root_str) 
+                        for file_path in target_files
+                    ]
+                    
+                    for future in concurrent.futures.as_completed(futures):
+                        try:
+                            dto = future.result(timeout=10) # 10s per file max
+                            if dto and not dto.error:
+                                dtos.append(dto)
+                        except Exception:
+                            continue
+            except Exception:
+                # If pool creation fails (e.g. strict sandboxing, no /dev/shm, etc.), fallback to sequential
+                use_pool = False
+                dtos.clear()
+                
+        if not use_pool:
+            for file_path in target_files:
                 try:
-                    dto = future.result(timeout=10) # 10s per file max
+                    dto = _parse_file(file_path, root_str)
                     if dto and not dto.error:
                         dtos.append(dto)
                 except Exception:

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from .base import BaseScanner, ScannerError
 from ..types.models import ArchitectureKnowledge, Discovery
@@ -16,7 +16,7 @@ class ArchitectureScanner(BaseScanner):
     def name(self) -> str:
         return "Architecture Scanner"
 
-    def scan(self, root_dir: Path, **kwargs) -> ArchitectureKnowledge:
+    def scan(self, root_dir: Path, file_paths: Optional[List[str]] = None, **kwargs) -> ArchitectureKnowledge:
         try:
             engine = DiscoveryEngine(root_dir)
             
@@ -24,14 +24,16 @@ class ArchitectureScanner(BaseScanner):
             candidates = engine.evaluate_registry(
                 registry=Registry.ARCHITECTURE_PATTERNS,
                 discovery_class=Discovery,
-                source_name="ArchitectureScanner"
+                source_name="ArchitectureScanner",
+                file_paths=file_paths
             )
             
             # Evaluate Architecture Layers
             layers = engine.evaluate_registry(
                 registry=Registry.ARCHITECTURE_LAYERS,
                 discovery_class=Discovery,
-                source_name="ArchitectureScanner"
+                source_name="ArchitectureScanner",
+                file_paths=file_paths
             )
 
             # Fallback handling

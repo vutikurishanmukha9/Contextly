@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Clipboard-First Workflow**: All context generation commands now default to pushing outputs directly to the clipboard via `pyperclip`.
 - **Streamlined Outputs**: Console output has been refined for improved clarity and readability.
 - **Zero Token Waste**: Removed the internal `AIClient` and external API dependencies entirely.
+- **Analyzer Engine Optimization**: Introduced a unified `RepoWalker` in the `AnalyzerEngine` to share a single filesystem traversal across all scanners, drastically reducing I/O and CPU overhead on large repositories.
+- **Memory Deduplication**: Updated `MemoryRule` to utilize a deterministic `name` field for precise rule deduplication in `contextly learn`, preventing repetitive entries in generated context files.
+
+#### Fixed
+- **Packer Engine Slicing**: Fixed an index mapping bug in the `PackerEngine` file slicing logic when truncating the selection based on token limit overflow, ensuring files are excluded robustly.
+- **Domain Clusterer Edge-cases**: Addressed directory collision bugs when boundary markers are identically named to domains.
+- **Import Graph Deadlocks**: Added sequential fallback to `ImportGraphBuilder` when multiprocessing pool execution encounters platform-specific instantiation failures.
+- **Dependency Parsing**: Resolved a regex parsing issue inside `_parse_pyproject_toml` ensuring `!=` constraint negations are properly normalized.
 
 ### [1.0.4] - 2026-06-13
 

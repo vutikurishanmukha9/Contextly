@@ -32,7 +32,12 @@ class DomainClusterer:
             
             for i, part in enumerate(parts):
                 if part.lower() in BOUNDARY_MARKERS and i + 1 < len(parts):
-                    domain_name = parts[i + 1].lower()
+                    if i + 1 == len(parts) - 1:
+                        # The next part is the file itself (e.g. services/stripe.ts)
+                        # Fallback to the marker name itself as the domain
+                        domain_name = part.lower()
+                    else:
+                        domain_name = parts[i + 1].lower()
                     node_to_domain[node.id] = domain_name
                     domain_types[domain_name] = DomainType.DOMAIN
                     assigned = True

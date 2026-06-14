@@ -117,13 +117,19 @@ def test_pack_cmd_is_file_permission_error(temp_repo, monkeypatch):
     assert result.exit_code == 0
 
 
-def test_pack_cmd_rglob_permission_error(temp_repo, monkeypatch):
-    """Covers pack.py line 80: except PermissionError on directory traversal."""
+def test_pack_cmd_walk_permission_error(temp_repo, monkeypatch):
+    """Covers pack.py line 61: except PermissionError on directory traversal."""
     runner.invoke(app, ["init"])
 
-    def mock_rglob(self, pattern):
-        raise PermissionError("Access denied")
-    monkeypatch.setattr(pathlib.Path, "rglob", mock_rglob)
+    import os
+    original_walk = os.walk
+    
+    def mock_walk(top, *args, **kwargs):
+        if "forbidden_dir" in str(top):
+            raise PermissionError("Access denied")
+        return original_walk(top, *args, **kwargs)
+        
+    monkeypatch.setattr(os, "walk", mock_walk)
 
     forbidden = temp_repo / "forbidden_dir"
     forbidden.mkdir()

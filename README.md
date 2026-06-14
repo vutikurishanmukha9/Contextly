@@ -1,139 +1,305 @@
-# Context-Ly
+# Context-Ly CLI
 
-**Imagine trying to hire a new employee, but instead of giving them an employee handbook, a map of the office, and a list of company rules, you just dump 10,000 loose papers on their desk and say, "figure it out."** 
+**Context-Ly CLI** is an open-source Context Intelligence Engine designed to help developers generate high-quality, token-efficient context for Large Language Models (LLMs).
 
-That is how most people use AI today. They dump raw files into ChatGPT or Claude and hope for the best. The AI gets confused, makes mistakes, and wastes time.
+Rather than manually explaining your project to an AI assistant in every session, Context-Ly analyzes your repository, discovers conventions, learns team rules, and generates structured context files that help AI tools understand your codebase more effectively.
 
-**Context-Ly fixes this.** 
-
-Context-Ly is a tool that automatically reads your project, figures out your unwritten rules, maps out how everything is connected, and packages it perfectly for AI. When you use Context-Ly, the AI instantly understands your project exactly like a senior engineer would—saving you hours of typing, explaining, and correcting.
+The CLI acts as a persistent **Context Memory Layer** for your repository, enabling consistent AI interactions across development workflows.
 
 ---
 
-## Overview
+## Features
 
-Modern AI applications often suffer from "token waste" - providing either too little context (requiring repeated clarifications) or too much irrelevant context (diluting the model's focus). Context-Ly solves this by introducing a structured methodology for building context packs. 
+* Repository analysis and context generation
+* Automatic framework and dependency detection
+* Architecture visualization through project structure analysis
+* Team convention discovery and memory management
+* Persistent project-specific context storage
+* LLM-ready Context Pack generation
+* Repository complexity and token usage inspection
+* Context-as-Code workflow with version-controlled project memory
 
-The application sits between the user's raw thoughts and the AI model, enforcing best practices in prompt engineering through an intuitive interface and a real-time heuristic scoring engine.
+---
 
-## Core Features
+## Installation
 
-### 1. Context Builder
-The Context Builder allows users to break down their prompts into distinct, manageable blocks:
-- **Goal**: The primary objective or task (What does success look like?).
-- **Background**: Necessary prerequisite information for the model.
-- **Constraints**: Strict boundaries, desired tone, and format restrictions.
-- **Examples**: Few-shot examples, gold standards, or anti-examples to guide the model.
-- **Files**: Supporting reference materials such as code snippets or documentation.
-
-### 2. Real-Time Context Scoring
-Every context pack is graded algorithmically before it touches an LLM. The scoring engine evaluates the context across four axes:
-- **Relevance**: Analyzes the word overlap ratio between the Goal block and all supporting blocks to ensure every token serves the primary objective.
-- **Completeness**: Verifies the presence of necessary structural components (e.g., heavily penalizing the absence of a defined Goal or Constraints).
-- **Redundancy**: Utilizes Jaccard similarity to detect and penalize repetitive information across different blocks.
-- **Clarity**: Evaluates sentence complexity (penalizing average sentence lengths over 25 words) and detects the excessive use of ambiguous pronouns ("it", "that", "those").
-
-### 3. Prompt Generator
-The generator compiles the active context blocks into a clean, markdown-structured system prompt. It clearly separates the permanent system context (Audience, Tech Stack, Output Style) from the temporary task context, ensuring the output is perfectly formatted for direct integration into tools like ChatGPT, Claude, or API requests.
-
-## Technical Architecture
-
-The application is designed with strict separation of concerns, ensuring that the core business logic remains framework-agnostic. 
-
-- **Frontend Framework**: React with TanStack Start
-- **Styling**: Tailwind CSS and Radix UI (Shadcn components)
-- **State Management**: Zustand with `localStorage` persistence module
-- **Core Engine**: Pure TypeScript logic (`scoring.ts` and `prompt-generator.ts`) completely decoupled from the DOM and React ecosystem, ensuring straightforward migration to alternative interfaces (such as a CLI) in the future.
-
-## Local Development
-
-The web application resides entirely within the `frontend` directory.
-
-### Prerequisites
-- Node.js (v20 or higher recommended)
-- npm
-
-### Installation
-
-1. Clone the repository and navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install the project dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open your browser and navigate to the provided local address (typically `http://localhost:5173`).
-
-## Project Structure
-
-```text
-frontend/
-├── src/
-│   ├── components/      # Reusable UI components (AppShell, Canvas, Optimizer)
-│   ├── lib/
-│   │   ├── prompt-generator.ts  # Logic for formatting the final markdown prompt
-│   │   ├── scoring.ts           # Heuristic mathematical scoring engine
-│   │   └── store.ts             # Zustand state management and persistence
-│   └── routes/          # TanStack Start routing layer
-```
-
-## Context-Ly CLI: The Intelligence Layer
-
-The true value of Context-Ly lies in its command-line interface, which transforms the tool from a simple prompt formatter into a persistent **Context Memory Layer** for your entire repository.
-
-The CLI acts as a static analysis tool that discovers team conventions, evaluates repository complexity, and generates highly-optimized, token-efficient system prompts (`PROJECT_CONTEXT.md`) tailored to your exact stack.
-
-### Setup
-
-To begin using the CLI, activate the Python virtual environment located in the `cli` directory:
+Install Context-Ly directly from PyPI:
 
 ```bash
-cd cli
-.\venv\Scripts\activate
+pip install contextly
 ```
 
-### Commands
+Verify the installation:
 
-#### 1. `contextly init`
-Initializes Context-as-Code in the current directory. It creates a `.contextly` configuration folder and sets up your environment.
+```bash
+contextly --help
+```
 
-#### 2. `contextly analyze`
-The ultimate context generator. This command automatically:
-- Reads your `README.md`.
-- Scans your entire project tree to build an ASCII architecture map.
-- Inspects your dependencies to determine your language and framework (e.g. TypeScript, React).
-- Pulls in both manually saved rules and statically inferred conventions.
-- Merges everything into a massive, LLM-ready system prompt named `PROJECT_CONTEXT.md`.
+---
 
-#### 3. `contextly discover`
-Runs the Pattern Discovery Engine. It statically analyzes the codebase using dependency heuristics and file-tree structures to figure out your team's unwritten conventions (e.g. "Uses Zustand", "Uses TailwindCSS", "Service Layer Hint").
+## Prerequisites
 
-#### 4. `contextly learn --auto`
-The interactive gatekeeper to the True Memory Engine. It triggers the Discovery Engine and interactively asks if you want to save the discovered conventions:
+* Python 3.9 or later
+* A local Git repository or project directory to analyze
+
+No external services or API keys are required for the core functionality.
+
+---
+
+## Quick Start
+
+Initialize Context-Ly in your project:
+
+```bash
+contextly init
+```
+
+Analyze your repository and generate a complete project context:
+
+```bash
+contextly analyze
+```
+
+This command automatically:
+
+* Reads your README documentation
+* Scans the project structure
+* Detects frameworks and dependencies
+* Discovers conventions and stored memory
+* Generates a comprehensive `PROJECT_CONTEXT.md`
+
+The generated file can be used directly with AI coding assistants and LLMs.
+
+---
+
+## Commands
+
+### `contextly init`
+
+Initialize Context-Ly in the current project.
+
+```bash
+contextly init
+```
+
+Creates:
+
+```text
+.contextly/
+├── config.yaml
+├── memory/
+└── packs/
+```
+
+---
+
+### `contextly analyze`
+
+Generate a complete repository context file.
+
+```bash
+contextly analyze
+```
+
+This command:
+
+* Reads project documentation
+* Analyzes repository structure
+* Detects frameworks and technologies
+* Loads stored team conventions
+* Generates `PROJECT_CONTEXT.md`
+
+Output:
+
+```text
+PROJECT_CONTEXT.md
+```
+
+---
+
+### `contextly discover`
+
+Run the Pattern Discovery Engine.
+
+```bash
+contextly discover
+```
+
+Discovers repository conventions such as:
+
+* TailwindCSS usage
+* Zustand state management
+* React Query patterns
+* Service-layer architecture hints
+* Framework-specific conventions
+
+The command provides insight into patterns already present within the codebase.
+
+---
+
+### `contextly learn --auto`
+
+Convert discovered conventions into permanent project memory.
+
+```bash
+contextly learn --auto
+```
+
+Example:
+
 ```text
 Save convention: TailwindCSS (Uses TailwindCSS for styling.)? [y/N]
 ```
-Confirmed conventions are saved permanently to `.contextly/memory/rules.yaml`.
 
-#### 5. `contextly memory`
-Trust requires visibility. Use this command to inspect all rules and conventions that have been permanently saved to the project's memory.
+Approved conventions are stored in:
 
-#### 6. `contextly pack <dir>`
-Bundles a specific directory (e.g., `src/components`) into an LLM-ready Context Pack. It reads all files, counts their tokens, and bundles them into `.contextly/packs/` so you can effortlessly copy-paste large portions of your codebase into an LLM without clutter.
+```text
+.contextly/memory/rules.yaml
+```
 
-#### 7. `contextly inspect`
-Performs a deep-dive analysis on your repository complexity, warning you about excessively large files that will act as "Token Hogs" and consume too much context window.
+This creates a persistent memory layer that can be committed to source control and shared across teams.
 
-#### 8. `contextly export <pack_name>`
-Fuses your memory rules and the specified context pack into a single, comprehensive Context Payload. The output is instantly copied to your clipboard, ready to be pasted directly into an LLM.
+---
 
-#### 9. `contextly explain <domain>`
-Extracts a highly-optimized structural context payload for a specific domain (e.g., 'core', 'shared', 'auth') based on the AST Knowledge Graph. It copies a JSON payload to your clipboard, allowing the LLM to understand the architecture without wasting tokens scanning raw files.
+### `contextly memory`
+
+Inspect all stored project memory and conventions.
+
+```bash
+contextly memory
+```
+
+Displays all saved rules, conventions, and architectural preferences currently remembered by Context-Ly.
+
+---
+
+### `contextly pack <directory>`
+
+Generate an LLM-ready Context Pack from a specific directory.
+
+```bash
+contextly pack src/components
+```
+
+The command:
+
+* Reads all files in the target directory
+* Calculates token usage
+* Bundles the content into a reusable Context Pack
+
+Output location:
+
+```text
+.contextly/packs/
+```
+
+Useful for sharing focused portions of a large codebase with an LLM.
+
+---
+
+### `contextly inspect`
+
+Analyze repository complexity and token consumption.
+
+```bash
+contextly inspect
+```
+
+Provides visibility into:
+
+* Large files
+* Potential token-heavy directories
+* Context window bottlenecks
+* Repository complexity hotspots
+
+This helps identify areas that may negatively impact AI context quality.
+
+---
+
+### `contextly export <pack_name>`
+
+Fuses your memory rules and the specified context pack into a single, comprehensive Context Payload.
+
+```bash
+contextly export cli
+```
+
+The output is instantly copied to your clipboard, ready to be pasted directly into an LLM.
+
+---
+
+### `contextly explain <domain>`
+
+Extracts a highly-optimized structural context payload for a specific domain based on the AST Knowledge Graph.
+
+```bash
+contextly explain core
+```
+
+It copies a JSON payload to your clipboard, allowing the LLM to understand the architecture without wasting tokens scanning raw files.
+
+---
+
+### Understanding Context-Ly Ignore Philosophies
+
+Context-Ly utilizes two distinct "ignore" policies depending on the operation:
+
+1. **Packing & Inspection (`contextly pack`, `contextly inspect`)**: These commands **respect** your `.gitignore` and `.contextlyignore` files. This ensures that generated packs and token counts omit irrelevant files (like `node_modules`, compiled binaries, etc.), producing concise, token-efficient context for the LLM.
+2. **Discovery & Intelligence (`contextly discover`, `contextly learn`)**: The Pattern Discovery Engine **ignores** your `.gitignore`. It uses a minimal, hardcoded skip-list (only completely toxic directories like `.git` or `.venv`). This allows Context-Ly to correctly discover architectural patterns and package dependencies in valid directories (like a `frontend/` folder) that you might have legitimately added to `.gitignore` to keep your root repository clean.
+
+---
+
+## Example Workflow
+
+```bash
+contextly init
+
+contextly discover
+
+contextly learn --auto
+
+contextly analyze
+```
+
+Result:
+
+```text
+.contextly/
+PROJECT_CONTEXT.md
+```
+
+Your repository now has a persistent memory layer and an AI-ready context file generated from both repository analysis and learned team conventions.
+
+---
+
+## Why Context-Ly?
+
+Modern AI coding tools are powerful, but they often lack project-specific context.
+
+Context-Ly bridges that gap by transforming repository knowledge, team conventions, and architectural patterns into structured context that can be consistently shared with LLMs.
+
+The goal is simple:
+
+**Build context once. Use it everywhere.**
+
+---
+
+## Changelog
+
+For all release notes and version history, please see the [CHANGELOG.md](https://github.com/vutikurishanmukha9/Contextly/blob/main/cli/CHANGELOG.md).
+
+---
+
+## Contributing
+
+Contributions, issues, and feature requests are welcome.
+
+If you discover a bug, have an idea for improving repository intelligence, or want to contribute new scanners and analysis capabilities, please open an issue or submit a pull request.
+
+---
+
+## License
+
+This project is open source and distributed under the terms of its license.
+
+See the LICENSE file for details.

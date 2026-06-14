@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Optional
 
 from .rules.base import BaseRule
 from ...types.models import Discovery, RepositoryCapability, PatternScanResult
@@ -38,11 +38,30 @@ class DiscoveryEngine:
         
         return patterns_result
 
-    def _load_paths(self):
+    def _load_paths(self, file_paths: Optional[List[str]] = None):
         """
         Walks the repository once and caches relative paths in memory for O(1) rule evaluation.
+        Can optionally accept a pre-computed list of files to avoid hitting the disk.
         """
         if self._is_loaded:
+            return
+
+        if file_paths is not None:
+            # We want unique paths
+            seen = set()
+            for rel_path in file_paths:
+                full_rel = rel_path
+                if full_rel not in seen:
+                    self._paths_cache.append(full_rel)
+                    seen.add(full_rel)
+                
+                parts = Path(full_rel).parts
+                for i in range(len(parts)):
+                    partial = "/".join(parts[:i+1])
+                    if partial not in seen:
+                        self._paths_cache.append(partial)
+                        seen.add(partial)
+            self._is_loaded = True
             return
 
         def skip_predicate(path: Path) -> bool:
@@ -74,7 +93,8 @@ class DiscoveryEngine:
         self, 
         registry: Dict[str, List[BaseRule]], 
         discovery_class: type = Discovery,
-        source_name: str = "DiscoveryEngine"
+        source_name: str = "DiscoveryEngine",
+        file_paths: Optional[List[str]] = None
     ) -> List[any]:
         """
         Evaluates a dictionary mapping names to rulesets.
@@ -83,11 +103,12 @@ class DiscoveryEngine:
             registry: Dict of "Target Name" -> [Rules]
             discovery_class: Pydantic model to construct (Discovery or RepositoryCapability)
             source_name: Tag for provenance auditing
+            file_paths: Optional list of file paths to restrict evaluation
             
         Returns:
             List of constructed discovery_class instances.
         """
-        self._load_paths()
+        self._load_paths(file_paths)
         results = []
 
         for target_name, rules in registry.items():

@@ -26,6 +26,7 @@ class PatternScanResult(BaseModel):
 
 class MemoryRule(BaseModel):
     id: str
+    name: str | None = None
     category: str
     rule: str
     confidence: str

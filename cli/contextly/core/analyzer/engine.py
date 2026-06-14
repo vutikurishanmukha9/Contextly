@@ -23,28 +23,52 @@ class AnalyzerEngine:
         Orchestrates all scanners and generates PROJECT_CONTEXT.md.
         Returns the generated RepositoryIntelligence object.
         """
+        from ...utils.walker import RepoWalker
+        import os
+        
+        # 1. Single unified walk of the repository to discover all valid files
+        # We use a depth of 6 and the standard exclusion list for maximum coverage
+        ALWAYS_SKIP = {
+            ".git", "node_modules", "venv", ".venv", "__pycache__",
+            ".contextly", "dist", "build", ".next", ".tox", ".eggs"
+        }
+        
+        def skip_predicate(path: Path) -> bool:
+            name = path.name.lower()
+            return name in ALWAYS_SKIP or name.endswith(".egg-info")
+
+        walker = RepoWalker(self.root_dir, max_depth=6, skip_predicate=skip_predicate)
+        all_files: list[str] = []
+        
+        for dirpath, _, filenames in walker.walk():
+            rel_path = str(Path(dirpath).relative_to(self.root_dir))
+            for filename in filenames:
+                full_rel = os.path.join(rel_path, filename).replace("\\", "/")
+                if full_rel.startswith("./"):
+                    full_rel = full_rel[2:]
+                all_files.append(full_rel)
         lang_scanner = LanguageScanner()
         dep_scanner = DependencyScanner()
         fw_scanner = FrameworkScanner()
         pat_scanner = PatternScanner()
         
-        lang_data = lang_scanner.scan(self.root_dir)
-        dep_data = dep_scanner.scan(self.root_dir)
-        fw_data = fw_scanner.scan(self.root_dir, deps=dep_data)
-        pat_data = pat_scanner.scan(self.root_dir, dependencies=dep_data)
+        lang_data = lang_scanner.scan(self.root_dir, file_paths=all_files)
+        dep_data = dep_scanner.scan(self.root_dir, file_paths=all_files)
+        fw_data = fw_scanner.scan(self.root_dir, deps=dep_data, file_paths=all_files)
+        pat_data = pat_scanner.scan(self.root_dir, dependencies=dep_data, file_paths=all_files)
         
         arch_scanner = ArchitectureScanner()
         cap_scanner = CapabilityDetector()
         
-        arch_data = arch_scanner.scan(self.root_dir)
-        cap_data = cap_scanner.scan(self.root_dir)
+        arch_data = arch_scanner.scan(self.root_dir, file_paths=all_files)
+        cap_data = cap_scanner.scan(self.root_dir, file_paths=all_files)
         
         memory_engine = MemoryEngine(self.root_dir)
         memory_data = memory_engine.load_memory()
         
         # Build the AST graph
         graph_builder = ImportGraphBuilder(self.root_dir)
-        ast_graph = graph_builder.build()
+        ast_graph = graph_builder.build(file_paths=all_files)
         
         # Cluster the graph into Domains
         from contextly.core.graph.cluster import DomainClusterer

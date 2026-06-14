@@ -2,6 +2,7 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import Optional, List
 from .base import BaseScanner, ScannerError
 from ..types.models import DependencyScanResult
 from ..utils.console import console
@@ -20,33 +21,48 @@ class DependencyScanner(BaseScanner):
     def name(self) -> str:
         return "Dependency Scanner"
 
-    def scan(self, root_dir: Path, **kwargs) -> DependencyScanResult:
+    def scan(self, root_dir: Path, file_paths: Optional[List[str]] = None, **kwargs) -> DependencyScanResult:
         try:
             result = DependencyScanResult()
 
-            _ALWAYS_SKIP = {
-                ".git", "node_modules", "venv", ".venv", "__pycache__",
-                ".contextly", "dist", "build", ".next", ".tox", ".eggs",
-                ".mypy_cache", ".pytest_cache", "htmlcov", "egg-info",
-            }
-            
-            def skip_predicate(path: Path) -> bool:
-                name = path.name.lower()
-                return name in _ALWAYS_SKIP or name.endswith(".egg-info")
+            if file_paths is not None:
+                for rel in file_paths:
+                    filename = Path(rel).name
+                    if filename == "package.json":
+                        self._parse_package_json(root_dir / rel, root_dir, result)
+                    elif filename == "requirements.txt":
+                        self._parse_requirements_txt(root_dir / rel, root_dir, result)
+                    elif filename == "Pipfile":
+                        self._parse_pipfile(root_dir / rel, root_dir, result)
+                    elif filename == "pyproject.toml":
+                        self._parse_pyproject_toml(root_dir / rel, root_dir, result)
+            else:
+                _ALWAYS_SKIP = {
+                    ".git", "node_modules", "venv", ".venv", "__pycache__",
+                    ".contextly", "dist", "build", ".next", ".tox", ".eggs",
+                    ".mypy_cache", ".pytest_cache", "htmlcov", "egg-info",
+                }
+                
+                def skip_predicate(path: Path) -> bool:
+                    name = path.name.lower()
+                    return name in _ALWAYS_SKIP or name.endswith(".egg-info")
 
-            walker = RepoWalker(root_dir, max_depth=3, skip_predicate=skip_predicate)
+                walker = RepoWalker(root_dir, max_depth=3, skip_predicate=skip_predicate)
 
-            for dirpath, dirnames, filenames in walker.walk():
-                current = Path(dirpath)
+                for dirpath, dirnames, filenames in walker.walk():
+                    current = Path(dirpath)
 
-                if "package.json" in filenames:
-                    self._parse_package_json(current / "package.json", root_dir, result)
+                    if "package.json" in filenames:
+                        self._parse_package_json(current / "package.json", root_dir, result)
 
-                if "requirements.txt" in filenames:
-                    self._parse_requirements_txt(current / "requirements.txt", root_dir, result)
+                    if "requirements.txt" in filenames:
+                        self._parse_requirements_txt(current / "requirements.txt", root_dir, result)
 
-                if "pyproject.toml" in filenames:
-                    self._parse_pyproject_toml(current / "pyproject.toml", root_dir, result)
+                    if "Pipfile" in filenames:
+                        self._parse_pipfile(current / "Pipfile", root_dir, result)
+
+                    if "pyproject.toml" in filenames:
+                        self._parse_pyproject_toml(current / "pyproject.toml", root_dir, result)
 
             return result
 
@@ -104,14 +120,14 @@ class DependencyScanner(BaseScanner):
                     # Extract standard [project.dependencies]
                     deps = data.get("project", {}).get("dependencies", [])
                     for dep in deps:
-                        clean_dep = re.split(r'[=<>~]', dep)[0].strip()
+                        clean_dep = re.split(r'[=<>~!]', dep)[0].strip()
                         if clean_dep and clean_dep not in result.python:
                             result.python.append(clean_dep)
                     # Also extract [project.optional-dependencies]
                     opt_deps = data.get("project", {}).get("optional-dependencies", {})
                     for group_deps in opt_deps.values():
                         for dep in group_deps:
-                            clean_dep = re.split(r'[=<>~]', dep)[0].strip()
+                            clean_dep = re.split(r'[=<>~!]', dep)[0].strip()
                             if clean_dep and clean_dep not in result.python:
                                 result.python.append(clean_dep)
                 else:

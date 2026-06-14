@@ -28,8 +28,19 @@ class ClaudeGenerator(BaseGenerator):
                 conventions_xml += "</explicit_rules>\n"
                 
             if has_patterns:
-                saved_descriptions = {r.rule for r in self.intelligence.memory.rules}
-                filtered_patterns = [p for p in self.intelligence.patterns.patterns if p.description not in saved_descriptions]
+                # Deduplicate inferred conventions using exact (category, name) tuple if possible
+                saved_tuples = {(r.category, r.name) for r in self.intelligence.memory.rules if r.name}
+                # Fallback to rule text if name is absent in older rules
+                saved_descriptions = {r.rule for r in self.intelligence.memory.rules if not r.name}
+                
+                filtered_patterns = []
+                for p in self.intelligence.patterns.patterns:
+                    if (p.category, p.name) in saved_tuples:
+                        continue
+                    if p.description in saved_descriptions:
+                        continue
+                    filtered_patterns.append(p)
+                    
                 if filtered_patterns:
                     conventions_xml += "<inferred_conventions source=\"discovery\">\n"
                     for p in filtered_patterns:

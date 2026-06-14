@@ -44,25 +44,30 @@ class MemoryEngine:
             console.print(f"[yellow]Warning: Failed to load memory ({e}). Falling back to empty memory.[/yellow]")
             return ProjectMemory()
             
-    def add_rule(self, category: str, rule_text: str, confidence: str, source: str) -> bool:
+    def add_rule(self, category: str, rule_text: str, confidence: str, source: str, name: str | None = None) -> bool:
         """Adds a rule to memory, avoiding exact duplicates."""
         memory = self.load_memory()
         
         # Deduplication check
         for rule in memory.rules:
-            if rule.category == category and rule.rule == rule_text:
-                return False # Already exists
+            # If name is provided and matches, or fallback to exact description match
+            if rule.category == category:
+                if name and rule.name == name:
+                    return False
+                if not name and rule.rule == rule_text:
+                    return False
                 
         # Generate ID (unique hash snippet)
         rule_id = f"rule_{uuid.uuid4().hex[:8]}"
         
         new_rule = MemoryRule(
             id=rule_id,
+            name=name,
             category=category,
             rule=rule_text,
             confidence=confidence,
             source=source,
-            created_at=datetime.now().strftime("%Y-%m-%d")
+            created_at=datetime.utcnow().isoformat() + "Z"
         )
         
         memory.rules.append(new_rule)

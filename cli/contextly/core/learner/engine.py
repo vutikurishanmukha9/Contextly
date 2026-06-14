@@ -30,5 +30,6 @@ class LearnEngine:
             category=pattern.category,
             rule_text=pattern.description,
             confidence=pattern.confidence,
-            source=pattern.source
+            source=pattern.source,
+            name=pattern.name
         )

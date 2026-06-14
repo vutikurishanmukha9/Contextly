@@ -115,9 +115,9 @@ class PackerEngine:
                 
         # If we broke early from ranked_files, any remaining files must be marked excluded
         # This occurs if break was hit in the token measurement loop
-        remaining_files = ranked_files[ranked_files.index(excluded_files[-1]) + 1:] if excluded_files else []
-        for remaining in remaining_files:
-            excluded_files.append(remaining)
+        processed_count = len(selected_files) + len(skipped_files) + len(excluded_files)
+        if processed_count < len(ranked_files):
+            excluded_files.extend(ranked_files[processed_count:])
 
         # Phase 4: Write Output Streamingly
         with open(output_file, "w", encoding="utf-8") as out_f:
