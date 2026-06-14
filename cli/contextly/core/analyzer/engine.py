@@ -4,7 +4,10 @@ from ...scanners.dependencies import DependencyScanner
 from ...scanners.language import LanguageScanner
 from ...scanners.framework import FrameworkScanner
 from ...scanners.patterns import PatternScanner
-from ...types.models import RepositoryIntelligence
+from ...scanners.architecture import ArchitectureScanner
+from ...scanners.capabilities import CapabilityDetector
+from ...types.models import RepositoryIntelligence, RepositoryKnowledge, TechnologyKnowledge, KnowledgeGraph
+from datetime import datetime, timezone
 from ...core.memory.engine import MemoryEngine
 from ...generators.claude import ClaudeGenerator
 from ...generators.chatgpt import ChatGPTGenerator
@@ -29,6 +32,12 @@ class AnalyzerEngine:
         fw_data = fw_scanner.scan(self.root_dir, deps=dep_data)
         pat_data = pat_scanner.scan(self.root_dir, dependencies=dep_data)
         
+        arch_scanner = ArchitectureScanner()
+        cap_scanner = CapabilityDetector()
+        
+        arch_data = arch_scanner.scan(self.root_dir)
+        cap_data = cap_scanner.scan(self.root_dir)
+        
         memory_engine = MemoryEngine(self.root_dir)
         memory_data = memory_engine.load_memory()
         
@@ -39,6 +48,28 @@ class AnalyzerEngine:
             patterns=pat_data,
             memory=memory_data
         )
+        
+        repo_knowledge = RepositoryKnowledge(
+            repository_hash="pending", # To be implemented
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            contextly_version="0.1.0",
+            technologies=TechnologyKnowledge(
+                frameworks=fw_data.frontend + fw_data.backend,
+                languages=[lang_data.primary] + list(lang_data.breakdown.keys()),
+                libraries=dep_data.npm + dep_data.python
+            ),
+            architecture=arch_data,
+            capabilities=cap_data,
+            domains=[], # To be implemented in Graph Builder
+            graph=KnowledgeGraph()
+        )
+        
+        contextly_dir = self.root_dir / ".contextly"
+        if not contextly_dir.exists():
+            contextly_dir.mkdir(parents=True, exist_ok=True)
+            
+        with open(contextly_dir / "repository.json", "w", encoding="utf-8") as f:
+            f.write(repo_knowledge.model_dump_json(indent=2))
         
         if model.lower() == "claude":
             generator = ClaudeGenerator(self.root_dir, intelligence)
