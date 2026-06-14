@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 import concurrent.futures
+import multiprocessing
 
 from ...types.models import KnowledgeGraph
 from ...utils.walker import RepoWalker
@@ -80,7 +81,8 @@ class ImportGraphBuilder:
         # Using ProcessPoolExecutor to bypass GIL for CPU-bound AST parsing
         # Limit to 4 workers to prevent starving user systems
         dtos: List[ParsedFileDTO] = []
-        with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
+        ctx = multiprocessing.get_context("spawn")
+        with concurrent.futures.ProcessPoolExecutor(max_workers=4, mp_context=ctx) as executor:
             # Pass root_dir as string to bypass path pickling issues on some systems
             root_str = str(self.root_dir)
             futures = [

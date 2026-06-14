@@ -34,8 +34,8 @@ class PythonASTParser(BaseASTParser):
                         
                 # Extract From Imports (and resolve relative)
                 elif isinstance(node, ast.ImportFrom):
-                    module = node.module or ""
                     level = node.level
+                    base_module = node.module or ""
                     
                     if level > 0:
                         # Resolve relative import (. = level 1, .. = level 2)
@@ -43,20 +43,25 @@ class PythonASTParser(BaseASTParser):
                         for _ in range(level - 1):
                             current_path = current_path.parent
                             
-                        # Construct pseudo-absolute path
-                        if module:
-                            resolved = current_path / module.replace(".", "/")
+                        # If we have a base_module (e.g. from .utils import x)
+                        if base_module:
+                            resolved = current_path / base_module.replace(".", "/")
+                            try:
+                                rel_to_root = str(resolved.relative_to(root_dir)).replace("\\", "/")
+                                imports.append(rel_to_root)
+                            except ValueError:
+                                imports.append(base_module)
                         else:
-                            resolved = current_path
-                            
-                        try:
-                            rel_to_root = str(resolved.relative_to(root_dir)).replace("\\", "/")
-                            imports.append(rel_to_root)
-                        except ValueError:
-                            # Imported outside of root (rare, but possible)
-                            imports.append(module)
+                            # e.g. from . import utils
+                            for alias in node.names:
+                                resolved = current_path / alias.name
+                                try:
+                                    rel_to_root = str(resolved.relative_to(root_dir)).replace("\\", "/")
+                                    imports.append(rel_to_root)
+                                except ValueError:
+                                    imports.append(alias.name)
                     else:
-                        imports.append(module)
+                        imports.append(base_module)
 
             # Deduplicate
             return ParsedFileDTO(

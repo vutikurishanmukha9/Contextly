@@ -19,9 +19,9 @@ class TypeScriptASTParser(BaseASTParser):
         self.parser = None
         if HAS_TREE_SITTER:
             try:
-                # Use TSX language to handle both TS and TSX
-                self.language = get_language('tsx')
-                self.parser = get_parser('tsx')
+                # Use typescript language
+                self.language = get_language('typescript')
+                self.parser = get_parser('typescript')
             except Exception:
                 pass
 
