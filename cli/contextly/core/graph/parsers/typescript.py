@@ -1,4 +1,6 @@
 import os
+import json
+import re
 from typing import List
 from .base import BaseASTParser, ParsedFileDTO
 
@@ -17,6 +19,8 @@ class TypeScriptASTParser(BaseASTParser):
     
     def __init__(self):
         self.parser = None
+        self._tsconfig_paths = None
+        self._root_dir = None
         if HAS_TREE_SITTER:
             try:
                 # Use typescript language
@@ -25,11 +29,53 @@ class TypeScriptASTParser(BaseASTParser):
             except Exception:
                 pass
 
+    def _load_tsconfig(self, root_dir: str):
+        if self._tsconfig_paths is not None and self._root_dir == root_dir:
+            return
+            
+        self._root_dir = root_dir
+        self._tsconfig_paths = []
+        
+        # Scan for tsconfig.json files in root and immediate subdirs
+        try:
+            for root, dirs, files in os.walk(root_dir):
+                if "tsconfig.json" in files:
+                    try:
+                        with open(os.path.join(root, "tsconfig.json"), "r", encoding="utf-8") as f:
+                            content = f.read()
+                            # Strip comments
+                            content = re.sub(r'//.*?\n|/\*.*?\*/', '', content, flags=re.S)
+                            data = json.loads(content)
+                            paths = data.get("compilerOptions", {}).get("paths", {})
+                            
+                            for alias, targets in paths.items():
+                                if not targets: continue
+                                alias_prefix = alias.replace("*", "")
+                                target_prefix = targets[0].replace("*", "")
+                                
+                                rel_root = os.path.relpath(root, root_dir)
+                                if rel_root == ".":
+                                    rel_root = ""
+                                    
+                                target_full = os.path.normpath(os.path.join(rel_root, target_prefix)).replace("\\", "/")
+                                if target_full and not target_full.endswith("/"):
+                                    target_full += "/"
+                                    
+                                self._tsconfig_paths.append((alias_prefix, target_full))
+                    except Exception:
+                        pass
+                # Don't go deeper than 1 level
+                if root.count(os.sep) - root_dir.count(os.sep) >= 1:
+                    dirs.clear()
+        except Exception:
+            pass
+
     def parse(self, file_path: str, content: str, root_dir: str) -> ParsedFileDTO:
         if not HAS_TREE_SITTER or not self.parser:
             return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error="Tree-sitter not available")
             
         try:
+            self._load_tsconfig(root_dir)
             tree = self.parser.parse(bytes(content, "utf8"))
             
             exports: List[str] = []
@@ -87,5 +133,16 @@ class TypeScriptASTParser(BaseASTParser):
             except ValueError:
                 imports_list.append(module)
         else:
-            # Absolute alias (like src/foo) or node_module
-            imports_list.append(module)
+            # Check tsconfig aliases
+            resolved = False
+            if self._tsconfig_paths:
+                for alias_prefix, target_prefix in self._tsconfig_paths:
+                    if module.startswith(alias_prefix):
+                        aliased = module.replace(alias_prefix, target_prefix, 1)
+                        imports_list.append(aliased)
+                        resolved = True
+                        break
+            
+            if not resolved:
+                # Absolute alias (like src/foo) or node_module
+                imports_list.append(module)

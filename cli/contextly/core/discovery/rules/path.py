@@ -15,6 +15,12 @@ class PathRegexRule(BaseRule):
             weight: The confidence delta to apply if matches are found.
             limit: The maximum number of evidence strings to retain to prevent payload bloat.
         """
+        # Convert standard \b word boundaries to support snake_case and PascalCase
+        # \b(auth)\b fails on auth_service because _ is a word character.
+        if pattern.startswith(r'\b') and pattern.endswith(r'\b'):
+            inner = pattern[2:-2]
+            pattern = rf'(?<![a-zA-Z0-9]){inner}(?![a-zA-Z0-9])'
+            
         # Pre-compile for performance across large file trees
         self._regex = re.compile(pattern, re.IGNORECASE)
         self.weight = weight
