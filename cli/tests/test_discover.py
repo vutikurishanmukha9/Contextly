@@ -108,3 +108,69 @@ def test_discover_cmd_sorting(tmp_path, monkeypatch):
     med_styling_idx = result.stdout.index("MedStylingPattern")
     low_styling_idx = result.stdout.index("LowStylingPattern")
     assert high_styling_idx < med_styling_idx < low_styling_idx
+
+def test_path_regex_rule_word_boundaries():
+    from contextly.core.discovery.rules.path import PathRegexRule
+    
+    # Standard \b regex
+    rule = PathRegexRule(r'\b(auth|login)\b', 1.0)
+    
+    # Should match standard words
+    res1 = rule.evaluate(["src/auth/index.ts"])
+    assert res1.score_delta == 1.0
+    
+    # Should match snake_case
+    res2 = rule.evaluate(["src/services/auth_service.py"])
+    assert res2.score_delta == 1.0
+    
+    # Should match PascalCase
+    res3 = rule.evaluate(["src/controllers/LoginController.ts"])
+    assert res3.score_delta == 1.0
+    
+    # Should NOT match partial words
+    res4 = rule.evaluate(["src/author/bio.ts"])
+    assert res4.score_delta == 0.0
+
+def test_discovery_engine_full_coverage(tmp_path):
+    from contextly.core.discovery.engine import DiscoveryEngine
+    from contextly.core.discovery.rules.path import PathRegexRule
+    from contextly.types.models import RepositoryCapability, Discovery
+    
+    # Create some files and directories to be walked
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "main.py").write_text("print('hello')")
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "node_modules" / "ignore.js").write_text("console.log('ignore')")
+    (tmp_path / "test.egg-info").mkdir()
+    (tmp_path / "test.egg-info" / "PKG-INFO").write_text("info")
+    
+    engine = DiscoveryEngine(tmp_path)
+    
+    # Test _load_paths by triggering evaluate_registry
+    rule1 = PathRegexRule(r'main\.py', 1.0)
+    registry1 = {"PythonMain": [rule1]}
+    
+    res1 = engine.evaluate_registry(registry1, discovery_class=RepositoryCapability, source_name="Test")
+    assert len(res1) == 1
+    assert res1[0].capability == "PythonMain"
+    assert res1[0].confidence == 1.0
+    assert len(res1[0].evidence) == 1
+    
+    # Test discovery_class == Discovery
+    res2 = engine.evaluate_registry(registry1, discovery_class=Discovery, source_name="Test")
+    assert len(res2) == 1
+    assert res2[0].name == "PythonMain"
+    assert res2[0].generated_by == "Test"
+    
+    # Test top 5 evidence limit
+    engine2 = DiscoveryEngine(tmp_path)
+    (tmp_path / "utils").mkdir()
+    for i in range(10):
+        (tmp_path / "utils" / f"file{i}.py").write_text("pass")
+        
+    rule2 = PathRegexRule(r'file\d+\.py', 0.2)
+    res3 = engine2.evaluate_registry({"ManyFiles": [rule2]}, discovery_class=Discovery)
+    assert len(res3) == 1
+    assert res3[0].confidence == 0.2 # 0.2 * 1 rule = 0.2
+    assert len(res3[0].evidence) == 5 # Limited to 5
+

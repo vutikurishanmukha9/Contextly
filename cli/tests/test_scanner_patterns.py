@@ -51,3 +51,55 @@ def test_pattern_scanner_missing_branches(tmp_path):
     empty_dir.mkdir()
     res_empty = s.scan(empty_dir, dependencies=DependencyScanResult())
     assert len(res_empty.patterns) == 0
+
+def test_pattern_scanner_full_coverage(tmp_path):
+    s = PatternScanner()
+    deps = DependencyScanResult()
+    deps.npm.extend(["react", "vite", "typescript", "tailwindcss"])
+    deps.python.extend(["typer", "rich", "pytest"])
+    
+    # Use file_paths to hit lines 58-89
+    file_paths = [
+        "src/scanners/a.py",
+        "src/commands/b.py",
+        "src/core/c.py",
+        "src/utils/d.py",
+        "src/tests/e.py",
+        "src/routes/f.py",
+        "src/generators/g.py",
+        "src/usecases/h.py"
+    ]
+    
+    res = s.scan(tmp_path, dependencies=deps, file_paths=file_paths)
+    names = {p.name for p in res.patterns}
+    
+    assert "React" in names
+    assert "Vite" in names
+    assert "TypeScript" in names
+    assert "Typer" in names
+    assert "Rich" in names
+    
+    assert "Scanner/Plugin Architecture" in names
+    assert "Command Pattern" in names
+    assert "Core Module Architecture" in names
+    assert "Utility Module" in names
+    assert "Test Suite" in names
+    assert "Route-Based Architecture" in names
+    assert "Generator Pattern" in names
+    assert "Clean Architecture (Use Cases)" in names
+
+    # Also test the default walker for these remaining dirs
+    (tmp_path / "scanners").mkdir()
+    (tmp_path / "commands").mkdir()
+    (tmp_path / "core").mkdir()
+    (tmp_path / "utils").mkdir()
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "routes").mkdir()
+    (tmp_path / "generators").mkdir()
+    (tmp_path / "usecases").mkdir()
+    
+    res2 = s.scan(tmp_path, dependencies=None)
+    names2 = {p.name for p in res2.patterns}
+    assert "Scanner/Plugin Architecture" in names2
+    assert "Route-Based Architecture" in names2
+

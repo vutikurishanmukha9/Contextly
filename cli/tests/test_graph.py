@@ -166,3 +166,35 @@ def test_parse_file_module_function():
     # Test the standalone function used by ProcessPoolExecutor
     res = _parse_file("nonexistent.py", "/tmp/does/not/exist")
     assert res is None # Should swallow file not found exception
+
+def test_typescript_ast_parser_tsconfig(tmp_path):
+    if not HAS_TREE_SITTER:
+        pytest.skip("Tree-sitter not installed")
+        
+    parser = TypeScriptASTParser()
+    
+    # Create a fake tsconfig.json
+    tsconfig_content = """
+    {
+      "compilerOptions": {
+        "paths": {
+          "@/*": ["./src/*"],
+          "~/*": ["./lib/*"]
+        }
+      }
+    }
+    """
+    (tmp_path / "tsconfig.json").write_text(tsconfig_content)
+    (tmp_path / "src").mkdir()
+    
+    content = """
+    import { Button } from "@/components/ui/button";
+    import { util } from "~/utils/helpers";
+    """
+    file_path = "src/index.ts"
+    (tmp_path / "src" / "index.ts").write_text(content)
+    
+    dto = parser.parse(file_path, content, str(tmp_path))
+    assert not dto.error
+    assert "src/components/ui/button" in dto.imports
+    assert "lib/utils/helpers" in dto.imports

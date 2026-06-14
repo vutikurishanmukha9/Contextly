@@ -134,3 +134,36 @@ def test_dependency_scanner_exceptions(tmp_path, monkeypatch):
             s.scan(tmp_path)
     finally:
         monkeypatch.undo()
+
+def test_dependency_scanner_file_paths(tmp_path):
+    s = DependencyScanner()
+    
+    # Create the files
+    (tmp_path / "package.json").write_text('{"dependencies": {"react": "1"}}')
+    (tmp_path / "requirements.txt").write_text("flask!=1.0\n# comment")
+    (tmp_path / "pyproject.toml").write_text('[project]\ndependencies=["requests~=2.0"]')
+    (tmp_path / "Pipfile").write_text('[packages]\ndjango = "*"\n')
+    
+    file_paths = [
+        "package.json",
+        "requirements.txt",
+        "pyproject.toml",
+        "Pipfile"
+    ]
+    
+    res = s.scan(tmp_path, file_paths=file_paths)
+    assert "react" in res.npm
+    assert "flask" in res.python
+    assert "requests" in res.python
+    assert "django" in res.python
+    
+    # Also test Poetry tools.poetry.dependencies
+    (tmp_path / "pyproject.toml").write_text('[tool.poetry.dependencies]\nfastapi="0.100.0"\n')
+    res2 = s.scan(tmp_path, file_paths=["pyproject.toml"])
+    assert "fastapi" in res2.python
+    
+    # Also test Pipfile with missing packages section
+    (tmp_path / "Pipfile").write_text('[dev-packages]\npytest = "*"\n')
+    res3 = s.scan(tmp_path, file_paths=["Pipfile"])
+    assert "pytest" in res3.python
+

@@ -130,6 +130,12 @@ class DependencyScanner(BaseScanner):
                             clean_dep = re.split(r'[=<>~!]', dep)[0].strip()
                             if clean_dep and clean_dep not in result.python:
                                 result.python.append(clean_dep)
+                                
+                    # Also extract Poetry dependencies
+                    poetry_deps = data.get("tool", {}).get("poetry", {}).get("dependencies", {})
+                    for dep in poetry_deps.keys():
+                        if dep != "python" and dep not in result.python:
+                            result.python.append(dep)
                 else:
                     raise ScannerError("`tomllib` (or `tomli`) is not installed. Required for pyproject.toml parsing.")
         except ScannerError:
@@ -138,3 +144,26 @@ class DependencyScanner(BaseScanner):
             console.print(f"[yellow]Warning:[/yellow] Could not access pyproject.toml: {str(e)}")
         except Exception as e:
             console.print(f"[yellow]Warning:[/yellow] Could not parse pyproject.toml: {str(e)}")
+
+    def _parse_pipfile(self, filepath: Path, root_dir: Path, result: DependencyScanResult):
+        try:
+            with open(filepath, 'r', encoding="utf-8") as f:
+                in_packages = False
+                for line in f:
+                    stripped = line.strip()
+                    if stripped.startswith("[packages]") or stripped.startswith("[dev-packages]"):
+                        in_packages = True
+                        continue
+                    elif stripped.startswith("["):
+                        in_packages = False
+                        continue
+                        
+                    if in_packages and "=" in stripped:
+                        dep = stripped.split("=")[0].strip().strip('"').strip("'")
+                        if dep and not dep.startswith("#"):
+                            if dep not in result.python:
+                                result.python.append(dep)
+        except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+            console.print(f"[yellow]Warning:[/yellow] Could not parse Pipfile: {str(e)}")
+        except Exception as e:
+            console.print(f"[yellow]Warning:[/yellow] Unexpected error reading Pipfile: {str(e)}")

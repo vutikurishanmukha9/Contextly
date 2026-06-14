@@ -15,12 +15,6 @@ class PathRegexRule(BaseRule):
             weight: The confidence delta to apply if matches are found.
             limit: The maximum number of evidence strings to retain to prevent payload bloat.
         """
-        # Convert standard \b word boundaries to support snake_case and PascalCase
-        # \b(auth)\b fails on auth_service because _ is a word character.
-        if pattern.startswith(r'\b') and pattern.endswith(r'\b'):
-            inner = pattern[2:-2]
-            pattern = rf'(?<![a-zA-Z0-9]){inner}(?![a-zA-Z0-9])'
-            
         # Pre-compile for performance across large file trees
         self._regex = re.compile(pattern, re.IGNORECASE)
         self.weight = weight
@@ -31,7 +25,12 @@ class PathRegexRule(BaseRule):
         score = 0.0
         
         for path in paths:
-            if self._regex.search(path):
+            # Normalize path for boundary matching (snake_case, kebab-case, PascalCase)
+            # e.g., AuthService.ts -> Auth Service.ts, auth_service.py -> auth service.py
+            normalized = re.sub(r'([a-z])([A-Z])', r'\1 \2', path)
+            normalized = normalized.replace('_', ' ').replace('-', ' ')
+            
+            if self._regex.search(normalized):
                 if len(matched_evidence) < self.limit:
                     matched_evidence.append(path)
                 # Apply weight only once per rule to prevent a massive folder 
