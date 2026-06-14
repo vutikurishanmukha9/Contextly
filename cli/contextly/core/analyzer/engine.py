@@ -6,6 +6,7 @@ from ...scanners.framework import FrameworkScanner
 from ...scanners.patterns import PatternScanner
 from ...scanners.architecture import ArchitectureScanner
 from ...scanners.capabilities import CapabilityDetector
+from ...core.graph.builder import ImportGraphBuilder
 from ...types.models import RepositoryIntelligence, RepositoryKnowledge, TechnologyKnowledge, KnowledgeGraph
 from datetime import datetime, timezone
 from ...core.memory.engine import MemoryEngine
@@ -41,6 +42,10 @@ class AnalyzerEngine:
         memory_engine = MemoryEngine(self.root_dir)
         memory_data = memory_engine.load_memory()
         
+        # Build the AST graph
+        graph_builder = ImportGraphBuilder(self.root_dir)
+        ast_graph = graph_builder.build()
+        
         intelligence = RepositoryIntelligence(
             language=lang_data,
             dependencies=dep_data,
@@ -60,8 +65,8 @@ class AnalyzerEngine:
             ),
             architecture=arch_data,
             capabilities=cap_data,
-            domains=[], # To be implemented in Graph Builder
-            graph=KnowledgeGraph()
+            domains=[], # To be implemented later based on graph boundaries
+            graph=ast_graph
         )
         
         contextly_dir = self.root_dir / ".contextly"
