@@ -15,6 +15,9 @@ class InitEngine:
         target_dir = self.root_dir / ".contextly"
         config_path = target_dir / "config.yaml"
         
+        if target_dir.is_file():
+            raise ContextlyError("Cannot initialize Context-Ly: a file named '.contextly' already exists")
+            
         if config_path.exists():
             return False
             

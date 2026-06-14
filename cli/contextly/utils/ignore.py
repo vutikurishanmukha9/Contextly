@@ -54,6 +54,11 @@ class IgnoreEngine:
         """
         Checks if a file or directory path is ignored.
         """
+        try:
+            is_directory = path.is_dir()
+        except PermissionError:
+            is_directory = False
+
         # Convert path to a relative POSIX string for matching (pathspec requires POSIX style)
         try:
             rel_path = path.relative_to(self.root_dir)
@@ -62,11 +67,6 @@ class IgnoreEngine:
             return True
             
         str_path = rel_path.as_posix()
-        
-        try:
-            is_directory = path.is_dir()
-        except PermissionError:
-            is_directory = False
 
         if is_directory and not str_path.endswith('/'):
             str_path += '/'

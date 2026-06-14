@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 import html
+import uuid
 import pyperclip
 
 from ...utils.exceptions import ContextlyError
@@ -50,7 +51,8 @@ class ExporterEngine:
 """
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        export_filename = f"export_{pack_name}_{timestamp}.md"
+        unique_id = uuid.uuid4().hex[:4]
+        export_filename = f"export_{pack_name}_{timestamp}_{unique_id}.md"
         export_path = export_dir / export_filename
         
         try:

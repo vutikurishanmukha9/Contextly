@@ -7,15 +7,7 @@ import {
 import type { ReactNode } from "react";
 
 const nav = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/builder", label: "Builder", icon: Layers3 },
-  { to: "/library", label: "Library", icon: Library },
-  { to: "/memory", label: "Memory", icon: Database },
-  { to: "/analyzer", label: "Analyzer", icon: Gauge },
-  { to: "/optimizer", label: "Optimizer", icon: Filter },
-  { to: "/workspace", label: "Workspace", icon: MessagesSquare },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/settings", label: "Settings", icon: SettingsIcon },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
 ];
 
 export function AppShell({ title, subtitle, actions, children }:{
@@ -54,8 +46,8 @@ export function AppShell({ title, subtitle, actions, children }:{
           <div className="flex items-center gap-2.5 rounded-md p-2">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-[#8B95E5]" />
             <div className="min-w-0">
-              <div className="truncate text-[13px] font-medium">Ada Lovelace</div>
-              <div className="truncate text-[11.5px] text-muted-foreground">Pro · 24,512 tokens saved</div>
+              <div className="truncate text-[13px] font-medium">User</div>
+              <div className="truncate text-[11.5px] text-muted-foreground">Free Tier</div>
             </div>
           </div>
         </div>

@@ -78,17 +78,34 @@ class PackerEngine:
                     
                 compressed_code = self.compressor.compress(path, raw_code)
                 
+                try:
+                    rel_path = path.relative_to(self.root_dir).as_posix()
+                except ValueError:
+                    rel_path = path.name
+                ext = path.suffix.replace('.', '')
+                
+                # Pre-calculate wrapper to accurately measure overhead
+                wrapper_str = f"## File: `{rel_path}`\n```{ext}\n"
+                if not compressed_code.endswith('\n'):
+                    wrapper_str += '\n'
+                wrapper_str += "```\n\n"
+                
                 if self.tokenizer:
-                    file_tokens = len(self.tokenizer.encode(compressed_code, disallowed_special=()))
+                    try:
+                        file_tokens = len(self.tokenizer.encode(wrapper_str + compressed_code, disallowed_special=()))
+                    except Exception:
+                        skipped_files.append(path)
+                        continue
+                        
                     if max_tokens and current_tokens + file_tokens > max_tokens:
                         excluded_files.append(path)
-                        continue
+                        break
                     current_tokens += file_tokens
                 else:
-                    file_chars = len(compressed_code)
-                    if max_tokens and (current_chars + file_chars) // 4 > max_tokens:
+                    file_chars = len(wrapper_str) + len(compressed_code)
+                    if max_tokens and (current_chars + file_chars) > max_tokens * 4:
                         excluded_files.append(path)
-                        continue
+                        break
                     current_chars += file_chars
                     
                 selected_files.append(path)
@@ -98,6 +115,12 @@ class PackerEngine:
                 skipped_files.append(path)
             except (FileNotFoundError, PermissionError, OSError):
                 skipped_files.append(path)
+                
+        # If we broke early from ranked_files, any remaining files must be marked excluded
+        # This occurs if break was hit in the token measurement loop
+        remaining_files = ranked_files[ranked_files.index(excluded_files[-1]) + 1:] if excluded_files else []
+        for remaining in remaining_files:
+            excluded_files.append(remaining)
 
         # Phase 4: Write Output Streamingly
         with open(output_file, "w", encoding="utf-8") as out_f:

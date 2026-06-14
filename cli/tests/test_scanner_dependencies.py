@@ -112,10 +112,10 @@ def test_dependency_scanner_exceptions(tmp_path, monkeypatch):
     s.scan(tmp_path)
     monkeypatch.undo()
     
-    # tomllib is None
     import contextly.scanners.dependencies as dep_module
     monkeypatch.setattr(dep_module, "tomllib", None)
-    s.scan(tmp_path)
+    with pytest.raises(ScannerError):
+        s.scan(tmp_path)
     monkeypatch.undo()
     
     # sub-dir package.json

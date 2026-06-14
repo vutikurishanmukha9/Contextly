@@ -115,7 +115,9 @@ class DependencyScanner(BaseScanner):
                             if clean_dep and clean_dep not in result.python:
                                 result.python.append(clean_dep)
                 else:
-                    console.print("[yellow]Warning:[/yellow] `tomllib` (or `tomli`) is not installed. Skipping pyproject.toml parsing.")
+                    raise ScannerError("`tomllib` (or `tomli`) is not installed. Required for pyproject.toml parsing.")
+        except ScannerError:
+            raise
         except (FileNotFoundError, PermissionError) as e:
             console.print(f"[yellow]Warning:[/yellow] Could not access pyproject.toml: {str(e)}")
         except Exception as e:
