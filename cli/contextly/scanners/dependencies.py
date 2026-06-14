@@ -14,17 +14,7 @@ except ImportError:
     except ImportError:
         tomllib = None
 
-# Directories that should always be skipped during discovery walks.
-# This is intentionally separate from the IgnoreEngine (.gitignore) because
-# discovery needs to scan directories like "frontend/" that a user might
-# gitignore but still want Context-Ly to understand.
-_ALWAYS_SKIP = {
-    ".git", "node_modules", "venv", ".venv", "__pycache__",
-    ".contextly", "dist", "build", ".next", ".tox", ".eggs",
-    ".mypy_cache", ".pytest_cache", "htmlcov", "egg-info",
-}
-
-
+from ..utils.walker import RepoWalker
 class DependencyScanner(BaseScanner):
     @property
     def name(self) -> str:
@@ -34,23 +24,19 @@ class DependencyScanner(BaseScanner):
         try:
             result = DependencyScanResult()
 
-            # Walk the tree up to depth 3 looking for manifest files.
-            # We use os.walk with in-place pruning of heavy directories
-            # so we never descend into node_modules / .venv / etc.
-            for dirpath, dirnames, filenames in os.walk(root_dir):
-                rel = os.path.relpath(dirpath, root_dir)
-                depth = 0 if rel == "." else rel.count(os.sep) + 1
-                if depth > 3:
-                    dirnames.clear()
-                    continue
+            _ALWAYS_SKIP = {
+                ".git", "node_modules", "venv", ".venv", "__pycache__",
+                ".contextly", "dist", "build", ".next", ".tox", ".eggs",
+                ".mypy_cache", ".pytest_cache", "htmlcov", "egg-info",
+            }
+            
+            def skip_predicate(path: Path) -> bool:
+                name = path.name.lower()
+                return name in _ALWAYS_SKIP or name.endswith(".egg-info")
 
-                # Prune directories we never want to enter
-                dirnames[:] = [
-                    d for d in dirnames
-                    if d.lower() not in _ALWAYS_SKIP
-                    and not d.lower().endswith(".egg-info")
-                ]
+            walker = RepoWalker(root_dir, max_depth=3, skip_predicate=skip_predicate)
 
+            for dirpath, dirnames, filenames in walker.walk():
                 current = Path(dirpath)
 
                 if "package.json" in filenames:

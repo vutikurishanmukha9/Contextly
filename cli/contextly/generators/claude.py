@@ -3,9 +3,13 @@ from .base import BaseGenerator
 class ClaudeGenerator(BaseGenerator):
     """Generates context using strict XML tags optimized for Anthropic Claude models."""
 
+    def _escape_cdata(self, text: str) -> str:
+        """Escapes the CDATA terminator sequence if it appears in the text."""
+        return text.replace("]]>", "]]]]><![CDATA[>")
+
     def generate(self) -> str:
-        readme = self._get_readme_content()
-        tree = self._generate_tree()
+        readme = self._escape_cdata(self._get_readme_content())
+        tree = self._escape_cdata(self._generate_tree())
         
         npm_count = len(self.intelligence.dependencies.npm)
         py_count = len(self.intelligence.dependencies.python)
@@ -19,7 +23,8 @@ class ClaudeGenerator(BaseGenerator):
             if has_memory:
                 conventions_xml += "<explicit_rules source=\"memory\">\n"
                 for rule in self.intelligence.memory.rules:
-                    conventions_xml += f"<rule category=\"{rule.category}\"><![CDATA[{rule.rule}]]></rule>\n"
+                    safe_rule = self._escape_cdata(rule.rule)
+                    conventions_xml += f"<rule category=\"{rule.category}\"><![CDATA[{safe_rule}]]></rule>\n"
                 conventions_xml += "</explicit_rules>\n"
                 
             if has_patterns:
@@ -28,13 +33,14 @@ class ClaudeGenerator(BaseGenerator):
                 if filtered_patterns:
                     conventions_xml += "<inferred_conventions source=\"discovery\">\n"
                     for p in filtered_patterns:
-                        conventions_xml += f"<pattern category=\"{p.category}\" name=\"{p.name}\"><![CDATA[{p.description}]]></pattern>\n"
+                        safe_desc = self._escape_cdata(p.description)
+                        conventions_xml += f"<pattern category=\"{p.category}\" name=\"{p.name}\"><![CDATA[{safe_desc}]]></pattern>\n"
                     conventions_xml += "</inferred_conventions>\n"
             conventions_xml += "</team_conventions>\n"
 
-        lang = self.intelligence.language.primary
-        front = self.intelligence.frameworks.frontend
-        back = self.intelligence.frameworks.backend
+        lang = self._escape_cdata(self.intelligence.language.primary)
+        front = self._escape_cdata(self.intelligence.frameworks.frontend)
+        back = self._escape_cdata(self.intelligence.frameworks.backend)
 
         xml = f"""<project_context>
 <overview>

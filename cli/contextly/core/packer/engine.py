@@ -67,6 +67,7 @@ class PackerEngine:
         # Phase 3: Compress, Measure, and Select
         selected_files = []
         excluded_files = []
+        compressed_cache = {}
         current_tokens = 0
         current_chars = 0
         
@@ -91,6 +92,7 @@ class PackerEngine:
                     current_chars += file_chars
                     
                 selected_files.append(path)
+                compressed_cache[path] = compressed_code
                 
             except UnicodeDecodeError:
                 skipped_files.append(path)
@@ -110,9 +112,7 @@ class PackerEngine:
                 out_f.write(f"## File: `{rel_path}`\n")
                 ext = path.suffix.replace('.', '')
                 try:
-                    with open(path, "r", encoding="utf-8") as in_f:
-                        raw_code = in_f.read()
-                    compressed_code = self.compressor.compress(path, raw_code)
+                    compressed_code = compressed_cache[path]
                     out_f.write(f"```{ext}\n")
                     out_f.write(compressed_code)
                     if not compressed_code.endswith('\n'):

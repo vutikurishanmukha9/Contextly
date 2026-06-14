@@ -9,7 +9,8 @@ from ..utils.fs import find_project_root
 from ..utils.validation import require_contextly_initialized
 
 def learn_cmd(
-    auto: bool = typer.Option(False, "--auto", help="Automatically discover and interactively learn conventions.")
+    auto: bool = typer.Option(False, "--auto", help="Automatically discover and interactively learn conventions."),
+    apply_all: bool = typer.Option(False, "--apply-all", help="Automatically accept and save all discovered conventions (non-interactive).")
 ):
     """Teach Context-Ly new conventions, or use --auto to discover them."""
     root_dir = find_project_root(Path.cwd())
@@ -44,7 +45,7 @@ def learn_cmd(
     
     saved_count = 0
     for p in sorted_patterns:
-        if Confirm.ask(f"Save convention: [cyan]{p.name}[/cyan] ({p.description})?"):
+        if apply_all or Confirm.ask(f"Save convention: [cyan]{p.name}[/cyan] ({p.description})?"):
             added = engine.save_convention(p)
             if added:
                 saved_count += 1

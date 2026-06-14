@@ -16,7 +16,7 @@ def test_main_version_exception(monkeypatch):
     
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert "contextly version 1.0.2" in result.stdout
+    assert "contextly version unknown" in result.stdout
 
 def test_engine_mkdir(tmp_path):
     """Covers engine.py line 21: mkdir when memory dir does not exist."""

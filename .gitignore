@@ -35,7 +35,7 @@ venv.bak/
 .contextly/
 
 # Frontend
-frontend/
+# frontend/
 
 # Coverage / Testing
 .coverage

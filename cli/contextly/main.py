@@ -16,7 +16,7 @@ def version_callback(value: bool):
             from importlib.metadata import version
             ver = version("contextly")
         except Exception:
-            ver = "1.0.2"
+            ver = "unknown"
         typer.echo(f"contextly version {ver}")
         raise typer.Exit()
 

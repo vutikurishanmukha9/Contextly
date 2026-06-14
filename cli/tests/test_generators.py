@@ -110,6 +110,31 @@ def test_claude_generator_memory_rules(tmp_path):
     assert "<explicit_rules source=\"memory\">" in res
     assert "<rule category=\"Cat\"><![CDATA[Rule1]]></rule>" in res
 
+def test_claude_generator_cdata_escaping(tmp_path):
+    """Verifies that the `]]>` sequence is correctly escaped so the final XML is valid."""
+    import xml.etree.ElementTree as ET
+    
+    mem = ProjectMemory(rules=[MemoryRule(id="1", category="Cat", rule="Rule containing ]]> to break it", confidence="High", source="user", created_at="2023")])
+    intel = get_dummy_intel()
+    intel.memory = mem
+    
+    # Also put ]]> in README
+    readme = tmp_path / "README.md"
+    readme.write_text("This has a ]]> in it")
+    
+    gen = ClaudeGenerator(tmp_path, intel)
+    res = gen.generate()
+    
+    assert "]]]]><![CDATA[>" in res
+    
+    # Because res is not a single root XML document (it has <project_context> but also other tags 
+    # depending on what generate() produces, let's wrap it to be sure).
+    wrapped_res = f"<root>{res}</root>"
+    
+    # This should parse without raising xml.etree.ElementTree.ParseError
+    root = ET.fromstring(wrapped_res)
+    assert root is not None
+
 def test_base_generator_exceptions(tmp_path, monkeypatch):
     """Covers base.py 22-23 (README exceptions), 34 (not is_dir inside walk)."""
     intel = get_dummy_intel()

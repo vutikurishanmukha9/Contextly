@@ -4,16 +4,7 @@ from typing import Set
 from .base import BaseScanner, ScannerError
 from ..types.models import PatternScanResult, Pattern, DependencyScanResult
 
-# Directories that should always be skipped during pattern discovery.
-# Intentionally separate from IgnoreEngine so we scan user-gitignored
-# subdirectories (like "frontend/") for architectural clues.
-_ALWAYS_SKIP = {
-    ".git", "node_modules", "venv", ".venv", "__pycache__",
-    ".contextly", "dist", "build", ".next", ".tox", ".eggs",
-    ".mypy_cache", ".pytest_cache", "htmlcov", "egg-info",
-}
-
-
+from ..utils.walker import RepoWalker
 class PatternScanner(BaseScanner):
     @property
     def name(self) -> str:
@@ -63,19 +54,19 @@ class PatternScanner(BaseScanner):
             architectures: Set[str] = set()
             components_found = False
 
-            for dirpath, dirnames, _filenames in os.walk(root_dir):
-                rel = os.path.relpath(dirpath, root_dir)
-                depth = 0 if rel == "." else rel.count(os.sep) + 1
-                if depth > 3:
-                    dirnames.clear()
-                    continue
+            _ALWAYS_SKIP = {
+                ".git", "node_modules", "venv", ".venv", "__pycache__",
+                ".contextly", "dist", "build", ".next", ".tox", ".eggs",
+                ".mypy_cache", ".pytest_cache", "htmlcov", "egg-info",
+            }
 
-                # Prune heavy directories
-                dirnames[:] = [
-                    d for d in dirnames
-                    if d.lower() not in _ALWAYS_SKIP
-                    and not d.lower().endswith(".egg-info")
-                ]
+            def skip_predicate(path: Path) -> bool:
+                name = path.name.lower()
+                return name in _ALWAYS_SKIP or name.endswith(".egg-info")
+
+            walker = RepoWalker(root_dir, max_depth=3, skip_predicate=skip_predicate)
+
+            for dirpath, dirnames, _filenames in walker.walk():
 
                 for dirname in dirnames:
                     name = dirname.lower()

@@ -216,6 +216,15 @@ This helps identify areas that may negatively impact AI context quality.
 
 ---
 
+### Understanding Context-Ly Ignore Philosophies
+
+Context-Ly utilizes two distinct "ignore" policies depending on the operation:
+
+1. **Packing & Inspection (`contextly pack`, `contextly inspect`)**: These commands **respect** your `.gitignore` and `.contextlyignore` files. This ensures that generated packs and token counts omit irrelevant files (like `node_modules`, compiled binaries, etc.), producing concise, token-efficient context for the LLM.
+2. **Discovery & Intelligence (`contextly discover`, `contextly learn`)**: The Pattern Discovery Engine **ignores** your `.gitignore`. It uses a minimal, hardcoded skip-list (only completely toxic directories like `.git` or `.venv`). This allows Context-Ly to correctly discover architectural patterns and package dependencies in valid directories (like a `frontend/` folder) that you might have legitimately added to `.gitignore` to keep your root repository clean.
+
+---
+
 ## Example Workflow
 
 ```bash
