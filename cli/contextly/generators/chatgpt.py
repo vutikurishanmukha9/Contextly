@@ -35,8 +35,8 @@ class ChatGPTGenerator(BaseGenerator):
         
         stack_identity = {
             "primary_language": self.intelligence.language.primary,
-            "frontend_framework": self.intelligence.frameworks.frontend,
-            "backend_tooling": self.intelligence.frameworks.backend
+            "frontend_framework": ", ".join(self.intelligence.frameworks.frontend) if self.intelligence.frameworks.frontend else "None detected",
+            "backend_tooling": ", ".join(self.intelligence.frameworks.backend) if self.intelligence.frameworks.backend else "None detected"
         }
         stack_identity_json = json.dumps(stack_identity, indent=2)
 

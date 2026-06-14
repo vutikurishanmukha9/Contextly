@@ -10,8 +10,8 @@ class DependencyScanResult(BaseModel):
     python: List[str] = Field(default_factory=list, description="List of Python dependencies")
 
 class FrameworkScanResult(BaseModel):
-    frontend: str = "None detected"
-    backend: str = "None detected"
+    frontend: List[str] = Field(default_factory=list)
+    backend: List[str] = Field(default_factory=list)
 
 class Pattern(BaseModel):
     name: str

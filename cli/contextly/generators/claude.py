@@ -39,8 +39,11 @@ class ClaudeGenerator(BaseGenerator):
             conventions_xml += "</team_conventions>\n"
 
         lang = self._escape_cdata(self.intelligence.language.primary)
-        front = self._escape_cdata(self.intelligence.frameworks.frontend)
-        back = self._escape_cdata(self.intelligence.frameworks.backend)
+        front_str = ", ".join(self.intelligence.frameworks.frontend) if self.intelligence.frameworks.frontend else "None detected"
+        back_str = ", ".join(self.intelligence.frameworks.backend) if self.intelligence.frameworks.backend else "None detected"
+        
+        front = self._escape_cdata(front_str)
+        back = self._escape_cdata(back_str)
 
         xml = f"""<project_context>
 <overview>

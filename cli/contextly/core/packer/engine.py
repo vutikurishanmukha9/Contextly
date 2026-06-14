@@ -92,21 +92,18 @@ class PackerEngine:
                 
                 if self.tokenizer:
                     try:
-                        file_tokens = len(self.tokenizer.encode(wrapper_str + compressed_code, disallowed_special=()))
+                        file_cost = len(self.tokenizer.encode(wrapper_str + compressed_code, disallowed_special=()))
                     except Exception:
                         skipped_files.append(path)
                         continue
-                        
-                    if max_tokens and current_tokens + file_tokens > max_tokens:
-                        excluded_files.append(path)
-                        break
-                    current_tokens += file_tokens
                 else:
-                    file_chars = len(wrapper_str) + len(compressed_code)
-                    if max_tokens and (current_chars + file_chars) > max_tokens * 4:
-                        excluded_files.append(path)
-                        break
-                    current_chars += file_chars
+                    file_cost = (len(wrapper_str) + len(compressed_code)) / 4.0
+
+                if max_tokens and current_tokens + file_cost > max_tokens:
+                    excluded_files.append(path)
+                    break
+                    
+                current_tokens += file_cost
                     
                 selected_files.append(path)
                 compressed_cache[path] = compressed_code
@@ -155,10 +152,10 @@ class PackerEngine:
                     out_f.write(f"- `{rel_path}`\n")
                 
         if self.tokenizer:
-            token_estimate = current_tokens
+            token_estimate = int(current_tokens)
             token_type = "Exact Tokens (cl100k_base)"
         else:
-            token_estimate = current_chars // 4
+            token_estimate = int(current_tokens)
             token_type = "Estimated Tokens (chars / 4)"
             
         return token_estimate, token_type, len(selected_files), output_file, skipped_files, len(excluded_files)

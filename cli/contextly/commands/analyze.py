@@ -37,8 +37,8 @@ def analyze_cmd(
     table.add_column("Value", style="magenta")
     
     table.add_row("Primary Language", f"[bold]{intelligence.language.primary}[/bold]")
-    table.add_row("Frontend Framework", intelligence.frameworks.frontend)
-    table.add_row("Backend/Tooling", intelligence.frameworks.backend)
+    table.add_row("Frontend Framework", ", ".join(intelligence.frameworks.frontend) if intelligence.frameworks.frontend else "None detected")
+    table.add_row("Backend/Tooling", ", ".join(intelligence.frameworks.backend) if intelligence.frameworks.backend else "None detected")
     
     npm_count = len(intelligence.dependencies.npm)
     py_count = len(intelligence.dependencies.python)

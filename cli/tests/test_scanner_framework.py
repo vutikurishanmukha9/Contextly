@@ -25,7 +25,7 @@ def test_framework_scanner_edge_cases(tmp_path):
     deps2 = DependencyScanResult()
     deps2.npm.extend(["express", "spring-boot-starter-web"])
     res2 = s.scan(tmp_path, deps=deps2)
-    assert "Express" in res2.backend
+    assert "Express.js" in res2.backend
 
 def test_framework_scanner_missing_branches(tmp_path):
     """Covers framework.py 23, 25, 27, 33, 45-46, 52-53."""
@@ -36,5 +36,5 @@ def test_framework_scanner_missing_branches(tmp_path):
     # 45-46, 52-53: various python frameworks
     deps.python.extend(["flask", "fastapi"])
     res = s.scan(tmp_path, deps=deps)
-    assert "React" in res.frontend or "Vue" in res.frontend
+    assert "React (SPA)" in res.frontend or "Vue.js" in res.frontend
     assert "FastAPI" in res.backend or "Flask" in res.backend
