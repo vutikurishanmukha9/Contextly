@@ -23,7 +23,6 @@ Modern AI applications often suffer from "token waste" - providing either too li
 ### Explicit Rules (Memory)
 - [State Management] Uses Zustand for state management. [High confidence]
 - [Styling] Uses TailwindCSS for styling. [High confidence]
-- [Architecture Hints] Found UI components directory structure. [Medium confidence]
 - [Data Validation] Uses Pydantic for data validation and parsing. [High confidence]
 - [Testing] Uses Pytest for unit testing. [High confidence]
 - [CLI Framework] Uses Typer for building CLI applications. [High confidence]
@@ -31,13 +30,14 @@ Modern AI applications often suffer from "token waste" - providing either too li
 - [Frontend Framework] Uses React for building user interfaces. [High confidence]
 - [Build Tool] Uses Vite as the frontend build tool. [High confidence]
 - [Language] Uses TypeScript for type-safe JavaScript. [High confidence]
-- [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Command Pattern. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Scanner/Plugin Architecture. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Generator Pattern. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
+- [Architecture Hints] Found UI components directory structure. [Medium confidence]
 
 
 ## Architecture Map
@@ -56,18 +56,23 @@ Contextly/
 │   │   ├── types/
 │   │   ├── utils/
 │   │   ├── __init__.py
+│   │   ├── __main__.py
 │   │   └── main.py
 │   ├── contextly-1.0.3/
 │   │   └── tests/
 │   ├── tests/
 │   │   ├── conftest.py
 │   │   ├── test_analyze.py
+│   │   ├── test_cluster.py
 │   │   ├── test_compression.py
 │   │   ├── test_core.py
 │   │   ├── test_discover.py
+│   │   ├── test_explain_cmd.py
+│   │   ├── test_explainer.py
 │   │   ├── test_export.py
 │   │   ├── test_fs.py
 │   │   ├── test_generators.py
+│   │   ├── test_graph.py
 │   │   ├── test_init.py
 │   │   ├── test_inspect.py
 │   │   ├── test_learn.py

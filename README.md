@@ -131,3 +131,9 @@ Bundles a specific directory (e.g., `src/components`) into an LLM-ready Context 
 
 #### 7. `contextly inspect`
 Performs a deep-dive analysis on your repository complexity, warning you about excessively large files that will act as "Token Hogs" and consume too much context window.
+
+#### 8. `contextly export <pack_name>`
+Fuses your memory rules and the specified context pack into a single, comprehensive Context Payload. The output is instantly copied to your clipboard, ready to be pasted directly into an LLM.
+
+#### 9. `contextly explain <domain>`
+Extracts a highly-optimized structural context payload for a specific domain (e.g., 'core', 'shared', 'auth') based on the AST Knowledge Graph. It copies a JSON payload to your clipboard, allowing the LLM to understand the architecture without wasting tokens scanning raw files.

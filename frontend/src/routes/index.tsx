@@ -157,7 +157,10 @@ function Landing() {
                 { cmd: "learn --auto", desc: "Interactively save discovered patterns to your rules memory." },
                 { cmd: "analyze", desc: "Build an ASCII architecture map of your entire repository." },
                 { cmd: "pack <dir>", desc: "Bundle code into a compressed, LLM-ready Context Pack." },
-                { cmd: "export", desc: "Fuse rules and packs into your clipboard instantly." },
+                { cmd: "export <pack>", desc: "Fuse rules and packs into your clipboard instantly." },
+                { cmd: "inspect", desc: "Identify massive files that act as Token Hogs." },
+                { cmd: "memory", desc: "View all rules permanently saved to project memory." },
+                { cmd: "explain <domain>", desc: "Copy a structural context payload for a specific domain." },
               ].map((c, i) => (
                 <div key={i} className="flex flex-col sm:flex-row sm:items-center border-b border-black/5 last:border-0 hover:bg-black/[0.02] transition-colors">
                   <div className="sm:w-1/3 p-5 font-mono text-sm border-b sm:border-b-0 sm:border-r border-black/5 bg-black/[0.01]">

@@ -216,6 +216,30 @@ This helps identify areas that may negatively impact AI context quality.
 
 ---
 
+### `contextly export <pack_name>`
+
+Fuses your memory rules and the specified context pack into a single, comprehensive Context Payload.
+
+```bash
+contextly export cli
+```
+
+The output is instantly copied to your clipboard, ready to be pasted directly into an LLM.
+
+---
+
+### `contextly explain <domain>`
+
+Extracts a highly-optimized structural context payload for a specific domain based on the AST Knowledge Graph.
+
+```bash
+contextly explain core
+```
+
+It copies a JSON payload to your clipboard, allowing the LLM to understand the architecture without wasting tokens scanning raw files.
+
+---
+
 ### Understanding Context-Ly Ignore Philosophies
 
 Context-Ly utilizes two distinct "ignore" policies depending on the operation:

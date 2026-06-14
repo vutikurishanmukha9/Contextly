@@ -2,7 +2,7 @@ import typer
 from rich.console import Console
 
 # Import commands (we will create these modules next)
-from .commands import init, analyze, inspect, pack, discover, memory, learn, export
+from .commands import init, analyze, inspect, pack, discover, memory, learn, export, explain
 
 app = typer.Typer(
     name="contextly",
@@ -35,6 +35,7 @@ app.command(name="memory", help="Inspect persistently stored team memory and con
 app.command(name="pack", help="Bundle a directory into an LLM-ready Context Pack")(pack.pack_cmd)
 app.command(name="export", help="Fuse intelligence and context packs into the clipboard")(export.export_cmd)
 app.command(name="inspect", help="Deep dive into repository complexity and structure")(inspect.inspect_cmd)
+app.command(name="explain", help="Explain repository concepts and structure")(explain.explain_cmd)
 
 console = Console()
 

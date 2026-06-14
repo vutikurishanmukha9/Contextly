@@ -46,6 +46,11 @@ class AnalyzerEngine:
         graph_builder = ImportGraphBuilder(self.root_dir)
         ast_graph = graph_builder.build()
         
+        # Cluster the graph into Domains
+        from contextly.core.graph.cluster import DomainClusterer
+        clusterer = DomainClusterer()
+        domains = clusterer.cluster(ast_graph)
+        
         intelligence = RepositoryIntelligence(
             language=lang_data,
             dependencies=dep_data,
@@ -65,7 +70,7 @@ class AnalyzerEngine:
             ),
             architecture=arch_data,
             capabilities=cap_data,
-            domains=[], # To be implemented later based on graph boundaries
+            domains=domains,
             graph=ast_graph
         )
         

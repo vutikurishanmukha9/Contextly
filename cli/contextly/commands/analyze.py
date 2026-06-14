@@ -17,7 +17,7 @@ def analyze_cmd(
     root_dir = find_project_root(Path.cwd())
     engine = AnalyzerEngine(root_dir)
     
-    with console.status("[bold blue]Scanning repository intelligence (Max Level)...", spinner="dots"):
+    with console.status("[bold blue]Scanning repository intelligence...", spinner="dots"):
         try:
             intelligence = engine.analyze(model)
         except ScannerError as e:
@@ -32,7 +32,7 @@ def analyze_cmd(
             
     console.print("\n[bold green][OK][/bold green] Repository scan complete!\n")
     
-    table = Table(title="Repository Intelligence (Max Level)", show_header=False, box=None)
+    table = Table(title="Repository Intelligence", show_header=False, box=None)
     table.add_column("Category", style="cyan", justify="right")
     table.add_column("Value", style="magenta")
     
