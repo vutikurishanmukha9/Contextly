@@ -63,6 +63,7 @@ class NodeType(str, Enum):
     ROUTE = "ROUTE"
     CONTROLLER = "CONTROLLER"
     REPOSITORY = "REPOSITORY"
+    MODEL = "MODEL"
     UNKNOWN = "UNKNOWN"
 
 class KnowledgeNode(BaseModel):

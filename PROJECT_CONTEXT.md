@@ -122,4 +122,4 @@ Contextly/
 
 ## Dependency Weight
 - **NPM Packages**: 69
-- **Python Packages**: 10
+- **Python Packages**: 12
