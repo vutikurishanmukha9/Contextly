@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [1.0.5] - 2026-06-14
+
+#### Added
+- **Domain Clustering Engine (`DomainClusterer`)**: The AST Knowledge Graph is now automatically segmented into coherent architectural domains (e.g., `core`, `shared`, `auth`), allowing component isolation without human intervention.
+- **Context Fusion (`contextly export <pack_name>`)**: Added the new `export` command that seamlessly merges persistent project memory with targeted context packs, automatically copying the optimized result to your clipboard.
+- **Direct Package Execution**: Added `__main__.py` to the CLI package, enabling execution directly via `python -m contextly`.
+
+#### Changed
+- **Offline Context Generation**: Context-Ly now operates entirely offline. Generating repository context no longer requires an API key or consumes LLM tokens, making the analysis process faster, more secure, and completely free.
+- **Structural Context Payloads (`contextly explain <domain>`)**: Completely refactored the `explain` command to extract a highly focused structural JSON payload based on the AST graph rather than streaming LLM responses.
+- **Clipboard-First Workflow**: All context generation commands now default to pushing outputs directly to the clipboard via `pyperclip`.
+- **Streamlined Outputs**: Console output has been refined for improved clarity and readability.
+- **Zero Token Waste**: Removed the internal `AIClient` and external API dependencies entirely.
+
 ### [1.0.4] - 2026-06-13
 
 #### Fixed
