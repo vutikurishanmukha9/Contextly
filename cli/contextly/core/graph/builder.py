@@ -16,8 +16,12 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
     """
     try:
         abs_path = os.path.join(root_dir, file_path)
-        with open(abs_path, "r", encoding="utf-8") as f:
-            content = f.read()
+        try:
+            with open(abs_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except UnicodeDecodeError:
+            with open(abs_path, "r", encoding="latin-1", errors="ignore") as f:
+                content = f.read()
             
         ext = file_path.lower().split('.')[-1]
         
@@ -114,6 +118,9 @@ class ImportGraphBuilder:
                 # If pool creation fails (e.g. strict sandboxing, no /dev/shm, etc.), fallback to sequential
                 use_pool = False
                 dtos.clear()
+                
+        if use_pool and not dtos and target_files:
+            use_pool = False # Trigger fallback
                 
         if not use_pool:
             for file_path in target_files:

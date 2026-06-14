@@ -15,7 +15,8 @@ def pack_cmd(
     target: Optional[str] = typer.Argument(None, help="Directory to pack (e.g., 'src/auth' or '.')"),
     name: str = typer.Option(None, "--name", "-n", help="Name of the context pack (defaults to directory name)"),
     profile: str = typer.Option(None, "--profile", "-p", help="Use a profile defined in .contextly/config.yaml"),
-    max_tokens: int = typer.Option(None, "--max-tokens", help="Drop least relevant files to fit within this limit")
+    max_tokens: int = typer.Option(None, "--max-tokens", help="Drop least relevant files to fit within this limit"),
+    compress: bool = typer.Option(False, "--compress", "-c", help="Compress AST representations to save tokens")
 ):
     """Bundle a directory into an LLM-ready Context Pack markdown file"""
     root_dir = find_project_root(Path.cwd())
@@ -75,7 +76,7 @@ def pack_cmd(
     target_str = f"profile '{profile}'" if profile else f"'{target}'"
     with console.status(f"[bold blue]Packing {target_str} into '{pack_name}'...", spinner="point"):
         try:
-            token_estimate, token_type, file_count, output_file, skipped_files, excluded_count = engine.pack(target_paths, pack_name, max_tokens)
+            token_estimate, token_type, file_count, output_file, skipped_files, excluded_count = engine.pack(target_paths, pack_name, max_tokens, compress)
         except ContextlyError as e:
             console.print(f"[bold red]Error:[/bold red] {e}")
             raise typer.Exit(1)

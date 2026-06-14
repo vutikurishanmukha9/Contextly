@@ -92,7 +92,7 @@ def test_base_generator_edge_cases(tmp_path, monkeypatch):
 
 def test_chatgpt_generator_memory_rules(tmp_path):
     """Covers chatgpt.py 20-23: memory formatting."""
-    mem = ProjectMemory(rules=[MemoryRule(id="1", category="Cat", rule="Rule1", confidence="High", source="user", created_at="2023")])
+    mem = ProjectMemory(rules=[MemoryRule(id="1", category="Cat", rule="Rule1", confidence=1.0, source="user", created_at="2023")])
     intel = get_dummy_intel()
     intel.memory = mem
     gen = ChatGPTGenerator(tmp_path, intel)
@@ -102,7 +102,7 @@ def test_chatgpt_generator_memory_rules(tmp_path):
 
 def test_claude_generator_memory_rules(tmp_path):
     """Covers claude.py 21-26: memory formatting."""
-    mem = ProjectMemory(rules=[MemoryRule(id="1", category="Cat", rule="Rule1", confidence="High", source="user", created_at="2023")])
+    mem = ProjectMemory(rules=[MemoryRule(id="1", category="Cat", rule="Rule1", confidence=1.0, source="user", created_at="2023")])
     intel = get_dummy_intel()
     intel.memory = mem
     gen = ClaudeGenerator(tmp_path, intel)
@@ -114,7 +114,7 @@ def test_claude_generator_cdata_escaping(tmp_path):
     """Verifies that the `]]>` sequence is correctly escaped so the final XML is valid."""
     import xml.etree.ElementTree as ET
     
-    mem = ProjectMemory(rules=[MemoryRule(id="1", category="Cat", rule="Rule containing ]]> to break it", confidence="High", source="user", created_at="2023")])
+    mem = ProjectMemory(rules=[MemoryRule(id="1", category="Cat", rule="Rule containing ]]> to break it", confidence=1.0, source="user", created_at="2023")])
     intel = get_dummy_intel()
     intel.memory = mem
     

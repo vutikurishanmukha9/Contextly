@@ -20,35 +20,35 @@ class PatternScanner(BaseScanner):
 
                 # State Management
                 if "zustand" in deps:
-                    result.patterns.append(Pattern(name="Zustand", category="State Management", confidence="High", description="Uses Zustand for state management."))
+                    result.patterns.append(Pattern(name="Zustand", category="State Management", confidence=1.0, description="Uses Zustand for state management."))
                 elif "redux" in deps or "@reduxjs/toolkit" in deps:
-                    result.patterns.append(Pattern(name="Redux", category="State Management", confidence="High", description="Uses Redux for state management."))
+                    result.patterns.append(Pattern(name="Redux", category="State Management", confidence=1.0, description="Uses Redux for state management."))
                 elif "jotai" in deps:
-                    result.patterns.append(Pattern(name="Jotai", category="State Management", confidence="High", description="Uses Jotai for state management."))
+                    result.patterns.append(Pattern(name="Jotai", category="State Management", confidence=1.0, description="Uses Jotai for state management."))
 
                 # Styling
                 if "tailwindcss" in deps:
-                    result.patterns.append(Pattern(name="TailwindCSS", category="Styling", confidence="High", description="Uses TailwindCSS for styling."))
+                    result.patterns.append(Pattern(name="TailwindCSS", category="Styling", confidence=1.0, description="Uses TailwindCSS for styling."))
                 elif "styled-components" in deps:
-                    result.patterns.append(Pattern(name="Styled Components", category="Styling", confidence="High", description="Uses Styled Components for styling."))
+                    result.patterns.append(Pattern(name="Styled Components", category="Styling", confidence=1.0, description="Uses Styled Components for styling."))
 
                 # Python Paradigms
                 if "pydantic" in deps:
-                    result.patterns.append(Pattern(name="Pydantic", category="Data Validation", confidence="High", description="Uses Pydantic for data validation and parsing."))
+                    result.patterns.append(Pattern(name="Pydantic", category="Data Validation", confidence=1.0, description="Uses Pydantic for data validation and parsing."))
                 if "pytest" in deps:
-                    result.patterns.append(Pattern(name="Pytest", category="Testing", confidence="High", description="Uses Pytest for unit testing."))
+                    result.patterns.append(Pattern(name="Pytest", category="Testing", confidence=1.0, description="Uses Pytest for unit testing."))
                 if "typer" in deps:
-                    result.patterns.append(Pattern(name="Typer", category="CLI Framework", confidence="High", description="Uses Typer for building CLI applications."))
+                    result.patterns.append(Pattern(name="Typer", category="CLI Framework", confidence=1.0, description="Uses Typer for building CLI applications."))
                 if "rich" in deps:
-                    result.patterns.append(Pattern(name="Rich", category="CLI Framework", confidence="High", description="Uses Rich for terminal formatting and output."))
+                    result.patterns.append(Pattern(name="Rich", category="CLI Framework", confidence=1.0, description="Uses Rich for terminal formatting and output."))
 
                 # Frontend Frameworks
                 if "react" in deps:
-                    result.patterns.append(Pattern(name="React", category="Frontend Framework", confidence="High", description="Uses React for building user interfaces."))
+                    result.patterns.append(Pattern(name="React", category="Frontend Framework", confidence=1.0, description="Uses React for building user interfaces."))
                 if "vite" in deps:
-                    result.patterns.append(Pattern(name="Vite", category="Build Tool", confidence="High", description="Uses Vite as the frontend build tool."))
+                    result.patterns.append(Pattern(name="Vite", category="Build Tool", confidence=1.0, description="Uses Vite as the frontend build tool."))
                 if "typescript" in deps:
-                    result.patterns.append(Pattern(name="TypeScript", category="Language", confidence="High", description="Uses TypeScript for type-safe JavaScript."))
+                    result.patterns.append(Pattern(name="TypeScript", category="Language", confidence=1.0, description="Uses TypeScript for type-safe JavaScript."))
 
             # 2. File-Tree Based Heuristics using os.walk with pruning
             # 2. Structural Heuristics
@@ -121,10 +121,10 @@ class PatternScanner(BaseScanner):
                             architectures.add("Generator Pattern")
 
             for arch in architectures:
-                result.patterns.append(Pattern(name=arch, category="Architecture Hints", confidence="Medium", description=f"Found directory structure indicating {arch}."))
+                result.patterns.append(Pattern(name=arch, category="Architecture Hints", confidence=0.8, description=f"Found directory structure indicating {arch}."))
 
             if components_found:
-                result.patterns.append(Pattern(name="Component-Based UI", category="Architecture Hints", confidence="Medium", description="Found UI components directory structure."))
+                result.patterns.append(Pattern(name="Component-Based UI", category="Architecture Hints", confidence=0.8, description="Found UI components directory structure."))
 
             return result
         except Exception as e:

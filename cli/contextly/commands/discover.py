@@ -45,8 +45,9 @@ def discover_cmd():
         
     for category, patterns in sorted(categories.items()):
         console.print(f"[bold cyan]{category}:[/bold cyan]")
-        # Sort by confidence descending (High -> Medium -> Low)
-        sorted_patterns = sorted(patterns, key=lambda p: {"high": 0, "medium": 1, "low": 2}.get(p.confidence.lower(), 3))
+        # Sort by confidence descending
+        sorted_patterns = sorted(patterns, key=lambda p: p.confidence, reverse=True)
         for p in sorted_patterns:
-            console.print(f"  [green]\\[OK][/green] [bold]{p.name}[/bold] ({p.description})")
+            conf_str = "High" if p.confidence >= 0.9 else "Medium" if p.confidence >= 0.7 else "Low"
+            console.print(f"  [green]\\[OK][/green] [bold]{p.name}[/bold] ({conf_str} Confidence) - {p.description}")
         console.print()

@@ -20,7 +20,8 @@ class LearnEngine:
         # Sort by confidence
         sorted_patterns = sorted(
             patterns_result.patterns,
-            key=lambda p: {"high": 0, "medium": 1, "low": 2}.get(p.confidence.lower(), 3)
+            key=lambda p: p.confidence,
+            reverse=True
         )
         return sorted_patterns
 

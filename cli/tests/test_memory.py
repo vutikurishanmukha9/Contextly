@@ -64,7 +64,7 @@ def test_memory_cmd_sorting(temp_repo):
                 "id": "rule_low_styling",
                 "category": "Styling",
                 "rule": "Low Styling Rule",
-                "confidence": "Low",
+                "confidence": 0.5,
                 "source": "discovered",
                 "created_at": "2026-06-12"
             },
@@ -72,7 +72,7 @@ def test_memory_cmd_sorting(temp_repo):
                 "id": "rule_high_styling",
                 "category": "Styling",
                 "rule": "High Styling Rule",
-                "confidence": "High",
+                "confidence": 1.0,
                 "source": "discovered",
                 "created_at": "2026-06-12"
             },
@@ -80,7 +80,7 @@ def test_memory_cmd_sorting(temp_repo):
                 "id": "rule_high_state",
                 "category": "State Management",
                 "rule": "High State Rule",
-                "confidence": "High",
+                "confidence": 1.0,
                 "source": "discovered",
                 "created_at": "2026-06-12"
             }

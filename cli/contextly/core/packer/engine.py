@@ -19,7 +19,7 @@ class PackerEngine:
         except ImportError:  # pragma: no cover
             self.tokenizer = None
 
-    def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None) -> Tuple[int, str, int, Path, List[Path], int]:
+    def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None, compress: bool = False) -> Tuple[int, str, int, Path, List[Path], int]:
         """
         Creates a context pack for the target directories.
         Returns:
@@ -28,7 +28,8 @@ class PackerEngine:
         packs_dir = self.root_dir / ".contextly" / "packs"
         packs_dir.mkdir(parents=True, exist_ok=True)
         
-        output_file = packs_dir / f"{pack_name}.contextpack.md"
+        safe_pack_name = os.path.basename(pack_name.replace("\\", "/"))
+        output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
         
         # Pre-validate access
         for target_path in target_paths:
@@ -73,10 +74,14 @@ class PackerEngine:
         
         for path in ranked_files:
             try:
-                with open(path, "r", encoding="utf-8") as in_f:
-                    raw_code = in_f.read()
+                try:
+                    with open(path, "r", encoding="utf-8") as in_f:
+                        raw_code = in_f.read()
+                except UnicodeDecodeError:
+                    with open(path, "r", encoding="latin-1", errors="ignore") as in_f:
+                        raw_code = in_f.read()
                     
-                compressed_code = self.compressor.compress(path, raw_code)
+                compressed_code = self.compressor.compress(path, raw_code) if compress else raw_code
                 
                 try:
                     rel_path = path.relative_to(self.root_dir).as_posix()
@@ -101,7 +106,7 @@ class PackerEngine:
 
                 if max_tokens and current_tokens + file_cost > max_tokens:
                     excluded_files.append(path)
-                    break
+                    continue
                     
                 current_tokens += file_cost
                     
@@ -113,12 +118,7 @@ class PackerEngine:
             except (FileNotFoundError, PermissionError, OSError):
                 skipped_files.append(path)
                 
-        # If we broke early from ranked_files, any remaining files must be marked excluded
-        # This occurs if break was hit in the token measurement loop
-        processed_count = len(selected_files) + len(skipped_files) + len(excluded_files)
-        if processed_count < len(ranked_files):
-            excluded_files.extend(ranked_files[processed_count:])
-
+                
         # Phase 4: Write Output Streamingly
         with open(output_file, "w", encoding="utf-8") as out_f:
             out_f.write(f"# Context Pack: {pack_name}\n\n")

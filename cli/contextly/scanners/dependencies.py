@@ -104,7 +104,8 @@ class DependencyScanner(BaseScanner):
                 for line in f:
                     stripped = line.strip()
                     if stripped and not stripped.startswith("#") and not stripped.startswith("-"):
-                        dep = re.split(r'[=<>~!]', stripped)[0].strip()
+                        clean_dep = stripped.split(';')[0].split('[')[0].strip()
+                        dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
                         if dep and dep not in result.python:
                             result.python.append(dep)
         except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
@@ -120,14 +121,16 @@ class DependencyScanner(BaseScanner):
                     # Extract standard [project.dependencies]
                     deps = data.get("project", {}).get("dependencies", [])
                     for dep in deps:
-                        clean_dep = re.split(r'[=<>~!]', dep)[0].strip()
+                        clean_dep = dep.split(';')[0].split('[')[0].strip()
+                        clean_dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
                         if clean_dep and clean_dep not in result.python:
                             result.python.append(clean_dep)
                     # Also extract [project.optional-dependencies]
                     opt_deps = data.get("project", {}).get("optional-dependencies", {})
                     for group_deps in opt_deps.values():
                         for dep in group_deps:
-                            clean_dep = re.split(r'[=<>~!]', dep)[0].strip()
+                            clean_dep = dep.split(';')[0].split('[')[0].strip()
+                            clean_dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
                             if clean_dep and clean_dep not in result.python:
                                 result.python.append(clean_dep)
                                 

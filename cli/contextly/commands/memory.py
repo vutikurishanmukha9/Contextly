@@ -37,12 +37,11 @@ def memory_cmd():
         
     for category, rules in sorted(categories.items()):
         console.print(f"[bold cyan]{category}[/bold cyan]")
-        # Sort by confidence descending (High -> Medium -> Low)
-        sorted_rules = sorted(rules, key=lambda r: {"high": 0, "medium": 1, "low": 2}.get(r.confidence.lower(), 3))
+        sorted_rules = sorted(rules, key=lambda r: r.confidence, reverse=True)
         for rule in sorted_rules:
+            conf_str = "High" if rule.confidence >= 0.9 else "Medium" if rule.confidence >= 0.7 else "Low"
+            conf_color = "green" if rule.confidence >= 0.9 else "yellow"
             source_tag = f"[dim]({rule.source})[/dim]"
-            conf_color = "green" if rule.confidence.lower() == "high" else "yellow"
-            conf_tag = f"[{conf_color}][{rule.confidence}][/{conf_color}]"
             
-            console.print(f"  - [dim]\\[{rule.id}][/dim] {rule.rule} {conf_tag} {source_tag}")
+            console.print(f"  - [dim]\\[{rule.id}][/dim] {rule.rule} ([{conf_color}]{conf_str}[/{conf_color}] conf) {source_tag}")
         console.print()

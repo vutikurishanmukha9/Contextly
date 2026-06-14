@@ -17,7 +17,7 @@ class FrameworkScanResult(BaseModel):
 class Pattern(BaseModel):
     name: str
     category: str
-    confidence: str
+    confidence: float
     description: str
     source: str = "discovered"
 
@@ -29,7 +29,7 @@ class MemoryRule(BaseModel):
     name: str | None = None
     category: str
     rule: str
-    confidence: str
+    confidence: float
     source: str
     created_at: str
 

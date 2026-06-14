@@ -79,12 +79,12 @@ def test_discover_cmd_sorting(tmp_path, monkeypatch):
     def mock_scan_patterns(*args, **kwargs):
         res = PatternScanResult()
         # Out of order insertion across categories
-        res.patterns.append(Pattern(name="LowStylingPattern", category="Styling", confidence="Low", description="Low styling description"))
-        res.patterns.append(Pattern(name="HighStylingPattern", category="Styling", confidence="High", description="High styling description"))
-        res.patterns.append(Pattern(name="MedStylingPattern", category="Styling", confidence="Medium", description="Medium styling description"))
+        res.patterns.append(Pattern(name="LowStylingPattern", category="Styling", confidence=0.5, description="Low styling description"))
+        res.patterns.append(Pattern(name="HighStylingPattern", category="Styling", confidence=1.0, description="High styling description"))
+        res.patterns.append(Pattern(name="MedStylingPattern", category="Styling", confidence=0.8, description="Medium styling description"))
         
-        res.patterns.append(Pattern(name="LowStatePattern", category="State Management", confidence="Low", description="Low state description"))
-        res.patterns.append(Pattern(name="HighStatePattern", category="State Management", confidence="High", description="High state description"))
+        res.patterns.append(Pattern(name="LowStatePattern", category="State Management", confidence=0.5, description="Low state description"))
+        res.patterns.append(Pattern(name="HighStatePattern", category="State Management", confidence=1.0, description="High state description"))
         return res
 
     monkeypatch.setattr(DependencyScanner, "scan", lambda *args, **kwargs: DependencyScanResult())

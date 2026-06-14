@@ -19,7 +19,8 @@ class ChatGPTGenerator(BaseGenerator):
             if has_memory:
                 conventions_md += "### Explicit Rules (Memory)\n"
                 for r in self.intelligence.memory.rules:
-                    conventions_md += f"- [{r.category}] {r.rule} [{r.confidence} confidence]\n"
+                    conf_str = "High" if r.confidence >= 0.9 else "Medium" if r.confidence >= 0.7 else "Low"
+                    conventions_md += f"- [{r.category}] {r.rule} [{conf_str} confidence]\n"
                 conventions_md += "\n"
                 
             if has_patterns:
@@ -39,7 +40,8 @@ class ChatGPTGenerator(BaseGenerator):
                 if filtered_patterns:
                     conventions_md += "### Inferred Conventions (Discovery)\n"
                     for p in filtered_patterns:
-                        conventions_md += f"- [{p.category}] {p.description} [{p.confidence} confidence]\n"
+                        conf_str = "High" if p.confidence >= 0.9 else "Medium" if p.confidence >= 0.7 else "Low"
+                        conventions_md += f"- [{p.category}] {p.description} [{conf_str} confidence]\n"
                     conventions_md += "\n"
 
         import json

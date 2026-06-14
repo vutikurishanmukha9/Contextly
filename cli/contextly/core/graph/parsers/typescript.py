@@ -107,6 +107,14 @@ class TypeScriptASTParser(BaseASTParser):
                             name_node = child.child_by_field_name('name')
                             if name_node:
                                 exports.append(content[name_node.start_byte:name_node.end_byte])
+                        elif child.type == 'export_clause':
+                            for spec in child.children:
+                                if spec.type == 'export_specifier':
+                                    name_node = spec.child_by_field_name('name')
+                                    if name_node:
+                                        exports.append(content[name_node.start_byte:name_node.end_byte])
+                        elif child.type == 'default' or child.type == 'identifier':
+                            exports.append('default')
                 
                 # Traverse children
                 for child in node.children:
