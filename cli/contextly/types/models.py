@@ -1,4 +1,5 @@
-from typing import Dict, List
+from typing import Dict, List, Any
+from enum import Enum
 from pydantic import BaseModel, Field
 
 class LanguageScanResult(BaseModel):
@@ -40,3 +41,80 @@ class RepositoryIntelligence(BaseModel):
     frameworks: FrameworkScanResult
     patterns: PatternScanResult = Field(default_factory=PatternScanResult)
     memory: ProjectMemory = Field(default_factory=ProjectMemory)
+
+# --- Knowledge Graph Schema (V2) ---
+
+class Discovery(BaseModel):
+    name: str
+    confidence: float
+    evidence: List[str]
+    generated_by: str = "UnknownScanner"
+
+class RepositoryCapability(BaseModel):
+    capability: str
+    confidence: float
+    evidence: List[str]
+    node_ids: List[str] = Field(default_factory=list)
+
+class NodeType(str, Enum):
+    COMPONENT = "COMPONENT"
+    SERVICE = "SERVICE"
+    STORE = "STORE"
+    ROUTE = "ROUTE"
+    CONTROLLER = "CONTROLLER"
+    REPOSITORY = "REPOSITORY"
+    UNKNOWN = "UNKNOWN"
+
+class KnowledgeNode(BaseModel):
+    id: str
+    type: NodeType
+    name: str
+    path: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+class RelationshipType(str, Enum):
+    IMPORTS = "IMPORTS"
+    CALLS = "CALLS"
+    USES = "USES"
+    EXTENDS = "EXTENDS"
+
+class Relationship(BaseModel):
+    source_id: str
+    target_id: str
+    type: RelationshipType
+    confidence: float = 1.0
+
+class KnowledgeGraph(BaseModel):
+    nodes: List[KnowledgeNode] = Field(default_factory=list)
+    relationships: List[Relationship] = Field(default_factory=list)
+
+class DomainType(str, Enum):
+    DOMAIN = "DOMAIN"
+    SHARED = "SHARED"
+    INFRASTRUCTURE = "INFRASTRUCTURE"
+
+class DomainKnowledge(BaseModel):
+    id: str
+    name: str
+    type: DomainType
+    node_ids: List[str] = Field(default_factory=list)
+
+class TechnologyKnowledge(BaseModel):
+    frameworks: List[str] = Field(default_factory=list)
+    languages: List[str] = Field(default_factory=list)
+    libraries: List[str] = Field(default_factory=list)
+
+class ArchitectureKnowledge(BaseModel):
+    primary_pattern: Discovery
+    pattern_candidates: List[Discovery] = Field(default_factory=list)
+    layers: List[Discovery] = Field(default_factory=list)
+
+class RepositoryKnowledge(BaseModel):
+    repository_hash: str
+    generated_at: str
+    contextly_version: str
+    technologies: TechnologyKnowledge
+    architecture: ArchitectureKnowledge
+    capabilities: List[RepositoryCapability] = Field(default_factory=list)
+    domains: List[DomainKnowledge] = Field(default_factory=list)
+    graph: KnowledgeGraph
