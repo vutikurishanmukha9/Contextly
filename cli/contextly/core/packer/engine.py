@@ -80,6 +80,9 @@ class PackerEngine:
                 except UnicodeDecodeError:
                     with open(path, "r", encoding="latin-1", errors="ignore") as in_f:
                         raw_code = in_f.read()
+                    if '\x00' in raw_code:
+                        skipped_files.append(path)
+                        continue
                     
                 compressed_code = self.compressor.compress(path, raw_code) if compress else raw_code
                 

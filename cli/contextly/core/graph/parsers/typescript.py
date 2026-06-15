@@ -46,6 +46,8 @@ class TypeScriptASTParser(BaseASTParser):
                             # Strip comments securely without destroying JSON strings
                             safe_regex = r'("(?:\\.|[^"\\])*")|//.*?\n|/\*.*?\*/'
                             content = re.sub(safe_regex, lambda m: m.group(1) if m.group(1) else '', content, flags=re.S)
+                            # Remove trailing commas
+                            content = re.sub(r',\s*([\]}])', r'\1', content)
                             data = json.loads(content)
                             paths = data.get("compilerOptions", {}).get("paths", {})
                             

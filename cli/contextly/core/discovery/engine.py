@@ -48,17 +48,12 @@ class DiscoveryEngine:
             seen = set()
             for rel_path in file_paths:
                 full_rel = rel_path.replace("\\", "/")
-                if full_rel not in seen:
-                    self._paths_cache.append(full_rel)
-                    seen.add(full_rel)
-                
-                parts = Path(full_rel).parts
-                for i in range(len(parts)):
-                    partial = "/".join(parts[:i+1])
-                    if partial not in seen:
+                path_obj = Path(full_rel)
+                for parent in [path_obj] + list(path_obj.parents):
+                    partial = parent.as_posix()
+                    if partial != "." and partial not in seen:
                         self._paths_cache.append(partial)
                         seen.add(partial)
-            self._is_loaded = True
             return
 
         walker = RepoWalker(self.root_dir, max_depth=4, skip_predicate=is_skippable)

@@ -70,10 +70,9 @@ class DependencyScanner(BaseScanner):
             with open(filepath, 'r', encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
-                    deps = (
-                        list(data.get("dependencies", {}).keys())
-                        + list(data.get("devDependencies", {}).keys())
-                    )
+                    deps_dict = data.get("dependencies") or {}
+                    dev_deps_dict = data.get("devDependencies") or {}
+                    deps = list(deps_dict.keys()) + list(dev_deps_dict.keys())
                     for d in deps:
                         if d not in result.npm:
                             result.npm.append(d)
