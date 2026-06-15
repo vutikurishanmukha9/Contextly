@@ -48,12 +48,16 @@ dependencies = [
     "typer>=0.12.0",
     "rich"
 ]
-    ''')
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "black"]
+''')
     
     scanner = DependencyScanner()
     result = scanner.scan(temp_project_dir)
     assert "typer" in result.python
     assert "rich" in result.python
+    assert "pytest" in result.python
+    assert "black" in result.python
 
 def test_dependency_scanner_malformed_toml(temp_project_dir):
     toml_path = temp_project_dir / "pyproject.toml"
@@ -134,6 +138,44 @@ def test_dependency_scanner_exceptions(tmp_path, monkeypatch):
             s.scan(tmp_path)
     finally:
         monkeypatch.undo()
+
+    # Test Exception blocks in _parse_* methods
+    import builtins
+    
+    # Mock open to raise Exception for package.json
+    def mock_open_gen_exception(*args, **kwargs):
+        if "package.json" in str(args[0]):
+            raise Exception("Unexpected error")
+        elif "requirements.txt" in str(args[0]):
+            raise Exception("Unexpected error req")
+        elif "pyproject.toml" in str(args[0]):
+            raise Exception("Unexpected error toml")
+        elif "Pipfile" in str(args[0]):
+            raise Exception("Unexpected error pipfile")
+        return original_open(*args, **kwargs)
+        
+    monkeypatch.setattr(builtins, "open", mock_open_gen_exception)
+    (tmp_path / "package.json").write_text('{}')
+    (tmp_path / "requirements.txt").write_text('flask')
+    (tmp_path / "pyproject.toml").write_text('')
+    (tmp_path / "Pipfile").write_text('')
+    
+    s.scan(tmp_path)
+    monkeypatch.undo()
+    
+    # Test PermissionError for requirements.txt, pyproject.toml, Pipfile
+    def mock_open_permission_error(*args, **kwargs):
+        if "requirements.txt" in str(args[0]):
+            raise PermissionError("Denied req")
+        elif "pyproject.toml" in str(args[0]):
+            raise PermissionError("Denied toml")
+        elif "Pipfile" in str(args[0]):
+            raise PermissionError("Denied pipfile")
+        return original_open(*args, **kwargs)
+        
+    monkeypatch.setattr(builtins, "open", mock_open_permission_error)
+    s.scan(tmp_path)
+    monkeypatch.undo()
 
 def test_dependency_scanner_file_paths(tmp_path):
     s = DependencyScanner()
