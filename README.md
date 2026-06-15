@@ -10,14 +10,15 @@ The CLI acts as a persistent **Context Memory Layer** for your repository, enabl
 
 ## Features
 
-* Repository analysis and context generation
-* Automatic framework and dependency detection
-* Architecture visualization through project structure analysis
-* Team convention discovery and memory management
-* Persistent project-specific context storage
-* LLM-ready Context Pack generation
-* Repository complexity and token usage inspection
-* Context-as-Code workflow with version-controlled project memory
+* **Offline Context Generation**: Context-Ly operates entirely offline, keeping your code secure and saving LLM tokens.
+* **Architecture Visualization & Domain Clustering**: Automatically segments code into coherent architectural domains (`core`, `shared`, etc.).
+* **Automatic Framework & Dependency Detection**: Discovers project stack, languages, and dependencies instantly.
+* **Team Convention Discovery**: Statically analyzes the repository to learn unwritten coding conventions and state management preferences.
+* **Persistent Context Storage**: Stores project memory locally (`.contextly/config.yaml`), allowing "Context-as-Code" via version control.
+* **LLM-ready Context Packs**: Bundles specific directories into optimized Markdown context files for LLMs.
+* **Zero Token Waste**: Features like `contextly explain <domain>` extract structural JSON payloads without streaming raw LLM responses.
+* **Clipboard-First Workflow**: Seamlessly pushes generated context packs directly to the clipboard for immediate use.
+* **Enterprise-Scale Stability**: Deterministic output generation and built-in binary immunity to prevent AST parsing crashes.
 
 ---
 
