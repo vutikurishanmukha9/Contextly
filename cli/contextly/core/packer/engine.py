@@ -70,7 +70,6 @@ class PackerEngine:
         excluded_files = []
         compressed_cache = {}
         current_tokens = 0
-        current_chars = 0
         
         for path in ranked_files:
             try:
