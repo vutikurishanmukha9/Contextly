@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Set, Tuple, Optional, Any
 
 from .rules.base import BaseRule
 from ...types.models import Discovery, RepositoryCapability, PatternScanResult
@@ -50,7 +50,7 @@ class DiscoveryEngine:
             # We want unique paths
             seen = set()
             for rel_path in file_paths:
-                full_rel = rel_path
+                full_rel = rel_path.replace("\\", "/")
                 if full_rel not in seen:
                     self._paths_cache.append(full_rel)
                     seen.add(full_rel)
@@ -95,7 +95,7 @@ class DiscoveryEngine:
         discovery_class: type = Discovery,
         source_name: str = "DiscoveryEngine",
         file_paths: Optional[List[str]] = None
-    ) -> List[any]:
+    ) -> List[Any]:
         """
         Evaluates a dictionary mapping names to rulesets.
         
@@ -123,7 +123,7 @@ class DiscoveryEngine:
             if total_score > 0:
                 confidence = min(1.0, total_score)
                 # Keep top 5 evidence to avoid giant JSON files
-                limited_evidence = list(all_evidence)[:5]
+                limited_evidence = sorted(list(all_evidence))[:5]
                 
                 if discovery_class == RepositoryCapability:
                     results.append(RepositoryCapability(
