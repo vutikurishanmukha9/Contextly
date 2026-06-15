@@ -8,6 +8,8 @@ from ...types.models import KnowledgeGraph
 from ...utils.walker import RepoWalker
 from .assembler import GraphAssembler
 from .parsers.base import ParsedFileDTO
+from .parsers.python import PythonASTParser
+from .parsers.typescript import TypeScriptASTParser
 
 def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
     """
@@ -26,12 +28,10 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
         ext = file_path.lower().split('.')[-1]
         
         if ext in ('py', 'pyw'):
-            from .parsers.python import PythonASTParser
             parser = PythonASTParser()
             return parser.parse(file_path, content, root_dir)
             
         elif ext in ('js', 'jsx', 'ts', 'tsx'):
-            from .parsers.typescript import TypeScriptASTParser
             parser = TypeScriptASTParser()
             return parser.parse(file_path, content, root_dir)
             
@@ -100,8 +100,10 @@ class ImportGraphBuilder:
         
         if use_pool:
             try:
+                # Leave 1 core free for OS, cap at 8 to prevent OOM on massive repos
+                optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
                 ctx = multiprocessing.get_context("spawn")
-                with concurrent.futures.ProcessPoolExecutor(max_workers=4, mp_context=ctx) as executor:
+                with concurrent.futures.ProcessPoolExecutor(max_workers=optimal_workers, mp_context=ctx) as executor:
                     futures = [
                         executor.submit(_parse_file, file_path, root_str) 
                         for file_path in target_files
