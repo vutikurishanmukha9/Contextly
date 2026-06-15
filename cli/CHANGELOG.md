@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [1.0.6] - 2026-06-15
+
+#### Changed
+- **Security & Fault Tolerance:** Protected core AST parsing and packing engines against unreadable binary files to prevent memory leaks and crashes.
+- **Cache Reliability:** Fixed Language Server state corruption issues by isolating discovery scans.
+- **Language Parsing:** Improved TypeScript handling (including trailing commas and complex exports) to ensure accurate dependency resolution.
+- **Performance:** Optimized filesystem traversal, reducing memory overhead, and implemented asynchronous parsing enhancements.
+- **Determinism:** Ensured fully reproducible output ordering for improved LLM context caching.
+
 ### [1.0.5] - 2026-06-14
 
 #### Added
