@@ -10,6 +10,7 @@ from .assembler import GraphAssembler
 from .parsers.base import ParsedFileDTO
 from .parsers.python import PythonASTParser
 from .parsers.typescript import TypeScriptASTParser
+from ...utils.constants import is_skippable
 
 _parser_cache = {}
 
@@ -76,11 +77,7 @@ class ImportGraphBuilder:
                 if ext in self._SUPPORTED_EXTENSIONS:
                     target_files.append(p)
         else:
-            def skip_predicate(path: Path) -> bool:
-                name = path.name.lower()
-                return name in self._ALWAYS_SKIP or name.endswith(".egg-info")
-
-            walker = RepoWalker(self.root_dir, max_depth=6, skip_predicate=skip_predicate)
+            walker = RepoWalker(self.root_dir, max_depth=None, skip_predicate=is_skippable)
 
             # 1. Discover all parseable files
             for dirpath, _, filenames in walker.walk():

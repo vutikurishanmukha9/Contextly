@@ -5,7 +5,8 @@ from pathlib import Path
 from contextly.types.models import KnowledgeGraph, DomainKnowledge, DomainType, RelationshipType
 
 BOUNDARY_MARKERS = {"features", "services", "modules", "packages", "domains", "apps"}
-SHARED_MARKERS = {"shared", "common", "utils", "helpers", "lib", "core", "infrastructure", "infra"}
+INFRA_MARKERS = {"core", "infrastructure", "infra"}
+SHARED_MARKERS = {"shared", "common", "utils", "helpers", "lib"}
 
 class DomainClusterer:
     """
@@ -39,17 +40,28 @@ class DomainClusterer:
                     else:
                         domain_name = parts[i + 1].lower()
                     node_to_domain[node.id] = domain_name
-                    domain_types[domain_name] = DomainType.DOMAIN
+                    
+                    if domain_name in INFRA_MARKERS:
+                        domain_types.setdefault(domain_name, DomainType.INFRASTRUCTURE)
+                    elif domain_name in SHARED_MARKERS:
+                        domain_types.setdefault(domain_name, DomainType.SHARED)
+                    else:
+                        domain_types.setdefault(domain_name, DomainType.DOMAIN)
+                        
                     assigned = True
                     break
                 
-                if part.lower() in SHARED_MARKERS:
-                    domain_name = "shared"
+                if part.lower() in INFRA_MARKERS:
+                    domain_name = "infrastructure"
+                    domain_types.setdefault(domain_name, DomainType.INFRASTRUCTURE)
                     node_to_domain[node.id] = domain_name
-                    if "infrastructure" in part.lower() or "core" in part.lower():
-                        domain_types[domain_name] = DomainType.INFRASTRUCTURE
-                    else:
-                        domain_types[domain_name] = DomainType.SHARED
+                    assigned = True
+                    break
+                    
+                elif part.lower() in SHARED_MARKERS:
+                    domain_name = "shared"
+                    domain_types.setdefault(domain_name, DomainType.SHARED)
+                    node_to_domain[node.id] = domain_name
                     assigned = True
                     break
                     

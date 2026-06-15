@@ -16,6 +16,8 @@ except ImportError:
         tomllib = None
 
 from ..utils.walker import RepoWalker
+from ..utils.constants import is_skippable
+
 class DependencyScanner(BaseScanner):
     @property
     def name(self) -> str:
@@ -37,17 +39,7 @@ class DependencyScanner(BaseScanner):
                     elif filename == "pyproject.toml":
                         self._parse_pyproject_toml(root_dir / rel, root_dir, result)
             else:
-                _ALWAYS_SKIP = {
-                    ".git", "node_modules", "venv", ".venv", "__pycache__",
-                    ".contextly", "dist", "build", ".next", ".tox", ".eggs",
-                    ".mypy_cache", ".pytest_cache", "htmlcov", "egg-info",
-                }
-                
-                def skip_predicate(path: Path) -> bool:
-                    name = path.name.lower()
-                    return name in _ALWAYS_SKIP or name.endswith(".egg-info")
-
-                walker = RepoWalker(root_dir, max_depth=3, skip_predicate=skip_predicate)
+                walker = RepoWalker(root_dir, max_depth=3, skip_predicate=is_skippable)
 
                 for dirpath, dirnames, filenames in walker.walk():
                     current = Path(dirpath)

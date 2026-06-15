@@ -8,9 +8,11 @@ def find_project_root(start_path: Path) -> Path:
     """
     current = start_path.resolve()
     
-    while current != current.parent:
+    while True:
         if (current / ".contextly").exists() or (current / ".git").exists():
             return current
+        if current.parent == current:
+            break
         current = current.parent
         
     return start_path.resolve()

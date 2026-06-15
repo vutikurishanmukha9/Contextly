@@ -13,6 +13,7 @@ def learn_cmd(
     apply_all: bool = typer.Option(False, "--apply-all", help="Automatically accept and save all discovered conventions (non-interactive).")
 ):
     """Teach Context-Ly new conventions, or use --auto to discover them."""
+    auto = auto or apply_all
     root_dir = find_project_root(Path.cwd())
     try:
         require_contextly_initialized(root_dir)

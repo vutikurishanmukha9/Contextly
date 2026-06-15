@@ -57,11 +57,11 @@ class ClaudeGenerator(BaseGenerator):
         back = self._escape_cdata(back_str)
 
         xml = f"""<project_context>
-<overview>
+<readme_excerpt>
 <![CDATA[
 {readme}
 ]]>
-</overview>
+</readme_excerpt>
 
 {conventions_xml}
 <architecture_map>

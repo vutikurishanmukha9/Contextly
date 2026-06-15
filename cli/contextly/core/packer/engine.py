@@ -89,20 +89,17 @@ class PackerEngine:
                     rel_path = path.name
                 ext = path.suffix.replace('.', '')
                 
-                # Pre-calculate wrapper to accurately measure overhead
-                wrapper_str = f"## File: `{rel_path}`\n```{ext}\n"
-                if not compressed_code.endswith('\n'):
-                    wrapper_str += '\n'
-                wrapper_str += "```\n\n"
+                body = compressed_code if compressed_code.endswith('\n') else compressed_code + '\n'
+                full_text = f"## File: `{rel_path}`\n```{ext}\n{body}```\n\n"
                 
                 if self.tokenizer:
                     try:
-                        file_cost = len(self.tokenizer.encode(wrapper_str + compressed_code, disallowed_special=()))
+                        file_cost = len(self.tokenizer.encode(full_text, disallowed_special=()))
                     except Exception:
                         skipped_files.append(path)
                         continue
                 else:
-                    file_cost = (len(wrapper_str) + len(compressed_code)) / 2.8
+                    file_cost = len(full_text) / 2.8
 
                 if max_tokens and current_tokens + file_cost > max_tokens:
                     excluded_files.append(path)
@@ -111,7 +108,7 @@ class PackerEngine:
                 current_tokens += file_cost
                     
                 selected_files.append(path)
-                compressed_cache[path] = compressed_code
+                compressed_cache[path] = body
                 
             except UnicodeDecodeError:
                 skipped_files.append(path)
@@ -135,8 +132,6 @@ class PackerEngine:
                     compressed_code = compressed_cache[path]
                     out_f.write(f"```{ext}\n")
                     out_f.write(compressed_code)
-                    if not compressed_code.endswith('\n'):
-                        out_f.write('\n')
                     out_f.write(f"```\n\n")
                 except (OSError, IOError, UnicodeDecodeError):
                     out_f.write(f"> [!WARNING]\n> File became unreadable during packing.\n\n")

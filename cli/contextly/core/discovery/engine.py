@@ -5,6 +5,7 @@ from typing import Dict, List, Set, Tuple, Optional, Any
 from .rules.base import BaseRule
 from ...types.models import Discovery, RepositoryCapability, PatternScanResult
 from ...utils.walker import RepoWalker
+from ...utils.constants import is_skippable
 
 class DiscoveryEngine:
     """
@@ -16,11 +17,6 @@ class DiscoveryEngine:
         self.root_dir = root_dir
         self._paths_cache: List[str] = []
         self._is_loaded = False
-        
-        self._ALWAYS_SKIP = {
-            ".git", "node_modules", "venv", ".venv", "__pycache__",
-            ".contextly", "dist", "build", ".next", ".tox", ".eggs"
-        }
 
     def discover(self) -> PatternScanResult:
         """
@@ -65,11 +61,7 @@ class DiscoveryEngine:
             self._is_loaded = True
             return
 
-        def skip_predicate(path: Path) -> bool:
-            name = path.name.lower()
-            return name in self._ALWAYS_SKIP or name.endswith(".egg-info")
-
-        walker = RepoWalker(self.root_dir, max_depth=4, skip_predicate=skip_predicate)
+        walker = RepoWalker(self.root_dir, max_depth=4, skip_predicate=is_skippable)
 
         for dirpath, dirnames, filenames in walker.walk():
             rel_path = str(Path(dirpath).relative_to(self.root_dir))

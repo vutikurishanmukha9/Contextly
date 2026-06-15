@@ -55,7 +55,7 @@ class ChatGPTGenerator(BaseGenerator):
 
         markdown = f"""# Project Context Intelligence
 
-## Overview
+## README Excerpt
 {readme}
 
 {conventions_md}

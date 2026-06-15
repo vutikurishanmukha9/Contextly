@@ -3,8 +3,8 @@ from pathlib import Path
 from typing import Set, Optional, List
 from .base import BaseScanner, ScannerError
 from ..types.models import PatternScanResult, Pattern, DependencyScanResult
-
 from ..utils.walker import RepoWalker
+from ..utils.constants import is_skippable
 class PatternScanner(BaseScanner):
     @property
     def name(self) -> str:
@@ -88,11 +88,7 @@ class PatternScanner(BaseScanner):
                     elif name == "generators":
                         architectures.add("Generator Pattern")
             else:
-                def skip_predicate(path: Path) -> bool:
-                    name = path.name.lower()
-                    return name in {".git", "node_modules", "venv", ".venv", ".contextly"}
-
-                walker = RepoWalker(root_dir, max_depth=4, skip_predicate=skip_predicate)
+                walker = RepoWalker(root_dir, max_depth=4, skip_predicate=is_skippable)
 
                 for _, dirnames, _ in walker.walk():
                     for dirname in dirnames:

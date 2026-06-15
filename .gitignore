@@ -22,6 +22,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Distribution artifacts
+cli/contextly-*/
+
 # Environments
 .env
 .venv
