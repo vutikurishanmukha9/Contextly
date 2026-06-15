@@ -12,7 +12,7 @@ class RuleResult(BaseModel):
 class BaseRule(ABC):
     """
     Abstract Base Class representing a single, deterministic discovery heuristic.
-    Enterprise implementations should ensure thread-safety and side-effect-free execution.
+    Implementations should ensure thread-safety and side-effect-free execution.
     """
     
     @abstractmethod

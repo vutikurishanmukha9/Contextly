@@ -8,7 +8,7 @@ from ..core.discovery.registry import Registry
 
 class ArchitectureScanner(BaseScanner):
     """
-    Enterprise-grade Architecture Scanner. 
+    Architecture Scanner. 
     Delegates pattern and layer detection to the Discovery Engine and Registry rules.
     """
     

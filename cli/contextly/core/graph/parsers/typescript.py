@@ -13,7 +13,7 @@ except ImportError:
 
 class TypeScriptASTParser(BaseASTParser):
     """
-    Enterprise TypeScript/JavaScript parser using Tree-Sitter.
+    TypeScript/JavaScript parser using Tree-Sitter.
     Extracts exports and resolves import paths accurately without regex.
     """
     

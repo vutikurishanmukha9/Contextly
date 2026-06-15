@@ -48,7 +48,7 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
 
 class ImportGraphBuilder:
     """
-    Enterprise-grade Graph Builder orchestrator.
+    Graph Builder orchestrator.
     Handles file discovery, thread/process pool management, and graph assembly delegation.
     """
     

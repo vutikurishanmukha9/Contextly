@@ -8,7 +8,7 @@ from ..core.discovery.registry import Registry
 
 class CapabilityDetector(BaseScanner):
     """
-    Enterprise-grade Capability Detector.
+    Capability Detector.
     Delegates heuristic detection to the generic Discovery Engine.
     """
     

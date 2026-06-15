@@ -9,7 +9,7 @@ from ...utils.constants import is_skippable
 
 class DiscoveryEngine:
     """
-    Enterprise-grade engine for evaluating arbitrary Discovery Rules against a codebase.
+    Engine for evaluating arbitrary Discovery Rules against a codebase.
     Decouples the file system traversal from the heuristic logic.
     """
     

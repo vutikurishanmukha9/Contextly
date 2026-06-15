@@ -10,7 +10,7 @@ SHARED_MARKERS = {"shared", "common", "utils", "helpers", "lib"}
 
 class DomainClusterer:
     """
-    Enterprise-grade Domain Clustering Engine.
+    Domain Clustering Engine.
     Uses path heuristics combined with Graph Edge analysis to determine logical boundaries.
     """
     

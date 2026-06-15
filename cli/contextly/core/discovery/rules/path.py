@@ -5,7 +5,7 @@ from .base import BaseRule, RuleResult
 class PathRegexRule(BaseRule):
     """
     Evaluates repository paths using a strict regular expression to avoid false positives.
-    Optimized for enterprise-scale path boundary detection (e.g., matching \\bauth\\b, not author).
+    Optimized for large-scale path boundary detection (e.g., matching \bauth\b, not author).
     """
     
     def __init__(self, pattern: str, weight: float, limit: int = 5):

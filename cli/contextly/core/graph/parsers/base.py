@@ -14,7 +14,7 @@ class ParsedFileDTO(BaseModel):
 
 class BaseASTParser(ABC):
     """
-    Enterprise abstract interface for AST parsers.
+    Abstract interface for AST parsers.
     Implementations must be thread-safe and free of persistent state.
     """
     

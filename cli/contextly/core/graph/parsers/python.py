@@ -6,7 +6,7 @@ from .base import BaseASTParser, ParsedFileDTO
 
 class PythonASTParser(BaseASTParser):
     """
-    Enterprise Python parser using the native AST module.
+    Python parser using the native AST module.
     Safely resolves relative imports to their absolute paths within the repository.
     """
     
@@ -24,7 +24,7 @@ class PythonASTParser(BaseASTParser):
                 # Extract Exports (Classes and Top-Level Functions)
                 if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
                     # Ensure it's not a deeply nested function by checking if we have a way to track scope
-                    # For a simple robust enterprise version, all top-level defs are exports in Python
+                    # For a simple robust version, all top-level defs are exports in Python
                     exports.append(node.name)
                     
                 # Extract Standard Imports

@@ -13,7 +13,7 @@ from pathlib import Path
 
 class GraphAssembler:
     """
-    Enterprise Knowledge Graph Assembler.
+    Knowledge Graph Assembler.
     Consumes parsed DTOs, creates strictly-typed nodes and relationships, 
     and maintains an O(1) symbol table for O(N) graph resolution.
     """
@@ -33,7 +33,7 @@ class GraphAssembler:
         # A simple stable ID mechanism for deterministic graphs
         node_id = f"node_{uuid.uuid4().hex[:8]}"
         
-        # Determine basic Node Type (Enterprise implementation would use a Registry here too)
+        # Determine basic Node Type (Implementation would use a Registry here too)
         node_type = NodeType.COMPONENT
         if "service" in dto.file_path.lower():
             node_type = NodeType.SERVICE
