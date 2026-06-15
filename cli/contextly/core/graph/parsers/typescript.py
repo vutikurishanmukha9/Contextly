@@ -43,8 +43,9 @@ class TypeScriptASTParser(BaseASTParser):
                     try:
                         with open(os.path.join(root, "tsconfig.json"), "r", encoding="utf-8") as f:
                             content = f.read()
-                            # Strip comments
-                            content = re.sub(r'//.*?\n|/\*.*?\*/', '', content, flags=re.S)
+                            # Strip comments securely without destroying JSON strings
+                            safe_regex = r'("(?:\\.|[^"\\])*")|//.*?\n|/\*.*?\*/'
+                            content = re.sub(safe_regex, lambda m: m.group(1) if m.group(1) else '', content, flags=re.S)
                             data = json.loads(content)
                             paths = data.get("compilerOptions", {}).get("paths", {})
                             

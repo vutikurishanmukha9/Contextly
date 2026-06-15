@@ -11,11 +11,14 @@ from .parsers.base import ParsedFileDTO
 from .parsers.python import PythonASTParser
 from .parsers.typescript import TypeScriptASTParser
 
+_parser_cache = {}
+
 def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
     """
     Module-level function required for ProcessPoolExecutor serialization.
     Instantiates the correct parser based on file extension and processes the file.
     """
+    global _parser_cache
     try:
         abs_path = os.path.join(root_dir, file_path)
         try:
@@ -28,12 +31,14 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
         ext = file_path.lower().split('.')[-1]
         
         if ext in ('py', 'pyw'):
-            parser = PythonASTParser()
-            return parser.parse(file_path, content, root_dir)
+            if 'py' not in _parser_cache:
+                _parser_cache['py'] = PythonASTParser()
+            return _parser_cache['py'].parse(file_path, content, root_dir)
             
         elif ext in ('js', 'jsx', 'ts', 'tsx'):
-            parser = TypeScriptASTParser()
-            return parser.parse(file_path, content, root_dir)
+            if 'ts' not in _parser_cache:
+                _parser_cache['ts'] = TypeScriptASTParser()
+            return _parser_cache['ts'].parse(file_path, content, root_dir)
             
         return None
     except Exception:

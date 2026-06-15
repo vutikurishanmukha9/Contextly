@@ -118,27 +118,40 @@ class DependencyScanner(BaseScanner):
             with open(filepath, 'rb') as f:
                 if tomllib is not None:
                     data = tomllib.load(f)
-                    # Extract standard [project.dependencies]
-                    deps = data.get("project", {}).get("dependencies", [])
-                    for dep in deps:
-                        clean_dep = dep.split(';')[0].split('[')[0].strip()
-                        clean_dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
-                        if clean_dep and clean_dep not in result.python:
-                            result.python.append(clean_dep)
-                    # Also extract [project.optional-dependencies]
-                    opt_deps = data.get("project", {}).get("optional-dependencies", {})
-                    for group_deps in opt_deps.values():
-                        for dep in group_deps:
-                            clean_dep = dep.split(';')[0].split('[')[0].strip()
-                            clean_dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
-                            if clean_dep and clean_dep not in result.python:
-                                result.python.append(clean_dep)
-                                
+                    project = data.get("project")
+                    if isinstance(project, dict):
+                        # Extract standard [project.dependencies]
+                        deps = project.get("dependencies", [])
+                        if isinstance(deps, list):
+                            for dep in deps:
+                                if isinstance(dep, str):
+                                    clean_dep = dep.split(';')[0].split('[')[0].strip()
+                                    clean_dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
+                                    if clean_dep and clean_dep not in result.python:
+                                        result.python.append(clean_dep)
+                                        
+                        # Also extract [project.optional-dependencies]
+                        opt_deps = project.get("optional-dependencies", {})
+                        if isinstance(opt_deps, dict):
+                            for group_deps in opt_deps.values():
+                                if isinstance(group_deps, list):
+                                    for dep in group_deps:
+                                        if isinstance(dep, str):
+                                            clean_dep = dep.split(';')[0].split('[')[0].strip()
+                                            clean_dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
+                                            if clean_dep and clean_dep not in result.python:
+                                                result.python.append(clean_dep)
+                                                
                     # Also extract Poetry dependencies
-                    poetry_deps = data.get("tool", {}).get("poetry", {}).get("dependencies", {})
-                    for dep in poetry_deps.keys():
-                        if dep != "python" and dep not in result.python:
-                            result.python.append(dep)
+                    tool = data.get("tool")
+                    if isinstance(tool, dict):
+                        poetry = tool.get("poetry")
+                        if isinstance(poetry, dict):
+                            poetry_deps = poetry.get("dependencies", {})
+                            if isinstance(poetry_deps, dict):
+                                for dep in poetry_deps.keys():
+                                    if dep != "python" and dep not in result.python:
+                                        result.python.append(dep)
                 else:
                     raise ScannerError("`tomllib` (or `tomli`) is not installed. Required for pyproject.toml parsing.")
         except ScannerError:

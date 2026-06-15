@@ -43,10 +43,11 @@ class DiscoveryEngine:
         Walks the repository once and caches relative paths in memory for O(1) rule evaluation.
         Can optionally accept a pre-computed list of files to avoid hitting the disk.
         """
-        if self._is_loaded:
+        if self._is_loaded and file_paths is None:
             return
 
         if file_paths is not None:
+            self._paths_cache.clear()
             # We want unique paths
             seen = set()
             for rel_path in file_paths:
