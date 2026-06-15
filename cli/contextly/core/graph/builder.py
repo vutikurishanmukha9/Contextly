@@ -28,6 +28,8 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
         except UnicodeDecodeError:
             with open(abs_path, "r", encoding="latin-1", errors="ignore") as f:
                 content = f.read()
+            if '\x00' in content:
+                return None # Silently skip binaries
             
         ext = file_path.lower().split('.')[-1]
         

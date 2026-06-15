@@ -34,17 +34,11 @@ class DiscoveryEngine:
         
         return patterns_result
 
-    def _load_paths(self, file_paths: Optional[List[str]] = None):
-        """
-        Walks the repository once and caches relative paths in memory for O(1) rule evaluation.
-        Can optionally accept a pre-computed list of files to avoid hitting the disk.
-        """
-        if self._is_loaded and file_paths is None:
-            return
-
+    def _get_evaluation_paths(self, file_paths: Optional[List[str]] = None) -> List[str]:
+        """Returns the paths to evaluate against, using caching for full-repo scans."""
         if file_paths is not None:
-            self._paths_cache.clear()
-            # We want unique paths
+            # LOCAL list for targeted scans. Do NOT touch self._paths_cache.
+            local_cache = []
             seen = set()
             for rel_path in file_paths:
                 full_rel = rel_path.replace("\\", "/")
@@ -52,9 +46,13 @@ class DiscoveryEngine:
                 for parent in [path_obj] + list(path_obj.parents):
                     partial = parent.as_posix()
                     if partial != "." and partial not in seen:
-                        self._paths_cache.append(partial)
+                        local_cache.append(partial)
                         seen.add(partial)
-            return
+            return local_cache
+
+        # Full repo scan caching logic
+        if self._is_loaded:
+            return self._paths_cache
 
         walker = RepoWalker(self.root_dir, max_depth=4, skip_predicate=is_skippable)
 
@@ -76,6 +74,7 @@ class DiscoveryEngine:
                 self._paths_cache.append(full_rel)
 
         self._is_loaded = True
+        return self._paths_cache
 
     def evaluate_registry(
         self, 
@@ -96,7 +95,7 @@ class DiscoveryEngine:
         Returns:
             List of constructed discovery_class instances.
         """
-        self._load_paths(file_paths)
+        paths_to_evaluate = self._get_evaluation_paths(file_paths)
         results = []
 
         for target_name, rules in registry.items():
@@ -104,7 +103,7 @@ class DiscoveryEngine:
             all_evidence: Set[str] = set()
 
             for rule in rules:
-                result = rule.evaluate(self._paths_cache)
+                result = rule.evaluate(paths_to_evaluate)
                 total_score += result.score_delta
                 all_evidence.update(result.matched_evidence)
 
