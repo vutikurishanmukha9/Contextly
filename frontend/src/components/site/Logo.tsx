@@ -12,7 +12,7 @@ export function BrandName({
   inline = false,
   className = "",
   size = "",
-  innerClassName = ""
+  innerClassName = "",
 }: {
   inline?: boolean;
   className?: string;
@@ -20,7 +20,9 @@ export function BrandName({
   innerClassName?: string;
 }) {
   return (
-    <span className={`whitespace-nowrap inline-flex items-baseline ${size} ${className} ${innerClassName}`}>
+    <span
+      className={`whitespace-nowrap inline-flex items-baseline ${size} ${className} ${innerClassName}`}
+    >
       <span
         className="font-extrabold tracking-[-0.04em] text-foreground"
         style={{ fontWeight: 900 }}

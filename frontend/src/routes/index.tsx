@@ -1,13 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { Terminal, HardDrive, Cpu, Shield, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Terminal, HardDrive, Cpu, Shield, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Context-Ly | The Intelligence CLI for LLMs" },
-      { name: "description", content: "A purpose-built CLI that automatically builds, compresses, and formats your codebase for any LLM." },
+      {
+        name: "description",
+        content:
+          "A purpose-built CLI that automatically builds, compresses, and formats your codebase for any LLM.",
+      },
     ],
   }),
   component: Landing,
@@ -17,7 +21,7 @@ function Landing() {
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-[#111111] font-sans antialiased selection:bg-[#111] selection:text-white">
       <SiteHeader />
-      
+
       <main>
         {/* Hero Section */}
         <section className="relative px-6 pt-12 pb-16 md:pt-16 md:pb-20 max-w-5xl mx-auto text-center">
@@ -26,29 +30,49 @@ function Landing() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span className="text-xs font-medium text-black/70 tracking-wide">v1.0.2 now available</span>
+            <span className="text-xs font-medium text-black/70 tracking-wide">
+              v1.0.5 now available
+            </span>
           </div>
-          
+
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-balance leading-tight">
             The CLI for <br className="hidden md:block" /> LLM Context.
           </h1>
-          
+
           <p className="mt-8 mx-auto max-w-2xl text-lg md:text-xl text-black/60 text-balance leading-relaxed">
-            Stop dumping raw files into ChatGPT. Context-Ly automatically reads your codebase, discovers unwritten rules, and packages your project perfectly for any AI.
+            Stop dumping raw files into ChatGPT. Context-Ly automatically reads your codebase,
+            discovers unwritten rules, and packages your project perfectly for any AI.
           </p>
 
           <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
             <div className="group relative flex items-center justify-between gap-4 rounded-xl border border-black/10 bg-white p-2 pl-5 pr-2 shadow-sm transition-all hover:shadow-md w-full sm:w-auto">
-              <code className="font-mono text-sm text-black/80 select-all">$ pip install contextly</code>
-              <button 
-                onClick={() => navigator.clipboard.writeText('pip install contextly')}
+              <code className="font-mono text-sm text-black/80 select-all">
+                $ pip install contextly
+              </code>
+              <button
+                onClick={() => navigator.clipboard.writeText("pip install contextly")}
                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/5 text-black/40 hover:bg-black/10 hover:text-black transition-colors"
                 title="Copy to clipboard"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
               </button>
             </div>
-            <a href="#docs" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-black text-white font-medium text-sm hover:bg-black/80 transition-colors">
+            <a
+              href="#docs"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-black text-white font-medium text-sm hover:bg-black/80 transition-colors"
+            >
               Read Docs <ArrowRight className="w-4 h-4" />
             </a>
           </div>
@@ -70,11 +94,11 @@ function Landing() {
                 <span className="text-green-400">~/project</span>
                 <span className="text-white">$ contextly pack .</span>
               </div>
-              <div className="mt-4 text-blue-400">Context-Ly Engine v1.0.2</div>
+              <div className="mt-4 text-blue-400">Context-Ly Engine v1.0.5</div>
               <div className="mt-2 text-white/50">Analyzing 1,420 files...</div>
               <div className="mt-1 text-white/50">Applying AST compression...</div>
-              <div className="mt-1 text-white/50">Wrapping in CDATA boundaries...</div>
-              
+              <div className="mt-1 text-white/50">Writing fenced Markdown context...</div>
+
               <div className="mt-4 text-white">
                 <span className="text-green-400">✔</span> Context pack generated successfully.
               </div>
@@ -102,10 +126,11 @@ function Landing() {
             <div className="mb-16">
               <h2 className="text-3xl font-bold tracking-tight">Purpose-built for LLMs.</h2>
               <p className="mt-4 text-black/60 max-w-2xl text-lg">
-                Generic scripts copy-paste your node_modules. Context-Ly uses AST-aware parsing to generate high-signal, token-efficient prompt payloads.
+                Generic scripts copy-paste your node_modules. Context-Ly uses AST-aware parsing to
+                generate high-signal, token-efficient prompt payloads.
               </p>
             </div>
-            
+
             <div className="grid md:grid-cols-2 gap-x-12 gap-y-16">
               {[
                 {
@@ -125,18 +150,16 @@ function Landing() {
                 },
                 {
                   icon: <Shield className="w-5 h-5" />,
-                  title: "XML CDATA Isolation",
-                  desc: "Wraps raw source code in strictly isolated CDATA tags to prevent prompt injection and tokenizer bleeding.",
-                }
+                  title: "Structured Markdown Packs",
+                  desc: "Wraps source files in readable fenced Markdown sections that preserve filenames, languages, and context boundaries.",
+                },
               ].map((feature, i) => (
                 <div key={i} className="relative">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/5 border border-black/10 text-black mb-5">
                     {feature.icon}
                   </div>
                   <h3 className="text-xl font-bold tracking-tight mb-3">{feature.title}</h3>
-                  <p className="text-black/60 leading-relaxed">
-                    {feature.desc}
-                  </p>
+                  <p className="text-black/60 leading-relaxed">{feature.desc}</p>
                 </div>
               ))}
             </div>
@@ -149,26 +172,46 @@ function Landing() {
             <div className="mb-12">
               <h2 className="text-3xl font-bold tracking-tight">Commands</h2>
             </div>
-            
+
             <div className="rounded-2xl border border-black/10 bg-white overflow-hidden shadow-sm">
               {[
-                { cmd: "init", desc: "Initialize a .contextly environment in the current directory." },
+                {
+                  cmd: "init",
+                  desc: "Initialize a .contextly environment in the current directory.",
+                },
                 { cmd: "discover", desc: "Run static analysis to find unwritten team patterns." },
-                { cmd: "learn --auto", desc: "Interactively save discovered patterns to your rules memory." },
-                { cmd: "analyze", desc: "Build an ASCII architecture map of your entire repository." },
-                { cmd: "pack <dir>", desc: "Bundle code into a compressed, LLM-ready Context Pack." },
-                { cmd: "export <pack>", desc: "Fuse rules and packs into your clipboard instantly." },
+                {
+                  cmd: "learn --auto",
+                  desc: "Interactively save discovered patterns to your rules memory.",
+                },
+                {
+                  cmd: "analyze",
+                  desc: "Build an ASCII architecture map of your entire repository.",
+                },
+                {
+                  cmd: "pack <dir>",
+                  desc: "Bundle code into a compressed, LLM-ready Context Pack.",
+                },
+                {
+                  cmd: "export <pack>",
+                  desc: "Fuse rules and packs into your clipboard instantly.",
+                },
                 { cmd: "inspect", desc: "Identify massive files that act as Token Hogs." },
                 { cmd: "memory", desc: "View all rules permanently saved to project memory." },
-                { cmd: "explain <domain>", desc: "Copy a structural context payload for a specific domain." },
+                {
+                  cmd: "explain <domain>",
+                  desc: "Copy a structural context payload for a specific domain.",
+                },
               ].map((c, i) => (
-                <div key={i} className="flex flex-col sm:flex-row sm:items-center border-b border-black/5 last:border-0 hover:bg-black/[0.02] transition-colors">
+                <div
+                  key={i}
+                  className="flex flex-col sm:flex-row sm:items-center border-b border-black/5 last:border-0 hover:bg-black/[0.02] transition-colors"
+                >
                   <div className="sm:w-1/3 p-5 font-mono text-sm border-b sm:border-b-0 sm:border-r border-black/5 bg-black/[0.01]">
-                    <span className="text-black/40">contextly</span> <span className="font-semibold">{c.cmd}</span>
+                    <span className="text-black/40">contextly</span>{" "}
+                    <span className="font-semibold">{c.cmd}</span>
                   </div>
-                  <div className="sm:w-2/3 p-5 text-[15px] text-black/70">
-                    {c.desc}
-                  </div>
+                  <div className="sm:w-2/3 p-5 text-[15px] text-black/70">{c.desc}</div>
                 </div>
               ))}
             </div>

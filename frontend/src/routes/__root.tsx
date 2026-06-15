@@ -74,19 +74,34 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Context-Ly — Less Noise. Better Context. Smarter AI." },
-      { name: "description", content: "Context-Ly is the context-engineering workspace for AI. Build, organize, compress and score context to get sharper answers with fewer tokens." },
+      {
+        name: "description",
+        content:
+          "Context-Ly is the context-engineering workspace for AI. Build, organize, compress and score context to get sharper answers with fewer tokens.",
+      },
       { property: "og:title", content: "Context-Ly — Less Noise. Better Context. Smarter AI." },
-      { property: "og:description", content: "Context-Ly is the context-engineering workspace for AI. Build, organize, compress and score context to get sharper answers with fewer tokens." },
+      {
+        property: "og:description",
+        content:
+          "Context-Ly is the context-engineering workspace for AI. Build, organize, compress and score context to get sharper answers with fewer tokens.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Context-Ly — Less Noise. Better Context. Smarter AI." },
-      { name: "twitter:description", content: "Context-Ly is the context-engineering workspace for AI. Build, organize, compress and score context to get sharper answers with fewer tokens." },
+      {
+        name: "twitter:description",
+        content:
+          "Context-Ly is the context-engineering workspace for AI. Build, organize, compress and score context to get sharper answers with fewer tokens.",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Inter+Tight:wght@500;600;700;800;900&family=Playfair+Display:ital,wght@1,400;1,500;1,600&family=JetBrains+Mono:wght@400;500&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Inter+Tight:wght@500;600;700;800;900&family=Playfair+Display:ital,wght@1,400;1,500;1,600&family=JetBrains+Mono:wght@400;500&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,

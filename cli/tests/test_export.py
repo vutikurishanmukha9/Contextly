@@ -55,6 +55,27 @@ def test_export_cmd_success_escaping(temp_repo, monkeypatch):
     assert '<context_pack name="front &amp; back">' in fused_content
 
 
+def test_export_cmd_normalizes_pack_name_for_filesystem(temp_repo, monkeypatch):
+    """Export should mirror pack's safe filename behavior for path-like names."""
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["analyze"])
+    runner.invoke(app, ["pack", "src", "--name", "frontend"])
+
+    import pyperclip
+    monkeypatch.setattr(pyperclip, "copy", lambda x: None)
+
+    result = runner.invoke(app, ["export", "../frontend"])
+    assert result.exit_code == 0
+
+    exports_dir = temp_repo / ".contextly" / "exports"
+    exports = list(exports_dir.glob("*.md"))
+    assert len(exports) == 1
+    assert exports[0].name.startswith("export_frontend_")
+
+    fused_content = exports[0].read_text(encoding="utf-8")
+    assert '<context_pack name="../frontend">' in fused_content
+
+
 def test_export_cmd_missing_pack(temp_repo):
     runner.invoke(app, ["init"])
     runner.invoke(app, ["analyze"])

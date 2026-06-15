@@ -15,8 +15,9 @@ class ExporterEngine:
         Fuses intelligence and context packs.
         Returns a tuple of (export_path, clipboard_success).
         """
+        safe_file_pack_name = Path(pack_name).name
         project_context_path = self.root_dir / "PROJECT_CONTEXT.md"
-        pack_path = self.root_dir / ".contextly" / "packs" / f"{pack_name}.contextpack.md"
+        pack_path = self.root_dir / ".contextly" / "packs" / f"{safe_file_pack_name}.contextpack.md"
         export_dir = self.root_dir / ".contextly" / "exports"
         
         if not project_context_path.exists():
@@ -52,7 +53,7 @@ class ExporterEngine:
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_id = uuid.uuid4().hex[:4]
-        export_filename = f"export_{pack_name}_{timestamp}_{unique_id}.md"
+        export_filename = f"export_{safe_file_pack_name}_{timestamp}_{unique_id}.md"
         export_path = export_dir / export_filename
         
         try:
