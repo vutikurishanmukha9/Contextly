@@ -28,7 +28,7 @@ class PackerEngine:
         packs_dir = self.root_dir / ".contextly" / "packs"
         packs_dir.mkdir(parents=True, exist_ok=True)
         
-        safe_pack_name = os.path.basename(pack_name.replace("\\", "/"))
+        safe_pack_name = Path(pack_name).name
         output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
         
         # Pre-validate access
@@ -102,7 +102,7 @@ class PackerEngine:
                         skipped_files.append(path)
                         continue
                 else:
-                    file_cost = (len(wrapper_str) + len(compressed_code)) / 4.0
+                    file_cost = (len(wrapper_str) + len(compressed_code)) / 2.8
 
                 if max_tokens and current_tokens + file_cost > max_tokens:
                     excluded_files.append(path)
@@ -156,6 +156,6 @@ class PackerEngine:
             token_type = "Exact Tokens (cl100k_base)"
         else:
             token_estimate = int(current_tokens)
-            token_type = "Estimated Tokens (chars / 4)"
+            token_type = "Estimated Tokens (chars / 2.8)"
             
         return token_estimate, token_type, len(selected_files), output_file, skipped_files, len(excluded_files)
