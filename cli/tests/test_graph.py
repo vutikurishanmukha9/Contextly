@@ -18,7 +18,9 @@ def my_func():
     pass
 
 class MyClass:
-    pass
+    def method(self):
+        def inner():
+            pass
 """
     file_path = "src/main.py"
     (tmp_path / "src").mkdir()
@@ -29,6 +31,8 @@ class MyClass:
     assert not dto.error
     assert "MyClass" in dto.exports
     assert "my_func" in dto.exports
+    assert "method" not in dto.exports
+    assert "inner" not in dto.exports
     assert "os" in dto.imports
     assert "src/local" in dto.imports # .local -> src/local
     assert "parent" in dto.imports # ..parent -> parent
@@ -137,6 +141,16 @@ def test_graph_assembler():
     rel = assembler.graph.relationships[0]
     assert rel.source_id == id1
     assert rel.target_id == id2
+
+
+def test_graph_assembler_node_ids_are_deterministic():
+    dto = ParsedFileDTO(file_path="src/index.ts", exports=["App"], imports=[])
+
+    first = GraphAssembler().add_node(dto)
+    second = GraphAssembler().add_node(dto)
+
+    assert first == second
+    assert first.startswith("node_")
 
 def test_import_graph_builder(tmp_path):
     (tmp_path / "src").mkdir()

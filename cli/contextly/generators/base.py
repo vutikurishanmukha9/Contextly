@@ -28,7 +28,7 @@ class BaseGenerator(ABC):
         tree = []
         
         def _controlled_walk(dir_path: Path, prefix: str = "", depth: int = 0):
-            if depth > 2: # Max depth
+            if depth > 4: # Limit depth to 4 levels to provide a meaningful but constrained tree
                 return
             if not dir_path.is_dir():
                 return
@@ -41,11 +41,11 @@ class BaseGenerator(ABC):
             
             for index, item in enumerate(valid_items):
                 is_last = index == len(valid_items) - 1
-                connector = "└── " if is_last else "├── "
+                connector = "`-- " if is_last else "|-- "
                 
                 if item.is_dir():
                     tree.append(f"{prefix}{connector}{item.name}/")
-                    extension = "    " if is_last else "│   "
+                    extension = "    " if is_last else "|   "
                     _controlled_walk(item, prefix + extension, depth + 1)
                 else:
                     tree.append(f"{prefix}{connector}{item.name}")

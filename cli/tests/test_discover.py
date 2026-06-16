@@ -174,3 +174,20 @@ def test_discovery_engine_full_coverage(tmp_path):
     assert res3[0].confidence == 0.2 # 0.2 * 1 rule = 0.2
     assert len(res3[0].evidence) == 5 # Limited to 5
 
+
+def test_discovery_engine_refreshes_full_repo_paths(tmp_path):
+    from contextly.core.discovery.engine import DiscoveryEngine
+    from contextly.core.discovery.rules.path import PathRegexRule
+
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "main.py").write_text("print('hello')")
+
+    engine = DiscoveryEngine(tmp_path)
+    assert engine.evaluate_registry({"Main": [PathRegexRule(r"main\.py", 1.0)]})
+
+    (tmp_path / "src" / "newfeature.py").write_text("print('new')")
+    result = engine.evaluate_registry({"NewFeature": [PathRegexRule(r"newfeature\.py", 1.0)]})
+
+    assert len(result) == 1
+    assert result[0].name == "NewFeature"
+

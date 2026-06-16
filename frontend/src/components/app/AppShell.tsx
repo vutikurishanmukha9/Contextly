@@ -1,18 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Logo } from "@/components/site/Logo";
-import {
-  LayoutDashboard,
-  Layers3,
-  Library,
-  Database,
-  Gauge,
-  Filter,
-  MessagesSquare,
-  BarChart3,
-  Settings as SettingsIcon,
-  Search,
-  Bell,
-} from "lucide-react";
+import { LayoutDashboard, Search, Bell } from "lucide-react";
 import type { ReactNode } from "react";
 
 const nav = [{ to: "/", label: "Dashboard", icon: LayoutDashboard }];
@@ -79,9 +67,9 @@ export function AppShell({
               <Search className="h-3.5 w-3.5 text-muted-foreground" />
               <input
                 className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
-                placeholder="Search context, memory, packs…"
+                placeholder="Search context, memory, packs..."
               />
-              <kbd className="text-mono text-[10.5px] text-muted-foreground">⌘K</kbd>
+              <kbd className="text-mono text-[10.5px] text-muted-foreground">Ctrl K</kbd>
             </div>
           </div>
           <button className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground">

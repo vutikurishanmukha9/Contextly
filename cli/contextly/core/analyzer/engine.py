@@ -1,4 +1,6 @@
 from pathlib import Path
+import hashlib
+from importlib.metadata import PackageNotFoundError, version
 
 from ...scanners.dependencies import DependencyScanner
 from ...scanners.language import LanguageScanner
@@ -10,6 +12,7 @@ from ...core.graph.builder import ImportGraphBuilder
 from ...types.models import RepositoryIntelligence, RepositoryKnowledge, TechnologyKnowledge, KnowledgeGraph
 from datetime import datetime, timezone
 from ...core.memory.engine import MemoryEngine
+from ...core.initializer.engine import InitEngine
 from ...generators.claude import ClaudeGenerator
 from ...generators.chatgpt import ChatGPTGenerator
 from ...utils.exceptions import ContextlyError
@@ -25,6 +28,8 @@ class AnalyzerEngine:
         """
         from ...utils.walker import RepoWalker
         import os
+
+        InitEngine(self.root_dir).initialize()
         
         # 1. Single unified walk of the repository to discover all valid files
         # We use a depth of 6 and the standard exclusion list for maximum coverage
@@ -83,10 +88,17 @@ class AnalyzerEngine:
             memory=memory_data
         )
         
+        hash_input = "\n".join(sorted(all_files)).encode("utf-8")
+        repository_hash = hashlib.sha256(hash_input).hexdigest()
+        try:
+            contextly_version = version("contextly")
+        except PackageNotFoundError:
+            contextly_version = "unknown"
+
         repo_knowledge = RepositoryKnowledge(
-            repository_hash="pending", # To be implemented
+            repository_hash=repository_hash,
             generated_at=datetime.now(timezone.utc).isoformat(),
-            contextly_version="0.1.0",
+            contextly_version=contextly_version,
             technologies=TechnologyKnowledge(
                 frameworks=fw_data.frontend + fw_data.backend,
                 languages=[lang_data.primary] + list(lang_data.breakdown.keys()),

@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional
-import uuid
+import hashlib
 
 from .parsers.base import ParsedFileDTO
 from ...types.models import (
@@ -30,8 +30,8 @@ class GraphAssembler:
         Converts a DTO into a node and stores it in the graph.
         Returns the stable node ID.
         """
-        # A simple stable ID mechanism for deterministic graphs
-        node_id = f"node_{uuid.uuid4().hex[:8]}"
+        node_hash = hashlib.sha256(dto.file_path.encode("utf-8")).hexdigest()[:12]
+        node_id = f"node_{node_hash}"
         
         # Determine basic Node Type (Implementation would use a Registry here too)
         node_type = NodeType.COMPONENT

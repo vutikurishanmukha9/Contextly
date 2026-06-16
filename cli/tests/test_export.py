@@ -73,7 +73,7 @@ def test_export_cmd_normalizes_pack_name_for_filesystem(temp_repo, monkeypatch):
     assert exports[0].name.startswith("export_frontend_")
 
     fused_content = exports[0].read_text(encoding="utf-8")
-    assert '<context_pack name="../frontend">' in fused_content
+    assert '<context_pack name="frontend">' in fused_content
 
 
 def test_export_cmd_missing_pack(temp_repo):

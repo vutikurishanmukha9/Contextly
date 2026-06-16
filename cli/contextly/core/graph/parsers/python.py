@@ -20,15 +20,14 @@ class PythonASTParser(BaseASTParser):
             # Helper to resolve relative imports to absolute repo paths
             file_dir = os.path.dirname(os.path.abspath(os.path.join(root_dir, file_path)))
             
-            for node in ast.walk(tree):
+            for node in ast.iter_child_nodes(tree):
                 # Extract Exports (Classes and Top-Level Functions)
                 if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-                    # Ensure it's not a deeply nested function by checking if we have a way to track scope
-                    # For a simple robust version, all top-level defs are exports in Python
                     exports.append(node.name)
-                    
+
+            for node in ast.walk(tree):
                 # Extract Standard Imports
-                elif isinstance(node, ast.Import):
+                if isinstance(node, ast.Import):
                     for alias in node.names:
                         imports.append(alias.name)
                         

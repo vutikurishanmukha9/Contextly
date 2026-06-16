@@ -3,6 +3,7 @@ import yaml
 from typer.testing import CliRunner
 from contextly.main import app
 from conftest import runner
+from contextly.core.memory.engine import MemoryEngine
 
 def test_memory_uninitialized(temp_repo):
     """Verifies memory command fails when not initialized."""
@@ -101,3 +102,15 @@ def test_memory_cmd_sorting(temp_repo):
     high_styling_idx = result.stdout.index("High Styling Rule")
     low_styling_idx = result.stdout.index("Low Styling Rule")
     assert high_styling_idx < low_styling_idx
+
+
+def test_memory_add_rule_deduplicates_named_and_unnamed_rules(temp_repo):
+    runner.invoke(app, ["init"])
+    engine = MemoryEngine(temp_repo)
+
+    assert engine.add_rule("Styling", "Uses TailwindCSS.", 1.0, "test", name="TailwindCSS")
+    assert not engine.add_rule("Styling", "Uses TailwindCSS.", 1.0, "test")
+
+    memory = engine.load_memory()
+    assert len(memory.rules) == 1
+    assert "+" in memory.rules[0].created_at

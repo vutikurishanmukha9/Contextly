@@ -52,3 +52,21 @@ def test_domain_clusterer_heuristics():
     
     # n6 should be in global
     assert "n6" in domain_map["global"].node_ids
+
+
+def test_domain_clusterer_direct_boundary_files_are_semantic_and_deterministic():
+    graph = KnowledgeGraph(
+        nodes=[
+            KnowledgeNode(id="n1", type=NodeType.SERVICE, name="stripe", path="src/services/stripe.ts"),
+            KnowledgeNode(id="n2", type=NodeType.SERVICE, name="paypal", path="src/services/paypal.ts"),
+        ]
+    )
+
+    first = DomainClusterer().cluster(graph)
+    second = DomainClusterer().cluster(graph)
+    first_map = {domain.name: domain for domain in first}
+    second_map = {domain.name: domain for domain in second}
+
+    assert set(first_map) == {"stripe", "paypal"}
+    assert first_map["stripe"].id == second_map["stripe"].id
+    assert first_map["paypal"].id == second_map["paypal"].id

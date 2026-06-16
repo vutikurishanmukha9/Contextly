@@ -72,7 +72,7 @@ def test_base_generator_edge_cases(tmp_path, monkeypatch):
     res = gen._get_readme_content()
     assert "[truncated" in res
 
-    # 32: depth > 2
+    # 32: depth > 4
     d1 = tmp_path / "dir1"
     d1.mkdir()
     d2 = d1 / "dir2"
@@ -81,14 +81,18 @@ def test_base_generator_edge_cases(tmp_path, monkeypatch):
     d3.mkdir()
     d4 = d3 / "dir4"
     d4.mkdir()
-    
+    d5 = d4 / "dir5"
+    d5.mkdir()
+    d6 = d5 / "dir6"
+    d6.mkdir()
+
     # 34: not dir
     f1 = tmp_path / "file1.txt"
     f1.write_text("a")
 
     tree = gen._generate_tree()
     assert "dir1" in tree
-    assert "dir4" not in tree
+    assert "dir6" not in tree
 
 def test_chatgpt_generator_memory_rules(tmp_path):
     """Covers chatgpt.py 20-23: memory formatting."""

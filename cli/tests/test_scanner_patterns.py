@@ -70,6 +70,11 @@ def test_pattern_scanner_full_coverage(tmp_path):
         "src/usecases/h.py"
     ]
     
+    for fp in file_paths:
+        path = tmp_path / fp
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    
     res = s.scan(tmp_path, dependencies=deps, file_paths=file_paths)
     names = {p.name for p in res.patterns}
     

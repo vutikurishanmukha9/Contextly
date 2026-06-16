@@ -43,7 +43,7 @@ class ExporterEngine:
         except (FileNotFoundError, PermissionError) as e:
             raise ContextlyError(f"Error reading files: {e}")
             
-        safe_pack_name = html.escape(pack_name)
+        safe_pack_name = html.escape(safe_file_pack_name)
         fused_content = f"""{intelligence_layer}
 
 <context_pack name="{safe_pack_name}">

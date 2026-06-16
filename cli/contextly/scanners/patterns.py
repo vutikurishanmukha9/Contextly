@@ -55,16 +55,13 @@ class PatternScanner(BaseScanner):
             architectures: Set[str] = set()
             components_found = False
 
-            if file_paths is not None:
-                # Deduplicate directory names based on file_paths
-                dirs = set()
-                for rel in file_paths:
-                    parts = Path(rel).parts
-                    if len(parts) > 1:
-                        dirs.update(parts[:-1]) # add all parent directories
-                
-                for name in dirs:
-                    name = name.lower()
+            # Always use RepoWalker to ensure we catch empty directories
+            # instead of relying solely on file_paths which drops empty dirs
+            walker = RepoWalker(root_dir, max_depth=4, skip_predicate=is_skippable)
+
+            for _, dirnames, _ in walker.walk():
+                for dirname in dirnames:
+                    name = dirname.lower()
                     if name == "services":
                         architectures.add("Service Layer")
                     elif name == "repositories":
@@ -87,34 +84,6 @@ class PatternScanner(BaseScanner):
                         architectures.add("Route-Based Architecture")
                     elif name == "generators":
                         architectures.add("Generator Pattern")
-            else:
-                walker = RepoWalker(root_dir, max_depth=4, skip_predicate=is_skippable)
-
-                for _, dirnames, _ in walker.walk():
-                    for dirname in dirnames:
-                        name = dirname.lower()
-                        if name == "services":
-                            architectures.add("Service Layer")
-                        elif name == "repositories":
-                            architectures.add("Repository Pattern")
-                        elif name in ("use_cases", "usecases"):
-                            architectures.add("Clean Architecture (Use Cases)")
-                        elif name == "components":
-                            components_found = True
-                        elif name == "scanners":
-                            architectures.add("Scanner/Plugin Architecture")
-                        elif name == "commands":
-                            architectures.add("Command Pattern")
-                        elif name == "core":
-                            architectures.add("Core Module Architecture")
-                        elif name == "utils":
-                            architectures.add("Utility Module")
-                        elif name == "tests":
-                            architectures.add("Test Suite")
-                        elif name == "routes":
-                            architectures.add("Route-Based Architecture")
-                        elif name == "generators":
-                            architectures.add("Generator Pattern")
 
             for arch in architectures:
                 result.patterns.append(Pattern(name=arch, category="Architecture Hints", confidence=0.8, description=f"Found directory structure indicating {arch}."))

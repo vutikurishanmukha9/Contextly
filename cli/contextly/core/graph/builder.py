@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 from typing import List, Optional
 import concurrent.futures
-import multiprocessing
 
 from ...types.models import KnowledgeGraph
 from ...utils.walker import RepoWalker
@@ -93,21 +92,20 @@ class ImportGraphBuilder:
                         target_files.append(full_rel)
 
         # 2. Concurrently parse files into DTOs
-        # Using ProcessPoolExecutor to bypass GIL for CPU-bound AST parsing
-        # Limit to 4 workers to prevent starving user systems
+        # Using ThreadPoolExecutor since tree-sitter C bindings release the GIL
+        # Limit to 8 workers to prevent overwhelming the disk/system
         dtos: List[ParsedFileDTO] = []
         
-        # Heuristic: For small repositories, sequential is faster. 
-        # Also provides fallback if multiprocessing fails.
-        use_pool = len(target_files) > 20
+        # Heuristic: For small repositories, sequential is faster.
+        # Also provides fallback if multithreading fails.
+        use_pool = len(target_files) > 100
         root_str = str(self.root_dir)
         
         if use_pool:
             try:
                 # Leave 1 core free for OS, cap at 8 to prevent OOM on massive repos
                 optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
-                ctx = multiprocessing.get_context("spawn")
-                with concurrent.futures.ProcessPoolExecutor(max_workers=optimal_workers, mp_context=ctx) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
                     futures = [
                         executor.submit(_parse_file, file_path, root_str) 
                         for file_path in target_files
@@ -138,8 +136,7 @@ class ImportGraphBuilder:
                     continue
 
         # 3. Assemble the Graph deterministically
-        # Sort DTOs by path to ensure deterministic node UUIDs (if we were seeding UUIDs)
-        # and predictable relationships
+        # Sort DTOs by path to ensure stable IDs and predictable relationships.
         dtos.sort(key=lambda x: x.file_path)
         
         for dto in dtos:

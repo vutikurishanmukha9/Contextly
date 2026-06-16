@@ -1,4 +1,4 @@
-import uuid
+import hashlib
 from typing import List, Dict, Set
 from pathlib import Path
 
@@ -34,9 +34,7 @@ class DomainClusterer:
             for i, part in enumerate(parts):
                 if part.lower() in BOUNDARY_MARKERS and i + 1 < len(parts):
                     if i + 1 == len(parts) - 1:
-                        # The next part is the file itself (e.g. services/stripe.ts)
-                        # Fallback to the marker name itself as the domain
-                        domain_name = part.lower()
+                        domain_name = Path(parts[i + 1]).stem.lower()
                     else:
                         domain_name = parts[i + 1].lower()
                     node_to_domain[node.id] = domain_name
@@ -103,13 +101,15 @@ class DomainClusterer:
             clusters[domain_name].append(node_id)
             
         result = []
-        for name, node_ids in clusters.items():
+        for name, node_ids in sorted(clusters.items()):
             dtype = domain_types.get(name, DomainType.DOMAIN)
+            stable_source = f"{name}:{','.join(sorted(node_ids))}"
+            domain_id = f"domain_{hashlib.sha256(stable_source.encode('utf-8')).hexdigest()[:12]}"
             result.append(DomainKnowledge(
-                id=str(uuid.uuid4()),
+                id=domain_id,
                 name=name,
                 type=dtype,
-                node_ids=node_ids
+                node_ids=sorted(node_ids)
             ))
             
         return result

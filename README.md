@@ -36,6 +36,12 @@ Verify the installation:
 contextly --help
 ```
 
+You can also execute the CLI module directly via Python:
+
+```bash
+python -m contextly --help
+```
+
 ---
 
 ## Prerequisites

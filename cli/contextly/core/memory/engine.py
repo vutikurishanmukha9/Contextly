@@ -1,7 +1,7 @@
 import uuid
 import yaml
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from ...types.models import ProjectMemory, MemoryRule
 from ...utils.console import console
 from ...utils.exceptions import MemoryVaultError
@@ -52,10 +52,12 @@ class MemoryEngine:
         for rule in memory.rules:
             if rule.category != category:
                 continue
-            # If name is provided and matches, or fallback to exact description match
+            # If name is provided and matches, it's a duplicate.
+            # If name is not provided, we fall back to rule text matching.
+            # Also if name IS provided, but rule text matches perfectly, it's also a duplicate (fixing Bug 5 gap).
             if name and rule.name == name:
                 return False
-            if rule.name is None and rule.rule == rule_text:
+            if rule.rule == rule_text:
                 return False
                 
         # Generate ID (unique hash snippet)
@@ -68,7 +70,7 @@ class MemoryEngine:
             rule=rule_text,
             confidence=confidence,
             source=source,
-            created_at=datetime.utcnow().isoformat() + "Z"
+            created_at=datetime.now(timezone.utc).isoformat()
         )
         
         memory.rules.append(new_rule)

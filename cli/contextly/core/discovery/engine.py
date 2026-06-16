@@ -18,6 +18,11 @@ class DiscoveryEngine:
         self._paths_cache: List[str] = []
         self._is_loaded = False
 
+    def invalidate_cache(self) -> None:
+        """Clears cached full-repository evaluation paths."""
+        self._paths_cache = []
+        self._is_loaded = False
+
     def discover(self) -> PatternScanResult:
         """
         Runs dependency and pattern scanners to discover conventions.
@@ -50,9 +55,9 @@ class DiscoveryEngine:
                         seen.add(partial)
             return local_cache
 
-        # Full repo scan caching logic
-        if self._is_loaded:
-            return self._paths_cache
+        # Full repo scans are cheap enough for correctness and avoid stale state
+        # when a long-lived engine instance observes filesystem changes.
+        self.invalidate_cache()
 
         walker = RepoWalker(self.root_dir, max_depth=4, skip_predicate=is_skippable)
 
