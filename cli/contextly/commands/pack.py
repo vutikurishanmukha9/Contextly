@@ -38,14 +38,17 @@ def pack_cmd(
                 
             for p in config["profiles"][profile]:
                 path = root_dir / p
-                if not path.exists():
+                try:
+                    resolved_path = path.resolve(strict=False)
+                    resolved_path.relative_to(root_dir)
+                except (ValueError, RuntimeError, OSError):
+                    raise ValidationError(f"Profile path '{p}' must be inside the project root directory.")
+                
+                if not resolved_path.exists():
                     console.print(f"[yellow]Warning:[/yellow] Profile path '{p}' does not exist. Skipping.")
                     continue
-                try:
-                    path.resolve().relative_to(root_dir)
-                    target_paths.append(path.resolve())
-                except ValueError:
-                    raise ValidationError(f"Profile path '{p}' must be inside the project root directory.")
+                
+                target_paths.append(resolved_path)
             
             if not target_paths:
                 raise ValidationError(f"No valid paths found for profile '{profile}'.")
@@ -54,12 +57,18 @@ def pack_cmd(
                 pack_name = f"profile_{profile}"
                 
         else:
-            target_path = require_directory_exists(target)
+            target_path = Path(target).resolve(strict=False)
             try:
                 target_path.relative_to(root_dir)
-                target_paths.append(target_path)
-            except ValueError:
+            except (ValueError, RuntimeError, OSError):
                 raise ValidationError("Target directory must be inside the project root directory.")
+                
+            if not target_path.exists():
+                raise ValidationError(f"Target directory does not exist: {target}")
+            if not target_path.is_dir():
+                raise ValidationError(f"Target is not a directory: {target}")
+                
+            target_paths.append(target_path)
                 
             if not pack_name:
                 pack_name = target_path.name

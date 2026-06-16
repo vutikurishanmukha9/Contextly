@@ -62,24 +62,19 @@ class DiscoveryEngine:
         walker = RepoWalker(self.root_dir, max_depth=4, skip_predicate=is_skippable)
 
         for dirpath, dirnames, filenames in walker.walk():
-            rel_path = str(Path(dirpath).relative_to(self.root_dir))
+            rel_path = Path(dirpath).relative_to(self.root_dir)
             
             # Add directories
             for dirname in dirnames:
-                full_rel = os.path.join(rel_path, dirname).replace("\\", "/")
-                if full_rel.startswith("./"):
-                    full_rel = full_rel[2:]
-                self._paths_cache.append(full_rel)
+                self._paths_cache.append((rel_path / dirname).as_posix())
                 
             # Add files
             for filename in filenames:
-                full_rel = os.path.join(rel_path, filename).replace("\\", "/")
-                if full_rel.startswith("./"):
-                    full_rel = full_rel[2:]
-                self._paths_cache.append(full_rel)
+                self._paths_cache.append((rel_path / filename).as_posix())
 
         self._is_loaded = True
-        return self._paths_cache
+            
+        return self._paths_cache.copy()
 
     def evaluate_registry(
         self, 

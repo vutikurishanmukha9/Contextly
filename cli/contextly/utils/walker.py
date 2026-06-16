@@ -31,7 +31,7 @@ class RepoWalker:
         """
         start_depth = len(self.root_dir.parts)
         
-        for root, dirs, files in os.walk(self.root_dir):
+        for root, dirs, files in os.walk(self.root_dir, followlinks=False):
             root_path = Path(root)
             current_depth = len(root_path.parts) - start_depth
             

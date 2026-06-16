@@ -30,20 +30,30 @@ class BaseGenerator(ABC):
         def _controlled_walk(dir_path: Path, prefix: str = "", depth: int = 0):
             if depth > 4: # Limit depth to 4 levels to provide a meaningful but constrained tree
                 return
-            if not dir_path.is_dir():
-                return
                 
             try:
-                items = sorted(list(dir_path.iterdir()), key=lambda x: (x.is_file(), x.name))
-            except PermissionError:
+                raw_items = list(dir_path.iterdir())
+            except OSError:
                 return
-            valid_items = [item for item in items if not self.ignorer.is_ignored(item)]
+                
+            classified = []
+            for item in raw_items:
+                if not self.ignorer.is_ignored(item):
+                    try:
+                        # Single syscall to determine directory status
+                        is_dir = item.is_dir()
+                        classified.append((is_dir, item))
+                    except OSError:
+                        pass
             
-            for index, item in enumerate(valid_items):
-                is_last = index == len(valid_items) - 1
+            # Sort: Directories first (not True -> False, False < True), then by name
+            classified.sort(key=lambda x: (not x[0], x[1].name))
+            
+            for index, (is_dir, item) in enumerate(classified):
+                is_last = index == len(classified) - 1
                 connector = "`-- " if is_last else "|-- "
                 
-                if item.is_dir():
+                if is_dir:
                     tree.append(f"{prefix}{connector}{item.name}/")
                     extension = "    " if is_last else "|   "
                     _controlled_walk(item, prefix + extension, depth + 1)

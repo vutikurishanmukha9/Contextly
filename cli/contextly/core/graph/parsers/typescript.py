@@ -67,8 +67,12 @@ class TypeScriptASTParser(BaseASTParser):
                                 self._tsconfig_paths.append((alias_prefix, target_full))
                     except Exception:
                         pass
-                # Don't go deeper than 1 level
-                if root.count(os.sep) - root_dir.count(os.sep) >= 1:
+                # Don't go deeper than 1 level (i.e. root and immediate subdirs)
+                try:
+                    rel_parts = Path(root).relative_to(root_dir).parts
+                    if len(rel_parts) >= 1:
+                        dirs.clear()
+                except ValueError:
                     dirs.clear()
         except Exception:
             pass

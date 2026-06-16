@@ -20,10 +20,34 @@ class PythonASTParser(BaseASTParser):
             # Helper to resolve relative imports to absolute repo paths
             file_dir = os.path.dirname(os.path.abspath(os.path.join(root_dir, file_path)))
             
+            explicit_all = None
+            
             for node in ast.iter_child_nodes(tree):
+                if isinstance(node, ast.Assign):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name) and target.id == "__all__":
+                            if isinstance(node.value, (ast.List, ast.Tuple)):
+                                explicit_all = []
+                                for elt in node.value.elts:
+                                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                        explicit_all.append(elt.value)
+                                    elif hasattr(ast, 'Str') and isinstance(elt, getattr(ast, 'Str')):
+                                        explicit_all.append(elt.s)
+                                        
                 # Extract Exports (Classes and Top-Level Functions)
                 if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-                    exports.append(node.name)
+                    if not node.name.startswith("_"):
+                        exports.append(node.name)
+                elif isinstance(node, ast.Assign):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name) and not target.id.startswith("_"):
+                            exports.append(target.id)
+                elif isinstance(node, ast.AnnAssign):
+                    if isinstance(node.target, ast.Name) and not node.target.id.startswith("_"):
+                        exports.append(node.target.id)
+                        
+            if explicit_all is not None:
+                exports = explicit_all
 
             for node in ast.walk(tree):
                 # Extract Standard Imports

@@ -32,7 +32,7 @@ class IgnoreEngine:
             try:
                 with open(gitignore_path, "r", encoding="utf-8") as f:
                     patterns.extend(f.readlines())
-            except (FileNotFoundError, PermissionError, UnicodeDecodeError):
+            except (OSError, UnicodeDecodeError):
                 pass
                 
         # Read .contextlyignore
@@ -41,7 +41,7 @@ class IgnoreEngine:
             try:
                 with open(contextlyignore_path, "r", encoding="utf-8") as f:
                     patterns.extend(f.readlines())
-            except (FileNotFoundError, PermissionError, UnicodeDecodeError):
+            except (OSError, UnicodeDecodeError):
                 pass
                 
         # Filter empty lines
@@ -65,7 +65,7 @@ class IgnoreEngine:
 
         try:
             is_directory = path.is_dir()
-        except PermissionError:
+        except OSError:
             is_directory = True # Default to treating it as a directory to ensure directory-specific ignore rules can trigger
 
         if is_directory and not str_path.endswith('/'):

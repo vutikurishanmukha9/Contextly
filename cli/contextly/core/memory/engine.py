@@ -48,15 +48,22 @@ class MemoryEngine:
         """Adds a rule to memory, avoiding exact duplicates."""
         memory = self.load_memory()
         
-        # Deduplication check
+        # Upsert logic: deduplicate or update
         for rule in memory.rules:
             if rule.category != category:
                 continue
-            # If name is provided and matches, it's a duplicate.
-            # If name is not provided, we fall back to rule text matching.
-            # Also if name IS provided, but rule text matches perfectly, it's also a duplicate (fixing Bug 5 gap).
+            
             if name and rule.name == name:
+                if rule.rule != rule_text:
+                    # Update existing rule content
+                    rule.rule = rule_text
+                    rule.confidence = confidence
+                    rule.source = source
+                    rule.created_at = datetime.now(timezone.utc).isoformat()
+                    self._save_memory(memory)
+                    return True
                 return False
+                
             if rule.rule == rule_text:
                 return False
                 

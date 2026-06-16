@@ -123,9 +123,7 @@ class ImportGraphBuilder:
                 use_pool = False
                 dtos.clear()
                 
-        if use_pool and not dtos and target_files:
-            use_pool = False # Trigger fallback
-                
+        # Pool failure is already handled in the except block which sets use_pool = False
         if not use_pool:
             for file_path in target_files:
                 try:

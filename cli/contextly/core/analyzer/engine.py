@@ -29,7 +29,7 @@ class AnalyzerEngine:
         from ...utils.walker import RepoWalker
         import os
 
-        InitEngine(self.root_dir).initialize()
+
         
         # 1. Single unified walk of the repository to discover all valid files
         # We use a depth of 6 and the standard exclusion list for maximum coverage
@@ -46,11 +46,10 @@ class AnalyzerEngine:
         all_files: list[str] = []
         
         for dirpath, _, filenames in walker.walk():
-            rel_path = str(Path(dirpath).relative_to(self.root_dir))
+            rel_path = Path(dirpath).relative_to(self.root_dir)
             for filename in filenames:
-                full_rel = os.path.join(rel_path, filename).replace("\\", "/")
-                if full_rel.startswith("./"):
-                    full_rel = full_rel[2:]
+                # Use robust pathlib operations for normalized Posix paths across OS
+                full_rel = (rel_path / filename).as_posix()
                 all_files.append(full_rel)
         lang_scanner = LanguageScanner()
         dep_scanner = DependencyScanner()

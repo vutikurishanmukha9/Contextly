@@ -20,7 +20,7 @@ class ExplainerEngine:
             data = json.load(f)
             return RepositoryKnowledge(**data)
 
-    def explain(self, domain_name: str) -> None:
+    def explain(self, domain_name: str) -> str:
         """
         Extracts a focused subgraph for the requested domain and asks the LLM to explain it.
         """

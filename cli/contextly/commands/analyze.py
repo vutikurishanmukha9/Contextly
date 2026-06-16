@@ -6,8 +6,9 @@ from ..utils.console import console
 from ..scanners.base import ScannerError
 from ..utils.exceptions import ContextlyError
 from ..utils.fs import find_project_root
-from ..utils.validation import require_directory_exists
+from ..utils.validation import require_directory_exists, require_contextly_initialized
 from ..core.analyzer.engine import AnalyzerEngine
+from ..utils.exceptions import ValidationError
 
 def analyze_cmd(
     target: str = typer.Argument(".", help="Directory to analyze"),
@@ -15,6 +16,13 @@ def analyze_cmd(
 ):
     """Analyze a repository and print intelligence summary"""
     root_dir = find_project_root(Path.cwd())
+    
+    try:
+        require_contextly_initialized(root_dir)
+    except ValidationError as e:
+        console.print(f"\n[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+        
     engine = AnalyzerEngine(root_dir)
     
     with console.status("[bold blue]Scanning repository intelligence...", spinner="dots"):
