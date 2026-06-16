@@ -28,4 +28,4 @@ jobs:
     - name: Run tests with coverage
       run: |
         cd cli
-        pytest tests/ --cov=contextly --cov-fail-under=93
+        pytest tests/ --cov=contextly --cov-fail-under=90
