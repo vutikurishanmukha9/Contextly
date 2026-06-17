@@ -65,6 +65,14 @@ class MemoryEngine:
                 return False
                 
             if rule.rule == rule_text:
+                # If existing rule has no name, but the new one does, "upgrade" it by adding the name.
+                if name and not rule.name:
+                    rule.name = name
+                    rule.confidence = max(rule.confidence, confidence)
+                    rule.source = source
+                    rule.created_at = datetime.now(timezone.utc).isoformat()
+                    self._save_memory(memory)
+                    return True
                 return False
                 
         # Generate ID (unique hash snippet)

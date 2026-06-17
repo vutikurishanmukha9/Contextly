@@ -44,10 +44,12 @@ class ExporterEngine:
             raise ContextlyError(f"Error reading files: {e}")
             
         safe_pack_name = html.escape(safe_file_pack_name)
+        # Escape closing tags to protect downstream XML parsing boundaries
+        safe_pack_layer = pack_layer.replace("</context_pack>", r"<\/context_pack>")
         fused_content = f"""{intelligence_layer}
 
 <context_pack name="{safe_pack_name}">
-{pack_layer}
+{safe_pack_layer}
 </context_pack>
 """
 

@@ -70,3 +70,25 @@ def test_domain_clusterer_direct_boundary_files_are_semantic_and_deterministic()
     assert set(first_map) == {"stripe", "paypal"}
     assert first_map["stripe"].id == second_map["stripe"].id
     assert first_map["paypal"].id == second_map["paypal"].id
+
+
+def test_domain_clusterer_propagation_convergence():
+    graph = KnowledgeGraph(
+        nodes=[
+            KnowledgeNode(id="n1", type=NodeType.COMPONENT, name="feat1", path="src/features/auth/feat1.ts"),
+            KnowledgeNode(id="n2", type=NodeType.COMPONENT, name="feat2", path="src/features/payment/feat2.ts"),
+            KnowledgeNode(id="n3", type=NodeType.COMPONENT, name="helper", path="src/helpers/helper.ts"),
+        ],
+        relationships=[
+            Relationship(source_id="n1", target_id="n3", type=RelationshipType.IMPORTS),
+            Relationship(source_id="n2", target_id="n3", type=RelationshipType.IMPORTS),
+        ]
+    )
+
+    domains = DomainClusterer().cluster(graph)
+    domain_map = {d.name: d for d in domains}
+    
+    assert "auth" in domain_map
+    assert "payment" in domain_map
+    assert "shared" in domain_map
+    assert "n3" in domain_map["shared"].node_ids

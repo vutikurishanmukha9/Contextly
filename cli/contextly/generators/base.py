@@ -46,8 +46,8 @@ class BaseGenerator(ABC):
                     except OSError:
                         pass
             
-            # Sort: Directories first (not True -> False, False < True), then by name
-            classified.sort(key=lambda x: (not x[0], x[1].name))
+            # Sort: Directories first (not True -> False, False < True), then by case-insensitive name
+            classified.sort(key=lambda x: (not x[0], x[1].name.lower()))
             
             for index, (is_dir, item) in enumerate(classified):
                 is_last = index == len(classified) - 1

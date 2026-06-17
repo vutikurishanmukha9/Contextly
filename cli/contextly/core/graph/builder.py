@@ -11,14 +11,21 @@ from .parsers.python import PythonASTParser
 from .parsers.typescript import TypeScriptASTParser
 from ...utils.constants import is_skippable
 
-_parser_cache = {}
+import threading
+
+_thread_local = threading.local()
+
+def _get_parsers():
+    if not hasattr(_thread_local, 'parsers'):
+        _thread_local.parsers = {}
+    return _thread_local.parsers
 
 def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
     """
     Module-level function required for ProcessPoolExecutor serialization.
     Instantiates the correct parser based on file extension and processes the file.
+    Uses thread-local storage to guarantee thread safety inside thread pools.
     """
-    global _parser_cache
     try:
         abs_path = os.path.join(root_dir, file_path)
         try:
@@ -31,16 +38,17 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
                 return None # Silently skip binaries
             
         ext = file_path.lower().split('.')[-1]
+        parsers = _get_parsers()
         
         if ext in ('py', 'pyw'):
-            if 'py' not in _parser_cache:
-                _parser_cache['py'] = PythonASTParser()
-            return _parser_cache['py'].parse(file_path, content, root_dir)
+            if 'py' not in parsers:
+                parsers['py'] = PythonASTParser()
+            return parsers['py'].parse(file_path, content, root_dir)
             
         elif ext in ('js', 'jsx', 'ts', 'tsx'):
-            if 'ts' not in _parser_cache:
-                _parser_cache['ts'] = TypeScriptASTParser()
-            return _parser_cache['ts'].parse(file_path, content, root_dir)
+            if 'ts' not in parsers:
+                parsers['ts'] = TypeScriptASTParser()
+            return parsers['ts'].parse(file_path, content, root_dir)
             
         return None
     except Exception:
@@ -121,11 +129,13 @@ class ImportGraphBuilder:
             except Exception:
                 # If pool creation fails (e.g. strict sandboxing, no /dev/shm, etc.), fallback to sequential
                 use_pool = False
-                dtos.clear()
                 
         # Pool failure is already handled in the except block which sets use_pool = False
         if not use_pool:
+            parsed_paths = {d.file_path for d in dtos}
             for file_path in target_files:
+                if file_path in parsed_paths:
+                    continue
                 try:
                     dto = _parse_file(file_path, root_str)
                     if dto and not dto.error:

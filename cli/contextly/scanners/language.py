@@ -24,7 +24,10 @@ class LanguageScanner(BaseScanner):
                 import os
                 for root, dirs, files in os.walk(root_dir):
                     root_path = Path(root)
-                    dirs[:] = [d for d in dirs if not ignorer.is_ignored(root_path / d)]
+                    try:
+                        dirs[:] = [d for d in dirs if not ignorer.is_ignored(root_path / d)]
+                    except OSError:
+                        dirs.clear()
                     
                     for f in files:
                         try:
@@ -33,7 +36,7 @@ class LanguageScanner(BaseScanner):
                                 continue
                             if file_path.suffix:
                                 exts[file_path.suffix.lower()] += 1
-                        except PermissionError:
+                        except OSError:
                             continue
                         
             total = sum(exts.values())

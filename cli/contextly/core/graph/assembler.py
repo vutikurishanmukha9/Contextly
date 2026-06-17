@@ -33,11 +33,20 @@ class GraphAssembler:
         node_hash = hashlib.sha256(dto.file_path.encode("utf-8")).hexdigest()[:12]
         node_id = f"node_{node_hash}"
         
-        # Determine basic Node Type (Implementation would use a Registry here too)
+        # Determine basic Node Type using strict segment-level and suffix checks
+        path_parts = [p.lower() for p in Path(dto.file_path).parts]
+        file_stem = Path(dto.file_path).stem.lower()
+        
+        is_service_dir = "services" in path_parts or "service" in path_parts
+        is_service_file = file_stem == "service" or file_stem.endswith("service") or file_stem.endswith("_service") or file_stem.endswith(".service")
+        
+        is_model_dir = "models" in path_parts or "model" in path_parts or "schemas" in path_parts or "schema" in path_parts
+        is_model_file = file_stem in ("model", "schema") or file_stem.endswith("model") or file_stem.endswith("_model") or file_stem.endswith(".model") or file_stem.endswith("schema") or file_stem.endswith("_schema") or file_stem.endswith(".schema")
+        
         node_type = NodeType.COMPONENT
-        if "service" in dto.file_path.lower():
+        if is_service_dir or is_service_file:
             node_type = NodeType.SERVICE
-        elif "model" in dto.file_path.lower() or "schema" in dto.file_path.lower():
+        elif is_model_dir or is_model_file:
             node_type = NodeType.MODEL
             
         node = KnowledgeNode(

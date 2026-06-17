@@ -1,6 +1,7 @@
 import os
 import json
 import re
+from pathlib import Path
 from typing import List
 from .base import BaseASTParser, ParsedFileDTO
 
@@ -67,10 +68,9 @@ class TypeScriptASTParser(BaseASTParser):
                                 self._tsconfig_paths.append((alias_prefix, target_full))
                     except Exception:
                         pass
-                # Don't go deeper than 1 level (i.e. root and immediate subdirs)
                 try:
-                    rel_parts = Path(root).relative_to(root_dir).parts
-                    if len(rel_parts) >= 1:
+                    rel_path = Path(root).resolve().relative_to(Path(root_dir).resolve())
+                    if len(rel_path.parts) >= 1:
                         dirs.clear()
                 except ValueError:
                     dirs.clear()

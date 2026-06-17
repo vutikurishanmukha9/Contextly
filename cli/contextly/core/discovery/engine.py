@@ -15,13 +15,6 @@ class DiscoveryEngine:
     
     def __init__(self, root_dir: Path):
         self.root_dir = root_dir
-        self._paths_cache: List[str] = []
-        self._is_loaded = False
-
-    def invalidate_cache(self) -> None:
-        """Clears cached full-repository evaluation paths."""
-        self._paths_cache = []
-        self._is_loaded = False
 
     def discover(self) -> PatternScanResult:
         """
@@ -40,9 +33,9 @@ class DiscoveryEngine:
         return patterns_result
 
     def _get_evaluation_paths(self, file_paths: Optional[List[str]] = None) -> List[str]:
-        """Returns the paths to evaluate against, using caching for full-repo scans."""
+        """Returns the paths to evaluate against, constructing path mappings dynamically."""
         if file_paths is not None:
-            # LOCAL list for targeted scans. Do NOT touch self._paths_cache.
+            # LOCAL list for targeted scans.
             local_cache = []
             seen = set()
             for rel_path in file_paths:
@@ -57,8 +50,7 @@ class DiscoveryEngine:
 
         # Full repo scans are cheap enough for correctness and avoid stale state
         # when a long-lived engine instance observes filesystem changes.
-        self.invalidate_cache()
-
+        paths = []
         walker = RepoWalker(self.root_dir, max_depth=4, skip_predicate=is_skippable)
 
         for dirpath, dirnames, filenames in walker.walk():
@@ -66,15 +58,13 @@ class DiscoveryEngine:
             
             # Add directories
             for dirname in dirnames:
-                self._paths_cache.append((rel_path / dirname).as_posix())
+                paths.append((rel_path / dirname).as_posix())
                 
             # Add files
             for filename in filenames:
-                self._paths_cache.append((rel_path / filename).as_posix())
-
-        self._is_loaded = True
+                paths.append((rel_path / filename).as_posix())
             
-        return self._paths_cache.copy()
+        return paths
 
     def evaluate_registry(
         self, 

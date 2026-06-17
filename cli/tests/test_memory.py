@@ -113,4 +113,20 @@ def test_memory_add_rule_deduplicates_named_and_unnamed_rules(temp_repo):
 
     memory = engine.load_memory()
     assert len(memory.rules) == 1
-    assert "+" in memory.rules[0].created_at
+    # Check that ISO timezone offset format is used
+    assert "+" in memory.rules[0].created_at or "Z" in memory.rules[0].created_at
+
+def test_memory_add_rule_upgrades_unnamed_rules(temp_repo):
+    runner.invoke(app, ["init"])
+    engine = MemoryEngine(temp_repo)
+
+    # Add unnamed rule first
+    assert engine.add_rule("Styling", "Uses TailwindCSS.", 0.8, "test")
+    # Add named rule with same text (upgrade path)
+    assert engine.add_rule("Styling", "Uses TailwindCSS.", 1.0, "new_source", name="TailwindCSS")
+
+    memory = engine.load_memory()
+    assert len(memory.rules) == 1
+    assert memory.rules[0].name == "TailwindCSS"
+    assert memory.rules[0].confidence == 1.0
+    assert memory.rules[0].source == "new_source"

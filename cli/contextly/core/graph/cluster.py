@@ -63,29 +63,35 @@ class DomainClusterer:
                     assigned = True
                     break
                     
+        structural_nodes = set(node_to_domain.keys())
+
         # Pass 2: Graph Propagation (Assign isolated/utility nodes based on who uses them)
         changed = True
         while changed:
             changed = False
             for node in graph.nodes:
-                if node.id not in node_to_domain:
-                    # Look at who imports this node
-                    callers = incoming_edges.get(node.id, set())
-                    caller_domains = set()
-                    for caller_id in callers:
-                        if caller_id in node_to_domain:
-                            caller_domains.add(node_to_domain[caller_id])
-                            
-                    if len(caller_domains) == 1:
-                        # Only used by one domain, it belongs to that domain
-                        domain_name = list(caller_domains)[0]
-                        node_to_domain[node.id] = domain_name
-                        changed = True
-                    elif len(caller_domains) > 1:
-                        # Used by multiple domains, it is shared
-                        node_to_domain[node.id] = "shared"
-                        domain_types["shared"] = DomainType.SHARED
-                        changed = True
+                if node.id in structural_nodes:
+                    continue
+                
+                # Look at who imports this node
+                callers = incoming_edges.get(node.id, set())
+                caller_domains = set()
+                for caller_id in callers:
+                    if caller_id in node_to_domain:
+                        caller_domains.add(node_to_domain[caller_id])
+                        
+                current_domain = node_to_domain.get(node.id)
+                new_domain = current_domain
+                
+                if len(caller_domains) == 1:
+                    new_domain = list(caller_domains)[0]
+                elif len(caller_domains) > 1:
+                    new_domain = "shared"
+                    domain_types["shared"] = DomainType.SHARED
+                    
+                if new_domain != current_domain:
+                    node_to_domain[node.id] = new_domain
+                    changed = True
 
         # Pass 3: Fallback for orphans
         for node in graph.nodes:

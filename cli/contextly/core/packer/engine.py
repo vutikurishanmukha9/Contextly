@@ -69,7 +69,15 @@ class PackerEngine:
         selected_files = []
         excluded_files = []
         compressed_cache = {}
-        current_tokens = 0
+        
+        header_text = f"# Context Pack: {pack_name}\n\n"
+        if self.tokenizer:
+            try:
+                current_tokens = len(self.tokenizer.encode(header_text, disallowed_special=()))
+            except Exception:
+                current_tokens = len(header_text) / 2.8
+        else:
+            current_tokens = len(header_text) / 2.8
         
         for path in ranked_files:
             try:

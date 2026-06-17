@@ -212,3 +212,96 @@ def test_typescript_ast_parser_tsconfig(tmp_path):
     assert not dto.error
     assert "src/components/ui/button" in dto.imports
     assert "lib/utils/helpers" in dto.imports
+
+
+def test_typescript_ast_parser_tsconfig_depth_limit(tmp_path):
+    parser = TypeScriptASTParser()
+    
+    # Root level
+    tsconfig_root = '{"compilerOptions": {"paths": {"@root/*": ["./root/*"]}}}'
+    (tmp_path / "tsconfig.json").write_text(tsconfig_root)
+    
+    # Depth 1: src/
+    (tmp_path / "src").mkdir()
+    tsconfig_depth1 = '{"compilerOptions": {"paths": {"@src/*": ["./src/*"]}}}'
+    (tmp_path / "src" / "tsconfig.json").write_text(tsconfig_depth1)
+    
+    # Depth 2: src/components/
+    (tmp_path / "src" / "components").mkdir()
+    tsconfig_depth2 = '{"compilerOptions": {"paths": {"@nested/*": ["./nested/*"]}}}'
+    (tmp_path / "src" / "components" / "tsconfig.json").write_text(tsconfig_depth2)
+    
+    parser._load_tsconfig(str(tmp_path))
+    aliases = [p[0] for p in parser._tsconfig_paths]
+    
+    assert "@root/" in aliases
+    assert "@src/" in aliases
+    assert "@nested/" not in aliases
+
+
+def test_graph_assembler_node_type_segment_classification():
+    from contextly.types.models import NodeType
+    assembler = GraphAssembler()
+    
+    # userService.py has "service" in path but it is a service file
+    dto1 = ParsedFileDTO(file_path="src/components/userService.py", exports=["UserService"], imports=[])
+    node_id1 = assembler.add_node(dto1)
+    node1 = next(n for n in assembler.graph.nodes if n.id == node_id1)
+    assert node1.type == NodeType.SERVICE
+    
+    # service_worker_bootstrap.py contains "service" but is a component/script
+    dto2 = ParsedFileDTO(file_path="src/auth/service_worker_bootstrap.py", exports=["run"], imports=[])
+    node_id2 = assembler.add_node(dto2)
+    node2 = next(n for n in assembler.graph.nodes if n.id == node_id2)
+    assert node2.type == NodeType.COMPONENT
+    
+    # model inside a model folder
+    dto3 = ParsedFileDTO(file_path="src/models/user.py", exports=["User"], imports=[])
+    node_id3 = assembler.add_node(dto3)
+    node3 = next(n for n in assembler.graph.nodes if n.id == node_id3)
+    assert node3.type == NodeType.MODEL
+
+
+def test_import_graph_builder_thread_safety(tmp_path):
+    (tmp_path / "src").mkdir()
+    for i in range(50):
+        (tmp_path / "src" / f"file_{i}.py").write_text("def run(): pass")
+        
+    builder = ImportGraphBuilder(tmp_path)
+    # Verify parsing handles files safely
+    graph = builder.build()
+    assert len(graph.nodes) == 50
+
+def test_python_ast_parser_explicit_all(tmp_path):
+    parser = PythonASTParser()
+    content = """
+__all__ = ["foo", "bar"]
+
+def foo():
+    pass
+
+def bar():
+    pass
+
+def baz():
+    pass
+"""
+    file_path = "src/main.py"
+    (tmp_path / "src").mkdir(exist_ok=True)
+    (tmp_path / "src" / "main.py").write_text(content)
+    
+    dto = parser.parse(file_path, content, str(tmp_path))
+    assert not dto.error
+    assert set(dto.exports) == {"foo", "bar"}
+    assert "baz" not in dto.exports
+
+    content_tuple = """
+__all__ = ('single_item',)
+
+def single_item():
+    pass
+"""
+    dto_tuple = parser.parse(file_path, content_tuple, str(tmp_path))
+    assert not dto_tuple.error
+    assert dto_tuple.exports == ["single_item"]
+
