@@ -139,8 +139,9 @@ class AnalyzerEngine:
         
         output_file = self.root_dir / "PROJECT_CONTEXT.md"
         try:
-            from ...utils.io import atomic_write
-            atomic_write(output_file, ctx_content)
+            # Pre-flight write permission check
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(ctx_content)
         except Exception as e:
             raise ContextlyError(f"Failed to write PROJECT_CONTEXT.md: {e}") from e
             

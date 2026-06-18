@@ -49,12 +49,7 @@ class ScannerRegistry:
             elif key == 'patterns':
                 kwargs['dependencies'] = results.get('dependencies')
                 
-            try:
-                results[key] = scanner.scan(root_dir, **kwargs)
-            except Exception as e:
-                from ..core.diagnostics import DiagnosticsContext
-                DiagnosticsContext().add_error(scanner.name, f"Execution failed: {str(e)}")
-                results[key] = None
+            results[key] = scanner.scan(root_dir, **kwargs)
                 
         return results
 

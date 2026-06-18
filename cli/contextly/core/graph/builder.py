@@ -117,18 +117,29 @@ class ImportGraphBuilder:
             diagnostics = DiagnosticsContext()
             pool_initialized = False
             try:
-                import itertools
                 optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
+                batch_size = optimal_workers * 32  # Bounded submission window
                 with concurrent.futures.ProcessPoolExecutor(max_workers=optimal_workers) as executor:
                     pool_initialized = True
-                    results = executor.map(_parse_file, target_files, itertools.repeat(root_str), chunksize=32, timeout=600)
-                    for dto in results:
-                        if dto:
-                            if dto.error:
-                                diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
-                                self.failed_files[dto.file_path] = dto.error
-                            else:
-                                dtos.append(dto)
+                    # Process in bounded batches to prevent IPC queue flooding
+                    for batch_start in range(0, len(target_files), batch_size):
+                        batch = target_files[batch_start:batch_start + batch_size]
+                        future_to_file = {
+                            executor.submit(_parse_file, fp, root_str): fp
+                            for fp in batch
+                        }
+                        for future in concurrent.futures.as_completed(future_to_file):
+                            file_path = future_to_file[future]
+                            try:
+                                dto = future.result(timeout=30)
+                                if dto:
+                                    if dto.error:
+                                        diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
+                                        self.failed_files[dto.file_path] = dto.error
+                                    else:
+                                        dtos.append(dto)
+                            except Exception as e:
+                                self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
             except Exception as e:
                 if pool_initialized:
                     # Execution failure (OOM, Timeout): do NOT retry in ThreadPool — fall through to sequential
@@ -137,17 +148,27 @@ class ImportGraphBuilder:
                 else:
                     # Initialization failure (fork/spawn restrictions): safe to retry with threads
                     try:
-                        import itertools
                         optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
+                        batch_size = optimal_workers * 32
                         with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
-                            results = executor.map(_parse_file, target_files, itertools.repeat(root_str), timeout=600)
-                            for dto in results:
-                                if dto:
-                                    if dto.error:
-                                        diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
-                                        self.failed_files[dto.file_path] = dto.error
-                                    else:
-                                        dtos.append(dto)
+                            for batch_start in range(0, len(target_files), batch_size):
+                                batch = target_files[batch_start:batch_start + batch_size]
+                                future_to_file = {
+                                    executor.submit(_parse_file, fp, root_str): fp
+                                    for fp in batch
+                                }
+                                for future in concurrent.futures.as_completed(future_to_file):
+                                    file_path = future_to_file[future]
+                                    try:
+                                        dto = future.result(timeout=30)
+                                        if dto:
+                                            if dto.error:
+                                                diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
+                                                self.failed_files[dto.file_path] = dto.error
+                                            else:
+                                                dtos.append(dto)
+                                    except Exception as e:
+                                        self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
                     except Exception as thread_err:
                         diagnostics.add_error("ImportGraphBuilder", f"ThreadPool fallback error: {str(thread_err)}")
                         use_pool = False
