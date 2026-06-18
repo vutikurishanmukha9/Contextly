@@ -56,12 +56,13 @@ class MemoryEngine:
                 pass
             
     def _save_memory(self, memory: ProjectMemory):
-        """Serializes the ProjectMemory model to YAML."""
+        """Serializes the ProjectMemory model to YAML and writes it atomically."""
         try:
+            from ...utils.io import atomic_write
             data = memory.model_dump()
-            with open(self.memory_file, "w", encoding="utf-8") as f:
-                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
-        except (OSError, PermissionError) as e:
+            yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
+            atomic_write(self.memory_file, yaml_str)
+        except Exception as e:
             raise MemoryVaultError(f"Failed to save memory rules: {e}")
             
     def load_memory(self) -> ProjectMemory:

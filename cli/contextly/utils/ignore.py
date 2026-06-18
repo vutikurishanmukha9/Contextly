@@ -24,8 +24,7 @@ class IgnoreEngine:
     def _build_spec(self) -> pathspec.PathSpec:
         """Reads .gitignore and .contextlyignore and merges with defaults"""
         patterns = []
-        # Security critical ignores that are never bypassed to prevent credentials and state leakage
-        patterns.extend([".git", ".env", ".contextly"])
+        # Security critical ignores are now handled directly in is_ignored for stronger enforcement
         
         if not self.no_default_excludes:
             patterns.extend(self.default_ignores)
@@ -58,6 +57,22 @@ class IgnoreEngine:
         """
         Checks if a file or directory path is ignored.
         """
+        # Security Check: Never allow secrets, credentials or .git state to be scanned.
+        # This operates on substrings and extensions rather than exact matches.
+        name_lower = path.name.lower()
+        parts_lower = [p.lower() for p in path.parts]
+        
+        if (
+            "secret" in name_lower 
+            or "credential" in name_lower
+            or name_lower.startswith(".env") 
+            or name_lower.endswith(".pem") 
+            or name_lower.endswith(".key")
+            or ".git" in parts_lower
+            or ".contextly" in parts_lower
+        ):
+            return True
+
         # Convert path to a relative POSIX string for matching (pathspec requires POSIX style)
         try:
             rel_path = path.relative_to(self.root_dir)

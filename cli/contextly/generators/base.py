@@ -56,8 +56,17 @@ class BaseGenerator(ABC):
             should_truncate = (depth == self.max_tree_depth)
             has_truncated_dirs = should_truncate and any(is_dir for is_dir, _ in classified)
 
+            breadth_limit = getattr(self.config.depth_limits, 'max_tree_breadth', 50)
+            if len(classified) > breadth_limit:
+                has_truncated_breadth = True
+                truncated_count = len(classified) - breadth_limit
+                classified = classified[:breadth_limit]
+            else:
+                has_truncated_breadth = False
+                truncated_count = 0
+
             for index, (is_dir, item) in enumerate(classified):
-                is_last = (index == len(classified) - 1) and not has_truncated_dirs
+                is_last = (index == len(classified) - 1) and not has_truncated_dirs and not has_truncated_breadth
                 connector = "`-- " if is_last else "|-- "
                 
                 if is_dir:
@@ -68,8 +77,12 @@ class BaseGenerator(ABC):
                 else:
                     tree.append(f"{prefix}{connector}{item.name}")
 
-            if has_truncated_dirs:
+            if has_truncated_dirs and not has_truncated_breadth:
                 tree.append(f"{prefix}`-- ... (truncated)")
+            elif has_truncated_breadth and not has_truncated_dirs:
+                tree.append(f"{prefix}`-- ... ({truncated_count} more items)")
+            elif has_truncated_dirs and has_truncated_breadth:
+                tree.append(f"{prefix}`-- ... (truncated & {truncated_count} more items)")
                         
         tree.append(self.root_dir.name + "/")
         _controlled_walk(self.root_dir)

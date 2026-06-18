@@ -2,19 +2,16 @@ from pathlib import Path
 import hashlib
 from importlib.metadata import PackageNotFoundError, version
 
-from ...scanners.dependencies import DependencyScanner
-from ...scanners.language import LanguageScanner
-from ...scanners.framework import FrameworkScanner
-from ...scanners.patterns import PatternScanner
-from ...scanners.architecture import ArchitectureScanner
-from ...scanners.capabilities import CapabilityDetector
+from ...scanners.registry import ScannerRegistry
+from ...types.models import (
+    LanguageScanResult, DependencyScanResult, FrameworkScanResult, 
+    PatternScanResult, ArchitectureKnowledge, Discovery
+)
 from ...core.graph.builder import ImportGraphBuilder
 from ...types.models import RepositoryIntelligence, RepositoryKnowledge, TechnologyKnowledge, KnowledgeGraph
 from datetime import datetime, timezone
 from ...core.memory.engine import MemoryEngine
 from ...core.initializer.engine import InitEngine
-from ...generators.claude import ClaudeGenerator
-from ...generators.chatgpt import ChatGPTGenerator
 from ...utils.exceptions import ContextlyError
 
 class AnalyzerEngine:
@@ -63,21 +60,16 @@ class AnalyzerEngine:
                 # Use robust pathlib operations for normalized Posix paths across OS
                 full_rel = (rel_path / filename).as_posix()
                 all_files.append(full_rel)
-        lang_scanner = LanguageScanner()
-        dep_scanner = DependencyScanner()
-        fw_scanner = FrameworkScanner()
-        pat_scanner = PatternScanner()
+        scan_results = ScannerRegistry.execute_pipeline(self.root_dir, all_files)
         
-        lang_data = lang_scanner.scan(self.root_dir, file_paths=all_files)
-        dep_data = dep_scanner.scan(self.root_dir, file_paths=all_files)
-        fw_data = fw_scanner.scan(self.root_dir, deps=dep_data, file_paths=all_files)
-        pat_data = pat_scanner.scan(self.root_dir, dependencies=dep_data, file_paths=all_files)
-        
-        arch_scanner = ArchitectureScanner()
-        cap_scanner = CapabilityDetector()
-        
-        arch_data = arch_scanner.scan(self.root_dir, file_paths=all_files)
-        cap_data = cap_scanner.scan(self.root_dir, file_paths=all_files)
+        lang_data = scan_results.get('language') or LanguageScanResult(primary="Unknown")
+        dep_data = scan_results.get('dependencies') or DependencyScanResult()
+        fw_data = scan_results.get('frameworks') or FrameworkScanResult()
+        pat_data = scan_results.get('patterns') or PatternScanResult()
+        arch_data = scan_results.get('architecture') or ArchitectureKnowledge(
+            primary_pattern=Discovery(name="Unknown", confidence=0.0, evidence=[])
+        )
+        cap_data = scan_results.get('capabilities') or []
         
         memory_engine = MemoryEngine(self.root_dir)
         memory_data = memory_engine.load_memory()
@@ -132,21 +124,22 @@ class AnalyzerEngine:
         if not contextly_dir.exists():
             InitEngine(self.root_dir).initialize()
             
-        with open(contextly_dir / "repository.json", "w", encoding="utf-8") as f:
-            f.write(repo_knowledge.model_dump_json(indent=2))
+        from ...utils.io import atomic_write
+        atomic_write(contextly_dir / "repository.json", repo_knowledge.model_dump_json(indent=2))
         
-        if model.lower() == "claude":
-            generator = ClaudeGenerator(self.root_dir, intelligence)
-        else:
-            generator = ChatGPTGenerator(self.root_dir, intelligence)
+        from ...generators.registry import GeneratorRegistry
+        generator = GeneratorRegistry.get_generator(model, self.root_dir, intelligence)
             
         ctx_content = generator.generate()
         
         output_file = self.root_dir / "PROJECT_CONTEXT.md"
         try:
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write(ctx_content)
-        except (FileNotFoundError, PermissionError) as e:
+            from ...utils.io import atomic_write
+            atomic_write(output_file, ctx_content)
+        except Exception as e:
             raise ContextlyError(f"Failed to write PROJECT_CONTEXT.md: {e}")
+            
+        from ...core.diagnostics import DiagnosticsContext
+        DiagnosticsContext().report()
             
         return intelligence

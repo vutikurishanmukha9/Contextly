@@ -9,6 +9,7 @@ class ProjectConfig(BaseModel):
 class DepthLimitsConfig(BaseModel):
     analyzer: int = 6
     generator_tree: int = 4
+    max_tree_breadth: int = 50
     scanners: int = 4
     discovery: int = 4
 
@@ -70,5 +71,12 @@ def load_config_model(root_dir: Path) -> ContextlyConfig:
             if not isinstance(data, dict):
                 return ContextlyConfig()
             return ContextlyConfig.model_validate(data)
-    except Exception:
+    except Exception as e:
+        import pydantic
+        if isinstance(e, pydantic.ValidationError):
+            try:
+                from .console import console
+                console.print(f"[red]Configuration Error in .contextly/config.yaml:[/red]\n{e}")
+            except Exception:
+                pass
         return ContextlyConfig()

@@ -77,10 +77,9 @@ class PackerEngine:
         all_files = list(all_files_set)
         ranked_files = self.ranker.rank(all_files)
         
-        # Phase 3: Compress, Measure, and Select
+        # Phase 3 & 4: Stream Compress, Measure, Select, and Write
         selected_files = []
         excluded_files = []
-        compressed_cache = {}
         
         header_text = f"# Context Pack: {pack_name}\n\n"
         if self.tokenizer:
@@ -90,103 +89,86 @@ class PackerEngine:
                 current_tokens = len(header_text) / 3.5
         else:
             current_tokens = len(header_text) / 3.5
-        
-        for path in ranked_files:
-            try:
-                # 1. Size constraint check before reading the file into memory
+            
+        with open(output_file, "w", encoding="utf-8") as out_f:
+            out_f.write(header_text)
+            
+            for path in ranked_files:
                 try:
-                    file_size = path.stat().st_size
-                except OSError:
-                    skipped_files.append(path)
-                    continue
-
-                if file_size > self.max_file_size:
-                    skipped_files.append(path)
-                    continue
-
-                # 2. Read first 1024 bytes to check for binary signature
-                try:
-                    with open(path, "rb") as in_f:
-                        first_kb = in_f.read(1024)
-                        if b'\x00' in first_kb:
-                            skipped_files.append(path)
-                            continue
-                        # If safe (not binary), read the rest
-                        rest = in_f.read()
-                        raw_bytes = first_kb + rest
-                except OSError:
-                    skipped_files.append(path)
-                    continue
-
-                # 3. Decode logic in memory
-                try:
-                    raw_code = raw_bytes.decode("utf-8")
-                except UnicodeDecodeError:
+                    # 1. Size constraint check
                     try:
-                        raw_code = raw_bytes.decode("latin-1")
-                        if '\x00' in raw_code:
+                        file_size = path.stat().st_size
+                    except OSError:
+                        skipped_files.append(path)
+                        continue
+
+                    if file_size > self.max_file_size:
+                        skipped_files.append(path)
+                        continue
+
+                    # 2. Read first 1024 bytes to check for binary signature
+                    try:
+                        with open(path, "rb") as in_f:
+                            first_kb = in_f.read(1024)
+                            if b'\x00' in first_kb:
+                                skipped_files.append(path)
+                                continue
+                            # If safe (not binary), read the rest
+                            rest = in_f.read()
+                            raw_bytes = first_kb + rest
+                    except OSError:
+                        skipped_files.append(path)
+                        continue
+
+                    # 3. Decode logic in memory
+                    try:
+                        raw_code = raw_bytes.decode("utf-8")
+                    except UnicodeDecodeError:
+                        try:
+                            raw_code = raw_bytes.decode("latin-1")
+                            if '\x00' in raw_code:
+                                skipped_files.append(path)
+                                continue
+                        except Exception:
                             skipped_files.append(path)
                             continue
                     except Exception:
                         skipped_files.append(path)
                         continue
+                        
+                    compressed_code = self.compressor.compress(path, raw_code) if compress else raw_code
+                    
+                    try:
+                        rel_path = path.relative_to(self.root_dir).as_posix()
+                    except ValueError:
+                        rel_path = path.name
+                    ext = path.suffix.replace('.', '')
+                    
+                    body = compressed_code if compressed_code.endswith('\n') else compressed_code + '\n'
+                    full_text = f"## File: `{rel_path}`\n```{ext}\n{body}```\n\n"
+                    
+                    if self.tokenizer:
+                        try:
+                            file_cost = len(self.tokenizer.encode(full_text, disallowed_special=()))
+                        except ValueError:
+                            # Fallback gracefully
+                            file_cost = len(full_text) / 3.5
+                    else:
+                        file_cost = len(full_text) / 3.5
+
+                    if max_tokens and current_tokens + file_cost > max_tokens:
+                        excluded_files.append(path)
+                        continue
+                        
+                    current_tokens += file_cost
+                    selected_files.append(path)
+                    
+                    # Write immediately to output file, do not cache in memory
+                    out_f.write(full_text)
+                    
                 except Exception:
                     skipped_files.append(path)
-                    continue
-                    
-                compressed_code = self.compressor.compress(path, raw_code) if compress else raw_code
-                
-                try:
-                    rel_path = path.relative_to(self.root_dir).as_posix()
-                except ValueError:
-                    rel_path = path.name
-                ext = path.suffix.replace('.', '')
-                
-                body = compressed_code if compressed_code.endswith('\n') else compressed_code + '\n'
-                full_text = f"## File: `{rel_path}`\n```{ext}\n{body}```\n\n"
-                
-                if self.tokenizer:
-                    try:
-                        file_cost = len(self.tokenizer.encode(full_text, disallowed_special=()))
-                    except ValueError:
-                        # Fallback gracefully rather than silently skipping the file
-                        file_cost = len(full_text) / 3.5
-                else:
-                    file_cost = len(full_text) / 3.5
 
-                if max_tokens and current_tokens + file_cost > max_tokens:
-                    excluded_files.append(path)
-                    continue
-                    
-                current_tokens += file_cost
-                    
-                selected_files.append(path)
-                compressed_cache[path] = body
-                
-            except Exception:
-                skipped_files.append(path)
-                
-                
-        # Phase 4: Write Output Streamingly
-        with open(output_file, "w", encoding="utf-8") as out_f:
-            out_f.write(f"# Context Pack: {pack_name}\n\n")
-            
-            for path in selected_files:
-                try:
-                    rel_path = path.relative_to(self.root_dir).as_posix()
-                except ValueError:
-                    rel_path = path.name
-                    
-                out_f.write(f"## File: `{rel_path}`\n")
-                ext = path.suffix.replace('.', '')
-                try:
-                    compressed_code = compressed_cache[path]
-                    out_f.write(f"```{ext}\n")
-                    out_f.write(compressed_code)
-                    out_f.write(f"```\n\n")
-                except (OSError, IOError, UnicodeDecodeError):
-                    out_f.write(f"> [!WARNING]\n> File became unreadable during packing.\n\n")
-                
             if excluded_files:
                 out_f.write(f"## Excluded Files (Token Limit)\n")
                 out_f.write(f"The following {len(excluded_files)} files were excluded to fit within the {max_tokens} token limit:\n")
@@ -196,7 +178,7 @@ class PackerEngine:
                     except ValueError:
                         rel_path = path.name
                     out_f.write(f"- `{rel_path}`\n")
-                
+
         if self.tokenizer:
             token_estimate = int(current_tokens)
             token_type = "Exact Tokens (cl100k_base)"

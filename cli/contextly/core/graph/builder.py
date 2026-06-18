@@ -7,18 +7,12 @@ from ...types.models import KnowledgeGraph
 from ...utils.walker import RepoWalker
 from .assembler import GraphAssembler
 from .parsers.base import ParsedFileDTO
-from .parsers.python import PythonASTParser
-from .parsers.typescript import TypeScriptASTParser
+from .parsers.registry import ParserRegistry
 from ...utils.constants import is_skippable
+from ...utils.console import console
 
 import threading
 
-_thread_local = threading.local()
-
-def _get_parsers():
-    if not hasattr(_thread_local, 'parsers'):
-        _thread_local.parsers = {}
-    return _thread_local.parsers
 
 def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
     """
@@ -48,17 +42,10 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
                 return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"DecodeError: {str(e)}")
             
         ext = file_path_obj.suffix.lower().lstrip(".")
-        parsers = _get_parsers()
         
-        if ext in ('py', 'pyw'):
-            if 'py' not in parsers:
-                parsers['py'] = PythonASTParser()
-            return parsers['py'].parse(file_path, content, root_dir)
-            
-        elif ext in ('js', 'jsx', 'ts', 'tsx'):
-            if 'ts' not in parsers:
-                parsers['ts'] = TypeScriptASTParser()
-            return parsers['ts'].parse(file_path, content, root_dir)
+        parser = ParserRegistry.get_parser(ext)
+        if parser:
+            return parser.parse(file_path, content, root_dir)
             
         return None
     except Exception as e:
@@ -79,9 +66,8 @@ class ImportGraphBuilder:
             ".contextly", "dist", "build", ".next", ".tox", ".eggs"
         }
         
-        self._SUPPORTED_EXTENSIONS = {
-            "py", "ts", "tsx", "js", "jsx"
-        }
+        # Dynamically load supported extensions from the registry
+        self._SUPPORTED_EXTENSIONS = set(ParserRegistry._registry.keys())
 
     def build(self, file_paths: Optional[List[str]] = None) -> KnowledgeGraph:
         """
@@ -124,62 +110,51 @@ class ImportGraphBuilder:
                 # Leave 1 core free for OS, cap at 8 to prevent resource limit exhaustion
                 optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
                 with concurrent.futures.ProcessPoolExecutor(max_workers=optimal_workers) as executor:
-                    # Process in chunks to prevent unbounded memory allocation for futures
-                    chunk_size = optimal_workers * 4
-                    for i in range(0, len(target_files), chunk_size):
-                        chunk = target_files[i:i + chunk_size]
+                    future_to_file = {
+                        executor.submit(_parse_file, file_path, root_str): file_path 
+                        for file_path in target_files
+                    }
+                    
+                    for future in concurrent.futures.as_completed(future_to_file):
+                        file_path = future_to_file[future]
+                        try:
+                            dto = future.result(timeout=30)
+                            if dto:
+                                if dto.error:
+                                    console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
+                                    self.failed_files[dto.file_path] = dto.error
+                                else:
+                                    dtos.append(dto)
+                            else:
+                                self.failed_files[file_path] = "Empty parser output"
+                        except Exception as e:
+                            console.print(f"[yellow]Warning:[/yellow] Concurrency error parsing {file_path}: {str(e)}")
+                            self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
+            except Exception:
+                # ProcessPoolExecutor fallback: ThreadPoolExecutor fallback
+                try:
+                    optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
                         future_to_file = {
                             executor.submit(_parse_file, file_path, root_str): file_path 
-                            for file_path in chunk
+                            for file_path in target_files
                         }
                         
                         for future in concurrent.futures.as_completed(future_to_file):
                             file_path = future_to_file[future]
                             try:
-                                dto = future.result(timeout=10) # 10s per file max
+                                dto = future.result(timeout=30)
                                 if dto:
                                     if dto.error:
-                                        from ...utils.console import console
                                         console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
                                         self.failed_files[dto.file_path] = dto.error
                                     else:
                                         dtos.append(dto)
                                 else:
                                     self.failed_files[file_path] = "Empty parser output"
-                            except Exception as e:
-                                from ...utils.console import console
-                                console.print(f"[yellow]Warning:[/yellow] Concurrency error parsing {file_path}: {str(e)}")
-                                self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
-            except Exception:
-                # ProcessPoolExecutor fallback: ThreadPoolExecutor fallback
-                try:
-                    optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
-                        chunk_size = optimal_workers * 4
-                        for i in range(0, len(target_files), chunk_size):
-                            chunk = target_files[i:i + chunk_size]
-                            future_to_file = {
-                                executor.submit(_parse_file, file_path, root_str): file_path 
-                                for file_path in chunk
-                            }
-                            
-                            for future in concurrent.futures.as_completed(future_to_file):
-                                file_path = future_to_file[future]
-                                try:
-                                    dto = future.result(timeout=10)
-                                    if dto:
-                                        if dto.error:
-                                            from ...utils.console import console
-                                            console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
-                                            self.failed_files[dto.file_path] = dto.error
-                                        else:
-                                            dtos.append(dto)
-                                    else:
-                                        self.failed_files[file_path] = "Empty parser output"
-                                except Exception as err:
-                                    from ...utils.console import console
-                                    console.print(f"[yellow]Warning:[/yellow] Concurrency error parsing {file_path}: {str(err)}")
-                                    self.failed_files[file_path] = f"ConcurrencyError: {str(err)}"
+                            except Exception as err:
+                                console.print(f"[yellow]Warning:[/yellow] Concurrency error parsing {file_path}: {str(err)}")
+                                self.failed_files[file_path] = f"ConcurrencyError: {str(err)}"
                 except Exception:
                     # Fallback to sequential parsing
                     use_pool = False
@@ -194,7 +169,6 @@ class ImportGraphBuilder:
                     dto = _parse_file(file_path, root_str)
                     if dto:
                         if dto.error:
-                            from ...utils.console import console
                             console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
                             self.failed_files[dto.file_path] = dto.error
                         else:
@@ -205,7 +179,6 @@ class ImportGraphBuilder:
                     self.failed_files[file_path] = f"SequentialError: {str(e)}"
 
         if self.failed_files:
-            from ...utils.console import console
             console.print(
                 f"[yellow]Warning:[/yellow] AST parsing was partial. "
                 f"Failed to parse {len(self.failed_files)} files out of {len(target_files)}. "
