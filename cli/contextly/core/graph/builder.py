@@ -24,8 +24,15 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
         root_path = Path(root_dir)
         file_path_obj = Path(file_path)
         abs_path = root_path / file_path_obj
+
+        # Guard: enforce a hard 2MB ceiling to prevent OOM on generated bundles
+        _AST_PARSE_MAX_BYTES = 2 * 1024 * 1024
+
         try:
             with open(abs_path, "rb") as f:
+                file_size = os.fstat(f.fileno()).st_size
+                if file_size > _AST_PARSE_MAX_BYTES:
+                    return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"Skipped: file size {file_size} exceeds {_AST_PARSE_MAX_BYTES} byte AST parse limit")
                 raw_bytes = f.read()
         except OSError:
             return None
@@ -106,43 +113,44 @@ class ImportGraphBuilder:
         root_str = str(self.root_dir)
         
         if use_pool:
+            from ..diagnostics import DiagnosticsContext
+            diagnostics = DiagnosticsContext()
+            pool_initialized = False
             try:
                 import itertools
                 optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
                 with concurrent.futures.ProcessPoolExecutor(max_workers=optimal_workers) as executor:
-                    try:
-                        results = executor.map(_parse_file, target_files, itertools.repeat(root_str), chunksize=32, timeout=600)
-                        for dto in results:
-                            if dto:
-                                if dto.error:
-                                    from ..diagnostics import DiagnosticsContext
-                                    DiagnosticsContext().add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
-                                    self.failed_files[dto.file_path] = dto.error
-                                else:
-                                    dtos.append(dto)
-                    except Exception as e:
-                        from ..diagnostics import DiagnosticsContext
-                        DiagnosticsContext().add_error("ImportGraphBuilder", f"ProcessPool mapping error: {str(e)}")
-                        raise # Trigger fallback
-            except Exception:
-                # ProcessPoolExecutor fallback: ThreadPoolExecutor fallback
-                try:
-                    import itertools
-                    optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
-                        results = executor.map(_parse_file, target_files, itertools.repeat(root_str), chunksize=32, timeout=600)
-                        for dto in results:
-                            if dto:
-                                if dto.error:
-                                    from ..diagnostics import DiagnosticsContext
-                                    DiagnosticsContext().add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
-                                    self.failed_files[dto.file_path] = dto.error
-                                else:
-                                    dtos.append(dto)
-                except Exception as e:
-                    from ..diagnostics import DiagnosticsContext
-                    DiagnosticsContext().add_error("ImportGraphBuilder", f"ThreadPool mapping error: {str(e)}")
+                    pool_initialized = True
+                    results = executor.map(_parse_file, target_files, itertools.repeat(root_str), chunksize=32, timeout=600)
+                    for dto in results:
+                        if dto:
+                            if dto.error:
+                                diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
+                                self.failed_files[dto.file_path] = dto.error
+                            else:
+                                dtos.append(dto)
+            except Exception as e:
+                if pool_initialized:
+                    # Execution failure (OOM, Timeout): do NOT retry in ThreadPool — fall through to sequential
+                    diagnostics.add_error("ImportGraphBuilder", f"ProcessPool execution error (no retry): {str(e)}")
                     use_pool = False
+                else:
+                    # Initialization failure (fork/spawn restrictions): safe to retry with threads
+                    try:
+                        import itertools
+                        optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
+                            results = executor.map(_parse_file, target_files, itertools.repeat(root_str), timeout=600)
+                            for dto in results:
+                                if dto:
+                                    if dto.error:
+                                        diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
+                                        self.failed_files[dto.file_path] = dto.error
+                                    else:
+                                        dtos.append(dto)
+                    except Exception as thread_err:
+                        diagnostics.add_error("ImportGraphBuilder", f"ThreadPool fallback error: {str(thread_err)}")
+                        use_pool = False
                 
         # Sequential Parsing Fallback
         if not use_pool:

@@ -35,7 +35,8 @@ class AnalyzerEngine:
         
         # 1. Single unified walk of the repository to discover all valid files
         # We use a depth of 6 and the standard exclusion list for maximum coverage
-        SECURITY_CRITICAL = {".git", ".contextly", ".npmrc", "id_rsa", "id_ed25519"}
+        SECURITY_CRITICAL_NAMES = {".git", ".contextly", ".npmrc", "id_rsa", "id_ed25519"}
+        SENSITIVE_DIRS = {".ssh", ".aws", ".kube", ".gcp", ".docker", ".gnupg"}
         BUILD_DIRS = {
             "node_modules", "venv", ".venv", "__pycache__",
             "dist", "build", ".next", ".tox", ".eggs"
@@ -45,7 +46,11 @@ class AnalyzerEngine:
         
         def skip_predicate(path: Path) -> bool:
             name = path.name.lower()
-            if ".env" in name or name in SECURITY_CRITICAL or name.endswith(".key") or name.endswith(".pem"):
+            # Basename heuristics: substring, suffix, and exact-match
+            if ".env" in name or name in SECURITY_CRITICAL_NAMES or name.endswith(".key") or name.endswith(".pem"):
+                return True
+            # Hierarchical check: skip anything inside sensitive directories
+            if name in SENSITIVE_DIRS or SENSITIVE_DIRS.intersection(p.lower() for p in path.parts):
                 return True
             if not self.no_default_excludes and (name in BUILD_DIRS or name.endswith(".egg-info")):
                 return True

@@ -75,9 +75,10 @@ class BaseGenerator(ABC):
                         _controlled_walk(item, prefix + extension, depth + 1)
                     else:
                         try:
-                            # Only print truncated marker if the directory actually has contents to skip
-                            if any(item.iterdir()):
-                                tree.append(f"{prefix}{extension}`-- ... (truncated)")
+                            import os as _os
+                            with _os.scandir(item) as it:
+                                if any(True for _ in it):
+                                    tree.append(f"{prefix}{extension}`-- ... (truncated)")
                         except OSError:
                             pass
                 else:
