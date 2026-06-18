@@ -58,18 +58,22 @@ class IgnoreEngine:
         Checks if a file or directory path is ignored.
         """
         # Security Check: Never allow secrets, credentials or .git state to be scanned.
-        # This operates on substrings and extensions rather than exact matches.
+        # This operates on exact names, prefixes and extensions rather than ambiguous substrings.
         name_lower = path.name.lower()
-        parts_lower = [p.lower() for p in path.parts]
+        parts_lower = {p.lower() for p in path.parts}
         
+        # Sensitive directory hierarchies — skip entire trees
+        _SENSITIVE_DIRS = {".git", ".contextly", ".ssh", ".aws", ".kube", ".gcp", ".docker", ".gnupg"}
+        if parts_lower.intersection(_SENSITIVE_DIRS):
+            return True
+
+        # Exact filenames and precise patterns
+        _SENSITIVE_FILES = {".npmrc", "id_rsa", "id_ed25519", "master.key", "credentials"}
         if (
-            "secret" in name_lower 
-            or "credential" in name_lower
-            or name_lower.startswith(".env") 
-            or name_lower.endswith(".pem") 
+            name_lower in _SENSITIVE_FILES
+            or name_lower.startswith(".env")
+            or name_lower.endswith(".pem")
             or name_lower.endswith(".key")
-            or ".git" in parts_lower
-            or ".contextly" in parts_lower
         ):
             return True
 

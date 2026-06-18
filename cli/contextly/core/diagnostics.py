@@ -1,7 +1,7 @@
 from typing import List, Dict
 from dataclasses import dataclass, field
 import threading
-from ...utils.console import console
+from ..utils.console import console
 
 @dataclass
 class DiagnosticMessage:
