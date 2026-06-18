@@ -32,3 +32,7 @@ class BaseASTParser(ABC):
             A strictly validated ParsedFileDTO.
         """
         pass
+
+# Alias for backward compatibility with registry and other consumers
+BaseParser = BaseASTParser
+
