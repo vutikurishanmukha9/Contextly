@@ -10,12 +10,10 @@ class IgnoreEngine:
         
         # Hardcoded defaults that should never be scanned
         self.default_ignores = [
-            ".git",
             "node_modules",
             "venv",
             ".venv",
             "__pycache__",
-            ".contextly",
             "dist",
             "build",
             ".next"
@@ -26,6 +24,9 @@ class IgnoreEngine:
     def _build_spec(self) -> pathspec.PathSpec:
         """Reads .gitignore and .contextlyignore and merges with defaults"""
         patterns = []
+        # Security critical ignores that are never bypassed to prevent credentials and state leakage
+        patterns.extend([".git", ".env", ".contextly"])
+        
         if not self.no_default_excludes:
             patterns.extend(self.default_ignores)
         

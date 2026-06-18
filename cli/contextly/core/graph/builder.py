@@ -72,6 +72,7 @@ class ImportGraphBuilder:
     
     def __init__(self, root_dir: Path):
         self.root_dir = root_dir
+        self.failed_files = {} # file_path -> error_message
         
         self._ALWAYS_SKIP = {
             ".git", "node_modules", "venv", ".venv", "__pycache__",
@@ -127,22 +128,28 @@ class ImportGraphBuilder:
                     chunk_size = optimal_workers * 4
                     for i in range(0, len(target_files), chunk_size):
                         chunk = target_files[i:i + chunk_size]
-                        futures = [
-                            executor.submit(_parse_file, file_path, root_str) 
+                        future_to_file = {
+                            executor.submit(_parse_file, file_path, root_str): file_path 
                             for file_path in chunk
-                        ]
+                        }
                         
-                        for future in concurrent.futures.as_completed(futures):
+                        for future in concurrent.futures.as_completed(future_to_file):
+                            file_path = future_to_file[future]
                             try:
                                 dto = future.result(timeout=10) # 10s per file max
                                 if dto:
                                     if dto.error:
                                         from ...utils.console import console
                                         console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
+                                        self.failed_files[dto.file_path] = dto.error
                                     else:
                                         dtos.append(dto)
-                            except Exception:
-                                continue
+                                else:
+                                    self.failed_files[file_path] = "Empty parser output"
+                            except Exception as e:
+                                from ...utils.console import console
+                                console.print(f"[yellow]Warning:[/yellow] Concurrency error parsing {file_path}: {str(e)}")
+                                self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
             except Exception:
                 # ProcessPoolExecutor fallback: ThreadPoolExecutor fallback
                 try:
@@ -151,22 +158,28 @@ class ImportGraphBuilder:
                         chunk_size = optimal_workers * 4
                         for i in range(0, len(target_files), chunk_size):
                             chunk = target_files[i:i + chunk_size]
-                            futures = [
-                                executor.submit(_parse_file, file_path, root_str) 
+                            future_to_file = {
+                                executor.submit(_parse_file, file_path, root_str): file_path 
                                 for file_path in chunk
-                            ]
+                            }
                             
-                            for future in concurrent.futures.as_completed(futures):
+                            for future in concurrent.futures.as_completed(future_to_file):
+                                file_path = future_to_file[future]
                                 try:
                                     dto = future.result(timeout=10)
                                     if dto:
                                         if dto.error:
                                             from ...utils.console import console
                                             console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
+                                            self.failed_files[dto.file_path] = dto.error
                                         else:
                                             dtos.append(dto)
-                                except Exception:
-                                    continue
+                                    else:
+                                        self.failed_files[file_path] = "Empty parser output"
+                                except Exception as err:
+                                    from ...utils.console import console
+                                    console.print(f"[yellow]Warning:[/yellow] Concurrency error parsing {file_path}: {str(err)}")
+                                    self.failed_files[file_path] = f"ConcurrencyError: {str(err)}"
                 except Exception:
                     # Fallback to sequential parsing
                     use_pool = False
@@ -183,10 +196,21 @@ class ImportGraphBuilder:
                         if dto.error:
                             from ...utils.console import console
                             console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
+                            self.failed_files[dto.file_path] = dto.error
                         else:
                             dtos.append(dto)
-                except Exception:
-                    continue
+                    else:
+                        self.failed_files[file_path] = "Empty parser output"
+                except Exception as e:
+                    self.failed_files[file_path] = f"SequentialError: {str(e)}"
+
+        if self.failed_files:
+            from ...utils.console import console
+            console.print(
+                f"[yellow]Warning:[/yellow] AST parsing was partial. "
+                f"Failed to parse {len(self.failed_files)} files out of {len(target_files)}. "
+                f"The resulting graph will be incomplete."
+            )
 
         # 3. Assemble the Graph deterministically
         # Sort DTOs by path to ensure stable IDs and predictable relationships.

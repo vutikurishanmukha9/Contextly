@@ -253,3 +253,66 @@ def test_process_pool_fallback_chain(temp_repo, monkeypatch):
     # Verify parsing succeeds via ThreadPoolExecutor fallback
     assert len(graph.nodes) == 121  # 120 files + index.js
 
+def test_security_critical_excludes(temp_repo):
+    from contextly.utils.ignore import IgnoreEngine
+    from contextly.core.analyzer.engine import AnalyzerEngine
+    
+    runner.invoke(app, ["init"])
+    
+    # Write a credentials file
+    env_file = temp_repo / ".env"
+    env_file.write_text("SECRET_KEY=12345")
+    
+    git_dir = temp_repo / ".git"
+    git_dir.mkdir(exist_ok=True)
+    git_config = git_dir / "config"
+    git_config.write_text("[core]\nrepositoryformatversion = 0")
+    
+    # IgnoreEngine with no_default_excludes=True
+    ignorer = IgnoreEngine(temp_repo, no_default_excludes=True)
+    assert ignorer.is_ignored(env_file)
+    assert ignorer.is_ignored(git_config)
+    
+    # AnalyzerEngine with no_default_excludes=True
+    analyzer = AnalyzerEngine(temp_repo, no_default_excludes=True)
+    intel = analyzer.analyze()
+    
+    # Double check no .env or .git configurations were saved in repository.json
+    repo_json_path = temp_repo / ".contextly" / "repository.json"
+    assert repo_json_path.exists()
+    
+    with open(repo_json_path, "r", encoding="utf-8") as f:
+        import json
+        repo_data = json.load(f)
+        
+    for node in repo_data["graph"]["nodes"]:
+        path = node["path"]
+        assert ".env" not in path
+        assert ".git" not in path
+
+def test_concurrency_error_logging(temp_repo, monkeypatch):
+    from contextly.core.graph.builder import ImportGraphBuilder
+    import concurrent.futures
+    
+    runner.invoke(app, ["init"])
+    
+    (temp_repo / "src").mkdir(exist_ok=True, parents=True)
+    for i in range(110):
+        (temp_repo / "src" / f"dummy_{i}.py").write_text("def f(): pass")
+        
+    # Monkeypatch Future.result to raise a timeout/concurrency error
+    def mock_result(*args, **kwargs):
+        raise RuntimeError("Simulated concurrency failure")
+        
+    monkeypatch.setattr(concurrent.futures.Future, "result", mock_result)
+    
+    builder = ImportGraphBuilder(temp_repo)
+    builder.build()
+    
+    # We should have failed files because all futures raised exception
+    assert len(builder.failed_files) > 0
+    # The error message should mention ConcurrencyError
+    first_failed = list(builder.failed_files.values())[0]
+    assert "ConcurrencyError" in first_failed
+
+

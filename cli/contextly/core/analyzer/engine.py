@@ -38,16 +38,19 @@ class AnalyzerEngine:
         
         # 1. Single unified walk of the repository to discover all valid files
         # We use a depth of 6 and the standard exclusion list for maximum coverage
-        ALWAYS_SKIP = {
-            ".git", "node_modules", "venv", ".venv", "__pycache__",
-            ".contextly", "dist", "build", ".next", ".tox", ".eggs"
+        SECURITY_CRITICAL = {".git", ".env", ".contextly"}
+        BUILD_DIRS = {
+            "node_modules", "venv", ".venv", "__pycache__",
+            "dist", "build", ".next", ".tox", ".eggs"
         }
         
         ignorer = IgnoreEngine(self.root_dir, no_default_excludes=self.no_default_excludes)
         
         def skip_predicate(path: Path) -> bool:
             name = path.name.lower()
-            if not self.no_default_excludes and (name in ALWAYS_SKIP or name.endswith(".egg-info")):
+            if name in SECURITY_CRITICAL:
+                return True
+            if not self.no_default_excludes and (name in BUILD_DIRS or name.endswith(".egg-info")):
                 return True
             return ignorer.is_ignored(path)
 
