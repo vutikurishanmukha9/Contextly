@@ -315,4 +315,60 @@ def test_concurrency_error_logging(temp_repo, monkeypatch):
     first_failed = list(builder.failed_files.values())[0]
     assert "ConcurrencyError" in first_failed
 
+def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
+    import concurrent.futures
+    from contextly.core.graph.builder import ImportGraphBuilder
+    
+    runner.invoke(app, ["init"])
+    (temp_repo / "src").mkdir(exist_ok=True, parents=True)
+    for i in range(110):
+        (temp_repo / "src" / f"dummy_{i}.py").write_text("def f(): pass")
+        
+    def mock_wait(in_flight, timeout=None, return_when=None):
+        return set(), in_flight
+        
+    monkeypatch.setattr(concurrent.futures, "wait", mock_wait)
+    
+    builder = ImportGraphBuilder(temp_repo)
+    builder.build()
+    
+    assert any("TimeoutError" in str(msg) for msg in builder.failed_files.values())
 
+def test_builder_dto_error_handling(temp_repo, monkeypatch):
+    import concurrent.futures
+    from contextly.core.graph.builder import ImportGraphBuilder
+    from contextly.core.graph.parsers.base import ParsedFileDTO
+    
+    runner.invoke(app, ["init"])
+    (temp_repo / "src").mkdir(exist_ok=True, parents=True)
+    for i in range(110):
+        (temp_repo / "src" / f"dummy_{i}.py").write_text("def f(): pass")
+        
+    def mock_result(self):
+        # Return a DTO with an error
+        return ParsedFileDTO(
+            file_path="dummy.py",
+            exports=[],
+            imports=[],
+            error="Mock DTO Error"
+        )
+        
+    monkeypatch.setattr(concurrent.futures.Future, "result", mock_result)
+    
+    builder = ImportGraphBuilder(temp_repo)
+    builder.build()
+    
+    assert any("Mock DTO Error" in str(msg) for msg in builder.failed_files.values())
+
+def test_configuration_error_raised_on_invalid_yaml(temp_repo):
+    from contextly.utils.exceptions import ConfigurationError
+    from contextly.core.analyzer.engine import AnalyzerEngine
+    
+    runner.invoke(app, ["init"])
+    config_path = temp_repo / ".contextly" / "config.yaml"
+    # Write invalid YAML
+    config_path.write_text("packer: [unclosed list\ndepth_limits:\n  analyzer: -1\n")
+    
+    import pytest
+    with pytest.raises(ConfigurationError):
+        AnalyzerEngine(temp_repo)
