@@ -12,17 +12,20 @@ class RepoWalker:
         self, 
         root_dir: Path, 
         max_depth: Optional[int] = None, 
-        skip_predicate: Optional[Callable[[Path], bool]] = None
+        skip_predicate: Optional[Callable[[Path], bool]] = None,
+        dir_skip_predicate: Optional[Callable[[Path], bool]] = None
     ):
         """
         Args:
             root_dir: The root directory to start walking from.
             max_depth: The maximum depth to traverse. 0 means only root_dir. None means infinite.
-            skip_predicate: A callable that takes a Path and returns True if the directory should be skipped.
+            skip_predicate: A callable that takes a Path and returns True if the file or directory should be skipped.
+            dir_skip_predicate: A callable that takes a Path and returns True if an entire directory branch should be pruned.
         """
         self.root_dir = root_dir
         self.max_depth = max_depth
         self.skip_predicate = skip_predicate
+        self.dir_skip_predicate = dir_skip_predicate
 
     def walk(self) -> Generator[Tuple[str, List[str], List[str]], None, None]:
         """
@@ -35,8 +38,10 @@ class RepoWalker:
             root_path = Path(root)
             current_depth = len(root_path.parts) - start_depth
             
-            # Prune directories matching the skip predicate
-            if self.skip_predicate:
+            # Prune directories matching the dir skip predicate
+            if self.dir_skip_predicate:
+                dirs[:] = [d for d in dirs if not self.dir_skip_predicate(root_path / d)]
+            elif self.skip_predicate:
                 dirs[:] = [d for d in dirs if not self.skip_predicate(root_path / d)]
                 
             # Prune directories if we've reached max_depth

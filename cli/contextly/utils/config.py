@@ -73,13 +73,7 @@ def load_config_model(root_dir: Path) -> ContextlyConfig:
             return ContextlyConfig.model_validate(data)
     except Exception as e:
         import pydantic
-        import sys
         if isinstance(e, (pydantic.ValidationError, yaml.YAMLError)):
-            try:
-                from .console import console
-                console.print(f"[red]Configuration Error in .contextly/config.yaml:[/red]\n{e}")
-            except Exception:
-                import traceback
-                traceback.print_exc()
-            sys.exit(1)
+            from .exceptions import ConfigurationError
+            raise ConfigurationError(f"Configuration Error in .contextly/config.yaml:\n{e}") from e
         return ContextlyConfig()

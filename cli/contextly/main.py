@@ -40,4 +40,12 @@ app.command(name="explain", help="Explain repository concepts and structure")(ex
 console = Console()
 
 if __name__ == "__main__":
-    app()
+    try:
+        app()
+    except Exception as e:
+        from .utils.exceptions import ConfigurationError
+        if isinstance(e, ConfigurationError):
+            console.print(f"[bold red]Fatal Error:[/bold red] {e}")
+            import sys
+            sys.exit(1)
+        raise

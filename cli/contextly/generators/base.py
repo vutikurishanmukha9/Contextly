@@ -14,6 +14,8 @@ class BaseGenerator(ABC):
         from ..utils.config import load_config_model
         self.config = load_config_model(root_dir)
         self.max_tree_depth = self.config.depth_limits.generator_tree
+        self.total_nodes = 0
+        self._MAX_TOTAL_NODES = 2500
 
     def _get_readme_content(self) -> str:
         """Extracts content from root README.md if it exists."""
@@ -65,6 +67,11 @@ class BaseGenerator(ABC):
                 truncated_count = 0
 
             for index, (is_dir, item) in enumerate(classified):
+                if self.total_nodes > self._MAX_TOTAL_NODES:
+                    tree.append(f"{prefix}`-- ... (tree truncated due to massive scale)")
+                    return
+                self.total_nodes += 1
+                
                 is_last = (index == len(classified) - 1) and not has_truncated_breadth
                 connector = "`-- " if is_last else "|-- "
                 

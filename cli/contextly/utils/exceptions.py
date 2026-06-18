@@ -13,3 +13,7 @@ class ScannerError(ContextlyError):
 class MemoryVaultError(ContextlyError):
     """Raised when the team memory vault cannot be accessed or parsed."""
     pass
+
+class ConfigurationError(ContextlyError):
+    """Raised when the Context-Ly configuration is invalid or missing."""
+    pass

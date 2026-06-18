@@ -31,10 +31,9 @@ def analyze_cmd(
         console.print(f"\n[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
         
-    engine = AnalyzerEngine(root_dir, no_default_excludes=no_default_excludes)
-    
     with console.status("[bold blue]Scanning repository intelligence...", spinner="dots"):
         try:
+            engine = AnalyzerEngine(root_dir, no_default_excludes=no_default_excludes)
             intelligence = engine.analyze(model)
         except ScannerError as e:
             console.print(f"\n[bold red]Scanner Error:[/bold red] {e}")
