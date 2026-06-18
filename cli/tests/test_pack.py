@@ -60,8 +60,8 @@ def test_pack_cmd_no_tiktoken(temp_repo, monkeypatch):
     # We patch the engine after it's initialized by the command
     original_init = pack_engine_mod.PackerEngine.__init__
     
-    def mock_init(self, root_dir):
-        original_init(self, root_dir)
+    def mock_init(self, *args, **kwargs):
+        original_init(self, *args, **kwargs)
         self.tokenizer = None
         
     monkeypatch.setattr(pack_engine_mod.PackerEngine, "__init__", mock_init)

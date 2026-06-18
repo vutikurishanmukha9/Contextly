@@ -51,7 +51,12 @@ class DiscoveryEngine:
         # Full repo scans are cheap enough for correctness and avoid stale state
         # when a long-lived engine instance observes filesystem changes.
         paths = []
-        walker = RepoWalker(self.root_dir, max_depth=4, skip_predicate=is_skippable)
+        from ...utils.config import load_config
+        config = load_config(self.root_dir) or {}
+        depth_config = config.get("depth_limits", {}) if isinstance(config, dict) else {}
+        discovery_depth = depth_config.get("discovery", 4)
+        
+        walker = RepoWalker(self.root_dir, max_depth=discovery_depth, skip_predicate=is_skippable)
 
         for dirpath, dirnames, filenames in walker.walk():
             rel_path = Path(dirpath).relative_to(self.root_dir)

@@ -7,7 +7,9 @@ from ..utils.validation import require_directory_exists
 from ..core.inspector.engine import InspectorEngine
 import typer
 
-def inspect_cmd():
+def inspect_cmd(
+    no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)")
+):
     """Deep dive into repository complexity and structure"""
     try:
         root_dir = find_project_root(Path.cwd())
@@ -16,7 +18,7 @@ def inspect_cmd():
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)
         
-    engine = InspectorEngine(root_dir)
+    engine = InspectorEngine(root_dir, no_default_excludes=no_default_excludes)
     
     with console.status("[bold blue]Inspecting repository file tree...", spinner="bouncingBar"):
         file_sizes = engine.inspect()

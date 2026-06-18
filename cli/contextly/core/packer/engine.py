@@ -8,9 +8,9 @@ from .compression import CompressionEngine
 from .ranking import RankingEngine
 
 class PackerEngine:
-    def __init__(self, root_dir: Path):
+    def __init__(self, root_dir: Path, no_default_excludes: bool = False):
         self.root_dir = root_dir
-        self.ignorer = IgnoreEngine(root_dir)
+        self.ignorer = IgnoreEngine(root_dir, no_default_excludes=no_default_excludes)
         self.compressor = CompressionEngine()
         self.ranker = RankingEngine(root_dir)
         try:
@@ -18,6 +18,11 @@ class PackerEngine:
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
         except ImportError:
             self.tokenizer = None
+
+        from ...utils.config import load_config
+        self.config = load_config(root_dir) or {}
+        packer_config = self.config.get("packer", {}) if isinstance(self.config, dict) else {}
+        self.max_file_size = packer_config.get("max_file_size_mb", 5) * 1024 * 1024
 
     def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None, compress: bool = False) -> Tuple[int, str, int, Path, List[Path], int]:
         """
@@ -82,22 +87,52 @@ class PackerEngine:
         if self.tokenizer:
             try:
                 current_tokens = len(self.tokenizer.encode(header_text, disallowed_special=()))
-            except Exception:
-                current_tokens = len(header_text) / 2.8
+            except ValueError:
+                current_tokens = len(header_text) / 3.5
         else:
-            current_tokens = len(header_text) / 2.8
+            current_tokens = len(header_text) / 3.5
         
         for path in ranked_files:
             try:
+                # 1. Size constraint check before reading the file into memory
+                try:
+                    file_size = path.stat().st_size
+                except OSError:
+                    skipped_files.append(path)
+                    continue
+
+                if file_size > self.max_file_size:
+                    skipped_files.append(path)
+                    continue
+
+                # 2. Binary detection check via first 1024 bytes in binary mode
+                try:
+                    with open(path, "rb") as check_f:
+                        chunk = check_f.read(1024)
+                        if b'\x00' in chunk:
+                            skipped_files.append(path)
+                            continue
+                except OSError:
+                    skipped_files.append(path)
+                    continue
+
+                # 3. Read and decode logic
                 try:
                     with open(path, "r", encoding="utf-8") as in_f:
                         raw_code = in_f.read()
                 except UnicodeDecodeError:
-                    with open(path, "r", encoding="latin-1", errors="ignore") as in_f:
-                        raw_code = in_f.read()
-                    if '\x00' in raw_code:
+                    try:
+                        with open(path, "r", encoding="latin-1", errors="ignore") as in_f:
+                            raw_code = in_f.read()
+                        if '\x00' in raw_code:
+                            skipped_files.append(path)
+                            continue
+                    except OSError:
                         skipped_files.append(path)
                         continue
+                except OSError:
+                    skipped_files.append(path)
+                    continue
                     
                 compressed_code = self.compressor.compress(path, raw_code) if compress else raw_code
                 
@@ -113,11 +148,11 @@ class PackerEngine:
                 if self.tokenizer:
                     try:
                         file_cost = len(self.tokenizer.encode(full_text, disallowed_special=()))
-                    except Exception:
+                    except ValueError:
                         skipped_files.append(path)
                         continue
                 else:
-                    file_cost = len(full_text) / 2.8
+                    file_cost = len(full_text) / 3.5
 
                 if max_tokens and current_tokens + file_cost > max_tokens:
                     excluded_files.append(path)
@@ -169,6 +204,6 @@ class PackerEngine:
             token_type = "Exact Tokens (cl100k_base)"
         else:
             token_estimate = int(current_tokens)
-            token_type = "Estimated Tokens (chars / 2.8)"
+            token_type = "Estimated Tokens (chars / 3.5)"
             
         return token_estimate, token_type, len(selected_files), output_file, skipped_files, len(excluded_files)

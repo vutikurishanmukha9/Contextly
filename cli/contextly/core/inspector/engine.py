@@ -4,9 +4,9 @@ from typing import List, Tuple
 from ...utils.ignore import IgnoreEngine
 
 class InspectorEngine:
-    def __init__(self, root_dir: Path):
+    def __init__(self, root_dir: Path, no_default_excludes: bool = False):
         self.root_dir = root_dir
-        self.ignorer = IgnoreEngine(root_dir)
+        self.ignorer = IgnoreEngine(root_dir, no_default_excludes=no_default_excludes)
 
     def inspect(self) -> List[Tuple[int, Path]]:
         """

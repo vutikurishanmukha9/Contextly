@@ -30,6 +30,15 @@ class InitEngine:
                 "project": {
                     "name": self.root_dir.name,
                 },
+                "depth_limits": {
+                    "analyzer": 6,
+                    "generator_tree": 4,
+                    "scanners": 4,
+                    "discovery": 4
+                },
+                "packer": {
+                    "max_file_size_mb": 5
+                },
                 "stack": {
                     "frontend": "",
                     "backend": ""

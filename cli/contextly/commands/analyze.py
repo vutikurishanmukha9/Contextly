@@ -12,7 +12,8 @@ from ..utils.exceptions import ValidationError
 
 def analyze_cmd(
     target: str = typer.Argument(".", help="Directory to analyze"),
-    model: str = typer.Option("chatgpt", "--model", "-m", help="Target LLM format ('chatgpt' or 'claude')")
+    model: str = typer.Option("chatgpt", "--model", "-m", help="Target LLM format ('chatgpt' or 'claude')"),
+    no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)")
 ):
     """Analyze a repository and print intelligence summary"""
     root_dir = find_project_root(Path.cwd())
@@ -30,7 +31,7 @@ def analyze_cmd(
         console.print(f"\n[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
         
-    engine = AnalyzerEngine(root_dir)
+    engine = AnalyzerEngine(root_dir, no_default_excludes=no_default_excludes)
     
     with console.status("[bold blue]Scanning repository intelligence...", spinner="dots"):
         try:

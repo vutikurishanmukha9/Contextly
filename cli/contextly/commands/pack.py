@@ -16,7 +16,8 @@ def pack_cmd(
     name: str = typer.Option(None, "--name", "-n", help="Name of the context pack (defaults to directory name)"),
     profile: str = typer.Option(None, "--profile", "-p", help="Use a profile defined in .contextly/config.yaml"),
     max_tokens: int = typer.Option(None, "--max-tokens", help="Drop least relevant files to fit within this limit"),
-    compress: bool = typer.Option(False, "--compress", "-c", help="Compress AST representations to save tokens")
+    compress: bool = typer.Option(False, "--compress", "-c", help="Compress AST representations to save tokens"),
+    no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)")
 ):
     """Bundle a directory into an LLM-ready Context Pack markdown file"""
     root_dir = find_project_root(Path.cwd())
@@ -80,7 +81,7 @@ def pack_cmd(
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
         
-    engine = PackerEngine(root_dir)
+    engine = PackerEngine(root_dir, no_default_excludes=no_default_excludes)
     
     target_str = f"profile '{profile}'" if profile else f"'{target}'"
     with console.status(f"[bold blue]Packing {target_str} into '{pack_name}'...", spinner="point"):

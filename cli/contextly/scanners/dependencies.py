@@ -40,7 +40,12 @@ class DependencyScanner(BaseScanner):
                     elif filename == "pyproject.toml":
                         self._parse_pyproject_toml(root_dir / rel, root_dir, python_set)
             else:
-                walker = RepoWalker(root_dir, max_depth=4, skip_predicate=is_skippable)
+                from ..utils.config import load_config
+                config = load_config(root_dir) or {}
+                depth_config = config.get("depth_limits", {}) if isinstance(config, dict) else {}
+                scanners_depth = depth_config.get("scanners", 4)
+                
+                walker = RepoWalker(root_dir, max_depth=scanners_depth, skip_predicate=is_skippable)
 
                 for dirpath, dirnames, filenames in walker.walk():
                     current = Path(dirpath)

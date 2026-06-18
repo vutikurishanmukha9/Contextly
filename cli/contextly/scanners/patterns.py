@@ -60,11 +60,16 @@ class PatternScanner(BaseScanner):
 
             if file_paths is not None:
                 for fp in file_paths:
-                    parts = Path(fp).parts
-                    for i in range(len(parts) - 1):
-                        dirnames.add(parts[i])
+                     parts = Path(fp).parts
+                     for i in range(len(parts) - 1):
+                         dirnames.add(parts[i])
             else:
-                walker = RepoWalker(root_dir, max_depth=4, skip_predicate=is_skippable)
+                from ..utils.config import load_config
+                config = load_config(root_dir) or {}
+                depth_config = config.get("depth_limits", {}) if isinstance(config, dict) else {}
+                scanners_depth = depth_config.get("scanners", 4)
+                
+                walker = RepoWalker(root_dir, max_depth=scanners_depth, skip_predicate=is_skippable)
                 try:
                     for _, subdirs, _ in walker.walk():
                         dirnames.update(subdirs)

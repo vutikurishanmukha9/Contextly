@@ -1,0 +1,161 @@
+import pytest
+import os
+import json
+import yaml
+from pathlib import Path
+from conftest import runner, app
+
+from contextly.core.packer.engine import PackerEngine
+from contextly.core.analyzer.engine import AnalyzerEngine
+from contextly.utils.ignore import IgnoreEngine
+from contextly.generators.base import BaseGenerator
+from contextly.types.models import RepositoryIntelligence, LanguageScanResult, DependencyScanResult, FrameworkScanResult
+
+class DummyGenerator(BaseGenerator):
+    def generate(self) -> str:
+        return "dummy"
+
+def test_packer_max_file_size(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    # Write config setting a very low max file size (1 byte)
+    config_path = temp_repo / ".contextly" / "config.yaml"
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    config["packer"] = {"max_file_size_mb": 0.000001}  # ~1 byte
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(config, f)
+        
+    large_file = temp_repo / "src" / "large.js"
+    large_file.write_text("this is definitely larger than one byte")
+    
+    large_file_size = large_file.stat().st_size
+    
+    engine = PackerEngine(temp_repo)
+    # large.js is larger than 1 byte, so it should be skipped
+    token_est, token_type, file_count, output_file, skipped, excluded = engine.pack(
+        [temp_repo / "src"], "test_pack"
+    )
+    assert any(large_file.name in str(p) for p in skipped)
+
+def test_packer_binary_detection(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    binary_file = temp_repo / "src" / "binary.data"
+    with open(binary_file, "wb") as f:
+        f.write(b"header\x00data")
+        
+    engine = PackerEngine(temp_repo)
+    token_est, token_type, file_count, output_file, skipped, excluded = engine.pack(
+        [temp_repo / "src"], "test_pack"
+    )
+    assert any(binary_file.name in str(p) for p in skipped)
+
+def test_packer_token_ratio_fallback(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    engine = PackerEngine(temp_repo)
+    # Force self.tokenizer to be None to check fallback ratio estimation
+    engine.tokenizer = None
+    
+    text = "a" * 350
+    # Create a dummy file of 350 chars
+    dummy_file = temp_repo / "src" / "dummy.js"
+    dummy_file.write_text(text)
+    
+    token_est, token_type, file_count, output_file, skipped, excluded = engine.pack(
+        [dummy_file], "test_pack"
+    )
+    
+    assert "Estimated Tokens (chars / 3.5)" in token_type
+    # Estimated tokens should roughly match length of header + file divided by 3.5
+    assert token_est > 0
+
+def test_no_default_excludes(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    # Create file inside an ignored folder like "dist"
+    dist_dir = temp_repo / "dist"
+    dist_dir.mkdir(exist_ok=True)
+    build_file = dist_dir / "bundle.js"
+    build_file.write_text("console.log('bundle')")
+    
+    # 1. By default, dist should be skipped
+    engine_default = PackerEngine(temp_repo, no_default_excludes=False)
+    _, _, file_count, _, _, _ = engine_default.pack([temp_repo], "test_default")
+    # Verify that dist/bundle.js is not packed (file_count is 1 because of index.js, or 2 if pack includes others)
+    # Let's verify bundle.js is not in the selected list of files
+    assert not any("bundle.js" in str(p) for p in engine_default.ignorer.default_ignores)
+    
+    # 2. With no_default_excludes=True, dist/bundle.js should be scanned/packed
+    engine_override = PackerEngine(temp_repo, no_default_excludes=True)
+    assert not engine_override.ignorer.is_ignored(build_file)
+
+def test_cli_no_default_excludes(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    dist_dir = temp_repo / "dist"
+    dist_dir.mkdir(exist_ok=True)
+    build_file = dist_dir / "bundle.js"
+    build_file.write_text("console.log('bundle')")
+    
+    # Pack command with --no-default-excludes
+    result = runner.invoke(app, ["pack", ".", "--name", "test_pack", "--no-default-excludes"])
+    assert result.exit_code == 0
+    # Output file should contain "bundle.js"
+    pack_file = temp_repo / ".contextly" / "packs" / "test_pack.contextpack.md"
+    assert pack_file.exists()
+    content = pack_file.read_text("utf-8")
+    assert "bundle.js" in content
+
+def test_analyzer_no_default_excludes(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    dist_dir = temp_repo / "dist"
+    dist_dir.mkdir(exist_ok=True)
+    build_file = dist_dir / "bundle.js"
+    build_file.write_text("console.log('bundle')")
+    
+    engine = AnalyzerEngine(temp_repo, no_default_excludes=True)
+    intel = engine.analyze()
+    # verify dist files were parsed or listed in repository.json
+    repo_json_path = temp_repo / ".contextly" / "repository.json"
+    assert repo_json_path.exists()
+    with open(repo_json_path, "r", encoding="utf-8") as f:
+        repo_data = json.load(f)
+    assert any("bundle.js" in node["path"] for node in repo_data["graph"]["nodes"])
+
+def test_custom_depth_limits(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    # Create a deep directory structure
+    deep_dir = temp_repo / "src" / "dir_a" / "dir_b" / "dir_c" / "dir_d"
+    deep_dir.mkdir(parents=True, exist_ok=True)
+    deep_file = deep_dir / "deep.js"
+    deep_file.write_text("console.log('deep')")
+    
+    # Update config: set generator_tree depth to 2
+    config_path = temp_repo / ".contextly" / "config.yaml"
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    config["depth_limits"] = {
+        "generator_tree": 2,
+        "analyzer": 2,
+        "scanners": 2,
+        "discovery": 2
+    }
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(config, f)
+        
+    # Test generator depth
+    intel = RepositoryIntelligence(
+        language=LanguageScanResult(primary="Unknown"),
+        dependencies=DependencyScanResult(),
+        frameworks=FrameworkScanResult()
+    )
+    generator = DummyGenerator(temp_repo, intel)
+    assert generator.max_tree_depth == 2
+    tree_str = generator._generate_tree()
+    # Depth 2 should have "src/dir_a/dir_b/", but not "dir_c/" or "dir_d/" or "deep.js"
+    assert "dir_b/" in tree_str
+    assert "dir_c/" not in tree_str

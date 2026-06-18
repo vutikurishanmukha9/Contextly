@@ -4,8 +4,9 @@ import pathspec
 class IgnoreEngine:
     """Centralized ignore logic for Context-Ly"""
     
-    def __init__(self, root_dir: Path):
+    def __init__(self, root_dir: Path, no_default_excludes: bool = False):
         self.root_dir = root_dir
+        self.no_default_excludes = no_default_excludes
         
         # Hardcoded defaults that should never be scanned
         self.default_ignores = [
@@ -24,7 +25,9 @@ class IgnoreEngine:
         
     def _build_spec(self) -> pathspec.PathSpec:
         """Reads .gitignore and .contextlyignore and merges with defaults"""
-        patterns = list(self.default_ignores)
+        patterns = []
+        if not self.no_default_excludes:
+            patterns.extend(self.default_ignores)
         
         # Read .gitignore
         gitignore_path = self.root_dir / ".gitignore"

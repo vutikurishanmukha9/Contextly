@@ -18,8 +18,12 @@ from ...generators.chatgpt import ChatGPTGenerator
 from ...utils.exceptions import ContextlyError
 
 class AnalyzerEngine:
-    def __init__(self, root_dir: Path):
+    def __init__(self, root_dir: Path, no_default_excludes: bool = False):
         self.root_dir = root_dir
+        self.no_default_excludes = no_default_excludes
+        
+        from ...utils.config import load_config
+        self.config = load_config(root_dir) or {}
         
     def analyze(self, model: str = "chatgpt") -> RepositoryIntelligence:
         """
@@ -27,9 +31,11 @@ class AnalyzerEngine:
         Returns the generated RepositoryIntelligence object.
         """
         from ...utils.walker import RepoWalker
+        from ...utils.ignore import IgnoreEngine
         import os
 
-
+        depth_config = self.config.get("depth_limits", {}) if isinstance(self.config, dict) else {}
+        analyzer_depth = depth_config.get("analyzer", 6)
         
         # 1. Single unified walk of the repository to discover all valid files
         # We use a depth of 6 and the standard exclusion list for maximum coverage
@@ -38,11 +44,15 @@ class AnalyzerEngine:
             ".contextly", "dist", "build", ".next", ".tox", ".eggs"
         }
         
+        ignorer = IgnoreEngine(self.root_dir, no_default_excludes=self.no_default_excludes)
+        
         def skip_predicate(path: Path) -> bool:
             name = path.name.lower()
-            return name in ALWAYS_SKIP or name.endswith(".egg-info")
+            if not self.no_default_excludes and (name in ALWAYS_SKIP or name.endswith(".egg-info")):
+                return True
+            return ignorer.is_ignored(path)
 
-        walker = RepoWalker(self.root_dir, max_depth=6, skip_predicate=skip_predicate)
+        walker = RepoWalker(self.root_dir, max_depth=analyzer_depth, skip_predicate=skip_predicate)
         all_files: list[str] = []
         
         for dirpath, _, filenames in walker.walk():

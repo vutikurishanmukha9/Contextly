@@ -10,6 +10,11 @@ class BaseGenerator(ABC):
         self.root_dir = root_dir
         self.intelligence = intelligence
         self.ignorer = IgnoreEngine(root_dir)
+        
+        from ..utils.config import load_config
+        self.config = load_config(root_dir) or {}
+        depth_config = self.config.get("depth_limits", {}) if isinstance(self.config, dict) else {}
+        self.max_tree_depth = depth_config.get("generator_tree", 4)
 
     def _get_readme_content(self) -> str:
         """Extracts content from root README.md if it exists."""
@@ -28,7 +33,7 @@ class BaseGenerator(ABC):
         tree = []
         
         def _controlled_walk(dir_path: Path, prefix: str = "", depth: int = 0):
-            if depth > 4: # Limit depth to 4 levels to provide a meaningful but constrained tree
+            if depth > self.max_tree_depth: # Limit depth based on configuration
                 return
                 
             try:
