@@ -11,14 +11,9 @@ class BaseGenerator(ABC):
         self.intelligence = intelligence
         self.ignorer = IgnoreEngine(root_dir)
         
-        from ..utils.config import load_config
-        self.config = load_config(root_dir) or {}
-        if not isinstance(self.config, dict):
-            self.config = {}
-        depth_config = self.config.get("depth_limits") or {}
-        if not isinstance(depth_config, dict):
-            depth_config = {}
-        self.max_tree_depth = depth_config.get("generator_tree", 4)
+        from ..utils.config import load_config_model
+        self.config = load_config_model(root_dir)
+        self.max_tree_depth = self.config.depth_limits.generator_tree
 
     def _get_readme_content(self) -> str:
         """Extracts content from root README.md if it exists."""
@@ -37,10 +32,6 @@ class BaseGenerator(ABC):
         tree = []
         
         def _controlled_walk(dir_path: Path, prefix: str = "", depth: int = 0):
-            if depth > self.max_tree_depth: # Limit depth based on configuration
-                tree.append(f"{prefix}... (truncated)")
-                return
-                
             try:
                 raw_items = list(dir_path.iterdir())
             except OSError:
@@ -59,16 +50,26 @@ class BaseGenerator(ABC):
             # Sort: Directories first (not True -> False, False < True), then by case-insensitive name
             classified.sort(key=lambda x: (not x[0], x[1].name.lower()))
             
+            if not classified:
+                return
+
+            should_truncate = (depth == self.max_tree_depth)
+            has_truncated_dirs = should_truncate and any(is_dir for is_dir, _ in classified)
+
             for index, (is_dir, item) in enumerate(classified):
-                is_last = index == len(classified) - 1
+                is_last = (index == len(classified) - 1) and not has_truncated_dirs
                 connector = "`-- " if is_last else "|-- "
                 
                 if is_dir:
                     tree.append(f"{prefix}{connector}{item.name}/")
-                    extension = "    " if is_last else "|   "
-                    _controlled_walk(item, prefix + extension, depth + 1)
+                    if not should_truncate:
+                        extension = "    " if is_last else "|   "
+                        _controlled_walk(item, prefix + extension, depth + 1)
                 else:
                     tree.append(f"{prefix}{connector}{item.name}")
+
+            if has_truncated_dirs:
+                tree.append(f"{prefix}`-- ... (truncated)")
                         
         tree.append(self.root_dir.name + "/")
         _controlled_walk(self.root_dir)

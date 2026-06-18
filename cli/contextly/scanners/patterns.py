@@ -64,14 +64,9 @@ class PatternScanner(BaseScanner):
                      for i in range(len(parts) - 1):
                          dirnames.add(parts[i])
             else:
-                from ..utils.config import load_config
-                config = load_config(root_dir) or {}
-                if not isinstance(config, dict):
-                    config = {}
-                depth_config = config.get("depth_limits") or {}
-                if not isinstance(depth_config, dict):
-                    depth_config = {}
-                scanners_depth = depth_config.get("scanners", 4)
+                from ..utils.config import load_config_model
+                config = load_config_model(root_dir)
+                scanners_depth = config.depth_limits.scanners
                 
                 walker = RepoWalker(root_dir, max_depth=scanners_depth, skip_predicate=is_skippable)
                 try:

@@ -7,7 +7,7 @@ from ..utils.validation import require_directory_exists, require_contextly_initi
 from ..utils.exceptions import ValidationError, ContextlyError
 from ..core.packer.engine import PackerEngine
 
-from ..utils.config import load_config
+from ..utils.config import load_config_model
 from ..utils.fs import find_project_root
 from typing import List, Optional
 
@@ -33,11 +33,11 @@ def pack_cmd(
         require_contextly_initialized(root_dir)
         
         if profile:
-            config = load_config(root_dir)
-            if not config or "profiles" not in config or profile not in config["profiles"]:
+            config = load_config_model(root_dir)
+            if profile not in config.profiles:
                 raise ValidationError(f"Profile '{profile}' not found in .contextly/config.yaml")
                 
-            for p in config["profiles"][profile]:
+            for p in config.profiles[profile]:
                 path = root_dir / p
                 try:
                     resolved_path = path.resolve(strict=False)

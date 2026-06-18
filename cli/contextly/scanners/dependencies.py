@@ -41,14 +41,9 @@ class DependencyScanner(BaseScanner):
                     elif filename == "pyproject.toml":
                         self._parse_pyproject_toml(root_dir / rel, root_dir, python_set, strict=strict)
             else:
-                from ..utils.config import load_config
-                config = load_config(root_dir) or {}
-                if not isinstance(config, dict):
-                    config = {}
-                depth_config = config.get("depth_limits") or {}
-                if not isinstance(depth_config, dict):
-                    depth_config = {}
-                scanners_depth = depth_config.get("scanners", 4)
+                from ..utils.config import load_config_model
+                config = load_config_model(root_dir)
+                scanners_depth = config.depth_limits.scanners
                 
                 walker = RepoWalker(root_dir, max_depth=scanners_depth, skip_predicate=is_skippable)
 
@@ -71,8 +66,10 @@ class DependencyScanner(BaseScanner):
             result.npm = sorted(list(npm_set))
             result.python = sorted(list(python_set))
             return result
+        except ScannerError:
+            raise
         except Exception as e:
-            raise ScannerError(f"Dependency scan failed: {str(e)}")
+            raise ScannerError(f"Dependency scan failed: {str(e)}") from e
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -94,14 +91,14 @@ class DependencyScanner(BaseScanner):
                 rel = filepath
             console.print(f"[yellow]Warning:[/yellow] Could not access {rel}: {str(e)}")
             if strict:
-                raise ScannerError(f"Could not access {rel}: {str(e)}")
+                raise ScannerError(f"Could not access {rel}: {str(e)}") from e
         except Exception as e:
             try:
                 rel = filepath.relative_to(root_dir)
             except ValueError:
                 rel = filepath
             if strict:
-                raise ScannerError(f"Failed to parse package.json {rel}: {str(e)}")
+                raise ScannerError(f"Failed to parse package.json {rel}: {str(e)}") from e
             else:
                 console.print(f"[yellow]Warning:[/yellow] Failed to parse package.json {rel}: {str(e)}")
 
@@ -118,10 +115,10 @@ class DependencyScanner(BaseScanner):
         except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
             console.print(f"[yellow]Warning:[/yellow] Could not access requirements.txt: {str(e)}")
             if strict:
-                raise ScannerError(f"Could not access requirements.txt: {str(e)}")
+                raise ScannerError(f"Could not access requirements.txt: {str(e)}") from e
         except Exception as e:
             if strict:
-                raise ScannerError(f"Failed to parse requirements.txt: {str(e)}")
+                raise ScannerError(f"Failed to parse requirements.txt: {str(e)}") from e
             else:
                 console.print(f"[yellow]Warning:[/yellow] Failed to parse requirements.txt: {str(e)}")
 
@@ -171,10 +168,10 @@ class DependencyScanner(BaseScanner):
         except (FileNotFoundError, PermissionError) as e:
             console.print(f"[yellow]Warning:[/yellow] Could not access pyproject.toml: {str(e)}")
             if strict:
-                raise ScannerError(f"Could not access pyproject.toml: {str(e)}")
+                raise ScannerError(f"Could not access pyproject.toml: {str(e)}") from e
         except Exception as e:
             if strict:
-                raise ScannerError(f"Failed to parse pyproject.toml: {str(e)}")
+                raise ScannerError(f"Failed to parse pyproject.toml: {str(e)}") from e
             else:
                 console.print(f"[yellow]Warning:[/yellow] Failed to parse pyproject.toml: {str(e)}")
 
@@ -198,9 +195,9 @@ class DependencyScanner(BaseScanner):
         except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
             console.print(f"[yellow]Warning:[/yellow] Could not access Pipfile: {str(e)}")
             if strict:
-                raise ScannerError(f"Could not access Pipfile: {str(e)}")
+                raise ScannerError(f"Could not access Pipfile: {str(e)}") from e
         except Exception as e:
             if strict:
-                raise ScannerError(f"Failed to parse Pipfile: {str(e)}")
+                raise ScannerError(f"Failed to parse Pipfile: {str(e)}") from e
             else:
                 console.print(f"[yellow]Warning:[/yellow] Failed to parse Pipfile: {str(e)}")

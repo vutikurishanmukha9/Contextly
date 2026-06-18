@@ -19,14 +19,9 @@ class PackerEngine:
         except ImportError:
             self.tokenizer = None
 
-        from ...utils.config import load_config
-        self.config = load_config(root_dir) or {}
-        if not isinstance(self.config, dict):
-            self.config = {}
-        packer_config = self.config.get("packer") or {}
-        if not isinstance(packer_config, dict):
-            packer_config = {}
-        self.max_file_size = packer_config.get("max_file_size_mb", 5) * 1024 * 1024
+        from ...utils.config import load_config_model
+        self.config = load_config_model(root_dir)
+        self.max_file_size = self.config.packer.max_file_size_mb * 1024 * 1024
 
     def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None, compress: bool = False) -> Tuple[int, str, int, Path, List[Path], int]:
         """
@@ -109,20 +104,21 @@ class PackerEngine:
                     skipped_files.append(path)
                     continue
 
-                # 2. Read file once in binary mode
+                # 2. Read first 1024 bytes to check for binary signature
                 try:
                     with open(path, "rb") as in_f:
-                        raw_bytes = in_f.read()
+                        first_kb = in_f.read(1024)
+                        if b'\x00' in first_kb:
+                            skipped_files.append(path)
+                            continue
+                        # If safe (not binary), read the rest
+                        rest = in_f.read()
+                        raw_bytes = first_kb + rest
                 except OSError:
                     skipped_files.append(path)
                     continue
 
-                # 3. Binary detection check on first 1024 bytes
-                if b'\x00' in raw_bytes[:1024]:
-                    skipped_files.append(path)
-                    continue
-
-                # 4. Decode logic in memory
+                # 3. Decode logic in memory
                 try:
                     raw_code = raw_bytes.decode("utf-8")
                 except UnicodeDecodeError:

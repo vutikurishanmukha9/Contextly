@@ -9,6 +9,7 @@ from contextly.core.packer.engine import PackerEngine
 from contextly.core.analyzer.engine import AnalyzerEngine
 from contextly.utils.ignore import IgnoreEngine
 from contextly.generators.base import BaseGenerator
+from contextly.utils.config import ContextlyConfig
 from contextly.types.models import RepositoryIntelligence, LanguageScanResult, DependencyScanResult, FrameworkScanResult
 
 class DummyGenerator(BaseGenerator):
@@ -203,7 +204,7 @@ def test_config_defensive_parsing(temp_repo):
     
     # AnalyzerEngine should not crash
     analyzer = AnalyzerEngine(temp_repo)
-    assert isinstance(analyzer.config, dict)
+    assert isinstance(analyzer.config, ContextlyConfig)
     
     # BaseGenerator should not crash
     intel = RepositoryIntelligence(

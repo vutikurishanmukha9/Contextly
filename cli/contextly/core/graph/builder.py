@@ -27,7 +27,9 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
     Uses thread-local storage to guarantee thread safety inside thread pools.
     """
     try:
-        abs_path = os.path.join(root_dir, file_path)
+        root_path = Path(root_dir)
+        file_path_obj = Path(file_path)
+        abs_path = root_path / file_path_obj
         try:
             with open(abs_path, "rb") as f:
                 raw_bytes = f.read()
@@ -45,7 +47,7 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
             except Exception as e:
                 return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"DecodeError: {str(e)}")
             
-        ext = file_path.lower().split('.')[-1]
+        ext = file_path_obj.suffix.lower().lstrip(".")
         parsers = _get_parsers()
         
         if ext in ('py', 'pyw'):
@@ -89,21 +91,21 @@ class ImportGraphBuilder:
 
         if file_paths is not None:
             for p in file_paths:
-                ext = p.lower().split('.')[-1]
+                path_obj = Path(p)
+                ext = path_obj.suffix.lower().lstrip(".")
                 if ext in self._SUPPORTED_EXTENSIONS:
-                    target_files.append(p)
+                    target_files.append(path_obj.as_posix())
         else:
             walker = RepoWalker(self.root_dir, max_depth=None, skip_predicate=is_skippable)
 
             # 1. Discover all parseable files
             for dirpath, _, filenames in walker.walk():
-                rel_path = str(Path(dirpath).relative_to(self.root_dir))
+                dir_path_obj = Path(dirpath)
                 for filename in filenames:
-                    ext = filename.lower().split('.')[-1]
+                    file_path_obj = dir_path_obj / filename
+                    ext = file_path_obj.suffix.lower().lstrip(".")
                     if ext in self._SUPPORTED_EXTENSIONS:
-                        full_rel = os.path.join(rel_path, filename).replace("\\", "/")
-                        if full_rel.startswith("./"):
-                            full_rel = full_rel[2:]
+                        full_rel = file_path_obj.relative_to(self.root_dir).as_posix()
                         target_files.append(full_rel)
 
         # 2. Concurrently parse files into DTOs
