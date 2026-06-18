@@ -10,12 +10,11 @@ class InspectorEngine:
 
     def inspect(self) -> List[Tuple[int, Path]]:
         """
-        Recursively scans the directory to evaluate file sizes.
         Returns a list of (size_in_bytes, file_path) sorted by size descending.
         """
-        file_sizes = []
         import os
-        for root, dirs, files in os.walk(self.root_dir):
+        file_sizes = []
+        for root, dirs, files in os.walk(self.root_dir, followlinks=False):
             root_path = Path(root)
             
             # Prune ignored directories in-place

@@ -16,7 +16,7 @@ class PackerEngine:
         try:
             import tiktoken
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
-        except ImportError:  # pragma: no cover
+        except ImportError:
             self.tokenizer = None
 
     def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None, compress: bool = False) -> Tuple[int, str, int, Path, List[Path], int]:
@@ -29,7 +29,13 @@ class PackerEngine:
         packs_dir.mkdir(parents=True, exist_ok=True)
         
         safe_pack_name = Path(pack_name).name
+        base_name = safe_pack_name
         output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
+        counter = 1
+        while output_file.exists():
+            safe_pack_name = f"{base_name}_{counter}"
+            output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
+            counter += 1
         
         # Pre-validate access
         for target_path in target_paths:
@@ -40,17 +46,18 @@ class PackerEngine:
                 raise ContextlyError(f"Cannot access target directory {target_path}: {e}")
                 
         # Phase 1: Collect all files
-        all_files = []
+        all_files_set = set()
         skipped_files = []
         for target_path in target_paths:
             try:
+                target_path = target_path.resolve()
                 if target_path.is_file():
                     if not self.ignorer.is_ignored(target_path):
-                        all_files.append(target_path)
+                        all_files_set.add(target_path)
                     continue
                     
                 for root, dirs, files in os.walk(target_path):
-                    root_path = Path(root)
+                    root_path = Path(root).resolve()
                     
                     # Prune ignored directories in-place to avoid deep traversal
                     dirs[:] = [d for d in dirs if not self.ignorer.is_ignored(root_path / d)]
@@ -58,11 +65,12 @@ class PackerEngine:
                     for f in files:
                         file_path = root_path / f
                         if not self.ignorer.is_ignored(file_path):
-                            all_files.append(file_path)
+                            all_files_set.add(file_path)
             except (PermissionError, OSError):
                 pass
                 
         # Phase 2: Rank files
+        all_files = list(all_files_set)
         ranked_files = self.ranker.rank(all_files)
         
         # Phase 3: Compress, Measure, and Select

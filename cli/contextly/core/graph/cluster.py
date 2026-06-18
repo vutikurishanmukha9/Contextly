@@ -67,8 +67,10 @@ class DomainClusterer:
 
         # Pass 2: Graph Propagation (Assign isolated/utility nodes based on who uses them)
         changed = True
-        while changed:
+        iterations = 0
+        while changed and iterations < 100:
             changed = False
+            iterations += 1
             for node in graph.nodes:
                 if node.id in structural_nodes:
                     continue

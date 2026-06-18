@@ -63,7 +63,6 @@ class ImportGraphBuilder:
     
     def __init__(self, root_dir: Path):
         self.root_dir = root_dir
-        self.assembler = GraphAssembler()
         
         self._ALWAYS_SKIP = {
             ".git", "node_modules", "venv", ".venv", "__pycache__",
@@ -78,6 +77,7 @@ class ImportGraphBuilder:
         """
         Builds the entire repository AST graph concurrently.
         """
+        self.assembler = GraphAssembler()
         target_files = []
 
         if file_paths is not None:
@@ -114,18 +114,22 @@ class ImportGraphBuilder:
                 # Leave 1 core free for OS, cap at 8 to prevent OOM on massive repos
                 optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
                 with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
-                    futures = [
-                        executor.submit(_parse_file, file_path, root_str) 
-                        for file_path in target_files
-                    ]
-                    
-                    for future in concurrent.futures.as_completed(futures):
-                        try:
-                            dto = future.result(timeout=10) # 10s per file max
-                            if dto and not dto.error:
-                                dtos.append(dto)
-                        except Exception:
-                            continue
+                    # Process in chunks to prevent unbounded memory allocation for futures (C-3)
+                    chunk_size = optimal_workers * 4
+                    for i in range(0, len(target_files), chunk_size):
+                        chunk = target_files[i:i + chunk_size]
+                        futures = [
+                            executor.submit(_parse_file, file_path, root_str) 
+                            for file_path in chunk
+                        ]
+                        
+                        for future in concurrent.futures.as_completed(futures):
+                            try:
+                                dto = future.result(timeout=10) # 10s per file max
+                                if dto and not dto.error:
+                                    dtos.append(dto)
+                            except Exception:
+                                continue
             except Exception:
                 # If pool creation fails (e.g. strict sandboxing, no /dev/shm, etc.), fallback to sequential
                 use_pool = False

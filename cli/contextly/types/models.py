@@ -25,13 +25,13 @@ class PatternScanResult(BaseModel):
     patterns: List[Pattern] = Field(default_factory=list)
 
 class MemoryRule(BaseModel):
-    id: str
-    name: str | None = None
-    category: str
-    rule: str
+    id: str = Field(..., max_length=100)
+    name: str | None = Field(default=None, max_length=200)
+    category: str = Field(..., max_length=100)
+    rule: str = Field(..., max_length=5000)
     confidence: float
-    source: str
-    created_at: str
+    source: str = Field(..., max_length=100)
+    created_at: str = Field(..., max_length=50)
 
 class ProjectMemory(BaseModel):
     rules: List[MemoryRule] = Field(default_factory=list)

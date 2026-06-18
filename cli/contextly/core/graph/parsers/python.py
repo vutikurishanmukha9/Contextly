@@ -70,7 +70,7 @@ class PythonASTParser(BaseASTParser):
                         if base_module:
                             resolved = current_path / base_module.replace(".", "/")
                             try:
-                                rel_to_root = str(resolved.relative_to(root_dir)).replace("\\", "/")
+                                rel_to_root = str(resolved.resolve().relative_to(Path(root_dir).resolve())).replace("\\", "/")
                                 imports.append(rel_to_root)
                             except ValueError:
                                 imports.append(base_module)
@@ -79,7 +79,7 @@ class PythonASTParser(BaseASTParser):
                             for alias in node.names:
                                 resolved = current_path / alias.name
                                 try:
-                                    rel_to_root = str(resolved.relative_to(root_dir)).replace("\\", "/")
+                                    rel_to_root = str(resolved.resolve().relative_to(Path(root_dir).resolve())).replace("\\", "/")
                                     imports.append(rel_to_root)
                                 except ValueError:
                                     imports.append(alias.name)

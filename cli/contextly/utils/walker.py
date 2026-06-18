@@ -40,7 +40,8 @@ class RepoWalker:
                 dirs[:] = [d for d in dirs if not self.skip_predicate(root_path / d)]
                 
             # Prune directories if we've reached max_depth
+            # If max_depth is 0, we clear dirs at depth 0 (root only).
             if self.max_depth is not None and current_depth >= self.max_depth:
-                dirs.clear()
+                dirs[:] = []
                 
             yield root, dirs, files

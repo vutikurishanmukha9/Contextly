@@ -26,7 +26,10 @@ class RankingEngine:
         except ValueError:
             rel_path = file.name.lower()
             
-        parts = Path(rel_path).parts
+        if rel_path == ".":
+            parts = (file.name.lower(),)
+        else:
+            parts = Path(rel_path).parts
         
         # 1. Config / Core Docs
         if file.name.lower() in ["readme.md", "package.json", "pyproject.toml", "cargo.toml", "go.mod"]:

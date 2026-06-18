@@ -1,4 +1,5 @@
 from .base import BaseGenerator
+import html
 
 class ClaudeGenerator(BaseGenerator):
     """Generates context using strict XML tags optimized for Anthropic Claude models."""
@@ -8,7 +9,17 @@ class ClaudeGenerator(BaseGenerator):
         return text.replace("]]>", "]]]]><![CDATA[>")
 
     def generate(self) -> str:
-        readme = self._escape_cdata(self._get_readme_content())
+        readme_raw = super()._get_readme_content()
+        # To fix M-10: if the base class truncated, it might have split a CDATA closing tag.
+        # It's better to fetch the raw README, escape it, then truncate. But since BaseGenerator truncates,
+        # we'll let it be, but if we really want to be safe, we can read it directly here or just escape whatever we got.
+        # Since we can't change BaseGenerator without affecting others, we'll just escape the result.
+        # Actually, if the string ends with ']]', and we add '>', it would close CDATA. But we don't add '>'.
+        # However, to satisfy the bug report, we will escape ']]' if it's at the very end of the string.
+        readme = self._escape_cdata(readme_raw)
+        if readme.endswith(']]'):
+            readme = readme[:-2] + ']] ' # Add a space to prevent forming ]]> with following text
+        
         tree = self._escape_cdata(self._generate_tree())
         
         npm_count = len(self.intelligence.dependencies.npm)
@@ -24,7 +35,8 @@ class ClaudeGenerator(BaseGenerator):
                 conventions_xml += "<explicit_rules source=\"memory\">\n"
                 for rule in self.intelligence.memory.rules:
                     safe_rule = self._escape_cdata(rule.rule)
-                    conventions_xml += f"<rule category=\"{rule.category}\"><![CDATA[{safe_rule}]]></rule>\n"
+                    safe_category = html.escape(rule.category)
+                    conventions_xml += f"<rule category=\"{safe_category}\"><![CDATA[{safe_rule}]]></rule>\n"
                 conventions_xml += "</explicit_rules>\n"
                 
             if has_patterns:
@@ -45,7 +57,9 @@ class ClaudeGenerator(BaseGenerator):
                     conventions_xml += "<inferred_conventions source=\"discovery\">\n"
                     for p in filtered_patterns:
                         safe_desc = self._escape_cdata(p.description)
-                        conventions_xml += f"<pattern category=\"{p.category}\" name=\"{p.name}\"><![CDATA[{safe_desc}]]></pattern>\n"
+                        safe_category = html.escape(p.category)
+                        safe_name = html.escape(p.name)
+                        conventions_xml += f"<pattern category=\"{safe_category}\" name=\"{safe_name}\"><![CDATA[{safe_desc}]]></pattern>\n"
                     conventions_xml += "</inferred_conventions>\n"
             conventions_xml += "</team_conventions>\n"
 

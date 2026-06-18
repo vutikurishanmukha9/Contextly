@@ -94,9 +94,16 @@ class AnalyzerEngine:
         except PackageNotFoundError:
             contextly_version = "unknown"
 
+        import os
+        epoch = os.environ.get("SOURCE_DATE_EPOCH")
+        if epoch:
+            generated_timestamp = datetime.fromtimestamp(int(epoch), timezone.utc).isoformat()
+        else:
+            generated_timestamp = datetime.now(timezone.utc).isoformat()
+
         repo_knowledge = RepositoryKnowledge(
             repository_hash=repository_hash,
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=generated_timestamp,
             contextly_version=contextly_version,
             technologies=TechnologyKnowledge(
                 frameworks=fw_data.frontend + fw_data.backend,
@@ -111,7 +118,7 @@ class AnalyzerEngine:
         
         contextly_dir = self.root_dir / ".contextly"
         if not contextly_dir.exists():
-            contextly_dir.mkdir(parents=True, exist_ok=True)
+            InitEngine(self.root_dir).initialize()
             
         with open(contextly_dir / "repository.json", "w", encoding="utf-8") as f:
             f.write(repo_knowledge.model_dump_json(indent=2))

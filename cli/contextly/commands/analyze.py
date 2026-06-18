@@ -19,6 +19,13 @@ def analyze_cmd(
     
     try:
         require_contextly_initialized(root_dir)
+        target_path = Path(target).resolve(strict=False)
+        try:
+            target_path.relative_to(root_dir)
+        except (ValueError, RuntimeError, OSError):
+            raise ValidationError("Target directory must be inside the project root directory.")
+        if not target_path.exists() or not target_path.is_dir():
+            raise ValidationError(f"Target is not a valid directory: {target}")
     except ValidationError as e:
         console.print(f"\n[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)

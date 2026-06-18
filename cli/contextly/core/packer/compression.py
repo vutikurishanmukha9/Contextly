@@ -41,6 +41,8 @@ class CompressionEngine:
             # unparse is available in Python 3.9+
             if hasattr(ast, "unparse"):
                 return ast.unparse(modified_tree)
+            from ...utils.console import console
+            console.print("[yellow]Warning: Python < 3.9 detected. Skipping AST compression for python files.[/yellow]")
             return code
         except SyntaxError:
             # Fallback if there's a syntax error in the python file

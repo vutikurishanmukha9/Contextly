@@ -16,8 +16,19 @@ class ExporterEngine:
         Returns a tuple of (export_path, clipboard_success).
         """
         safe_file_pack_name = Path(pack_name).name
+        if not safe_file_pack_name or safe_file_pack_name in (".", ".."):
+            raise ContextlyError("Invalid pack name provided.")
+            
         project_context_path = self.root_dir / "PROJECT_CONTEXT.md"
-        pack_path = self.root_dir / ".contextly" / "packs" / f"{safe_file_pack_name}.contextpack.md"
+        packs_dir = self.root_dir / ".contextly" / "packs"
+        pack_path = packs_dir / f"{safe_file_pack_name}.contextpack.md"
+        
+        try:
+            resolved_pack_path = pack_path.resolve(strict=False)
+            resolved_pack_path.relative_to(packs_dir.resolve(strict=False))
+        except (ValueError, RuntimeError):
+            raise ContextlyError("Invalid pack name leading to path traversal.")
+            
         export_dir = self.root_dir / ".contextly" / "exports"
         
         if not project_context_path.exists():
@@ -45,7 +56,7 @@ class ExporterEngine:
             
         safe_pack_name = html.escape(safe_file_pack_name)
         # Escape closing tags to protect downstream XML parsing boundaries
-        safe_pack_layer = pack_layer.replace("</context_pack>", r"<\/context_pack>")
+        safe_pack_layer = pack_layer.replace("</context_pack>", "&lt;/context_pack&gt;")
         fused_content = f"""{intelligence_layer}
 
 <context_pack name="{safe_pack_name}">

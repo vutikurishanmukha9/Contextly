@@ -10,11 +10,13 @@ export function AppShell({
   subtitle,
   actions,
   children,
+  user = { name: "User", plan: "Free Tier" },
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   children: ReactNode;
+  user?: { name: string; plan: string };
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
@@ -53,8 +55,8 @@ export function AppShell({
           <div className="flex items-center gap-2.5 rounded-md p-2">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-[#8B95E5]" />
             <div className="min-w-0">
-              <div className="truncate text-[13px] font-medium">User</div>
-              <div className="truncate text-[11.5px] text-muted-foreground">Free Tier</div>
+              <div className="truncate text-[13px] font-medium">{user.name}</div>
+              <div className="truncate text-[11.5px] text-muted-foreground">{user.plan}</div>
             </div>
           </div>
         </div>

@@ -9,15 +9,15 @@ class IgnoreEngine:
         
         # Hardcoded defaults that should never be scanned
         self.default_ignores = [
-            ".git/",
-            "node_modules/",
-            "venv/",
-            ".venv/",
-            "__pycache__/",
-            ".contextly/",
-            "dist/",
-            "build/",
-            ".next/"
+            ".git",
+            "node_modules",
+            "venv",
+            ".venv",
+            "__pycache__",
+            ".contextly",
+            "dist",
+            "build",
+            ".next"
         ]
         
         self.spec = self._build_spec()
@@ -44,8 +44,8 @@ class IgnoreEngine:
             except (OSError, UnicodeDecodeError):
                 pass
                 
-        # Filter empty lines
-        patterns = [p.strip() for p in patterns if p.strip()]
+        # Filter empty lines and comments
+        patterns = [p.strip() for p in patterns if p.strip() and not p.strip().startswith("#")]
         
         # Use the modern 'gitignore' identifier to fix deprecation warnings
         return pathspec.PathSpec.from_lines('gitignore', patterns)

@@ -40,7 +40,7 @@ class DependencyScanner(BaseScanner):
                     elif filename == "pyproject.toml":
                         self._parse_pyproject_toml(root_dir / rel, root_dir, python_set)
             else:
-                walker = RepoWalker(root_dir, max_depth=3, skip_predicate=is_skippable)
+                walker = RepoWalker(root_dir, max_depth=4, skip_predicate=is_skippable)
 
                 for dirpath, dirnames, filenames in walker.walk():
                     current = Path(dirpath)
@@ -145,7 +145,7 @@ class DependencyScanner(BaseScanner):
                                     if dep != "python":
                                         python_set.add(dep)
                 else:
-                    raise ScannerError("`tomllib` (or `tomli`) is not installed. Required for pyproject.toml parsing.")
+                    raise ScannerError("`tomllib` (or `tomli`) is not installed. Required for pyproject.toml parsing. Please run: pip install tomli")
         except ScannerError:
             raise
         except (FileNotFoundError, PermissionError) as e:

@@ -35,7 +35,7 @@ class TypeScriptASTParser(BaseASTParser):
             return
             
         self._root_dir = root_dir
-        self._tsconfig_paths = []
+        paths_list = []
         
         # Scan for tsconfig.json files in root and immediate subdirs
         try:
@@ -45,7 +45,7 @@ class TypeScriptASTParser(BaseASTParser):
                         with open(os.path.join(root, "tsconfig.json"), "r", encoding="utf-8") as f:
                             content = f.read()
                             # Strip comments securely without destroying JSON strings
-                            safe_regex = r'("(?:\\.|[^"\\])*")|//.*?\n|/\*.*?\*/'
+                            safe_regex = r'("(?:\\.|[^"\\])*")|//.*?(?=\n|$)|/\*.*?\*/'
                             content = re.sub(safe_regex, lambda m: m.group(1) if m.group(1) else '', content, flags=re.S)
                             # Remove trailing commas
                             content = re.sub(r',\s*([\]}])', r'\1', content)
@@ -65,17 +65,20 @@ class TypeScriptASTParser(BaseASTParser):
                                 if target_full and not target_full.endswith("/"):
                                     target_full += "/"
                                     
-                                self._tsconfig_paths.append((alias_prefix, target_full))
+                                paths_list.append((alias_prefix, target_full))
                     except Exception:
                         pass
                 try:
                     rel_path = Path(root).resolve().relative_to(Path(root_dir).resolve())
                     if len(rel_path.parts) >= 1:
-                        dirs.clear()
+                        dirs[:] = []
                 except ValueError:
-                    dirs.clear()
+                    dirs[:] = []
         except Exception:
             pass
+
+        self._root_dir = root_dir
+        self._tsconfig_paths = paths_list
 
     def parse(self, file_path: str, content: str, root_dir: str) -> ParsedFileDTO:
         if not HAS_TREE_SITTER or not self.parser:

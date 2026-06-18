@@ -14,8 +14,7 @@ class PatternScanner(BaseScanner):
         try:
             result = PatternScanResult()
 
-            # 1. Dependency-Based Heuristics
-            if dependencies:
+            if dependencies is not None:
                 deps = set(dependencies.npm + dependencies.python)
 
                 # State Management

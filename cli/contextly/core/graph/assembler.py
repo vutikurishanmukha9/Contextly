@@ -75,9 +75,6 @@ class GraphAssembler:
         Processes all imports from all DTOs and establishes relationships
         after all nodes have been registered.
         """
-        # Map file paths back to their node DTOs
-        path_to_dto = {dto.file_path: dto for dto in dtos}
-        
         for dto in dtos:
             source_id = self._exact_to_node_id.get(dto.file_path)
             if not source_id:

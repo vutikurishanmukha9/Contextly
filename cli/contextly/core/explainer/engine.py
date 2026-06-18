@@ -4,6 +4,7 @@ from pathlib import Path
 
 from contextly.core.memory.engine import MemoryEngine
 from contextly.types.models import RepositoryKnowledge, KnowledgeNode, Relationship
+from contextly.utils.exceptions import ContextlyError
 
 class ExplainerEngine:
 
@@ -14,7 +15,7 @@ class ExplainerEngine:
     def _load_knowledge(self) -> RepositoryKnowledge:
         knowledge_file = self.root_dir / ".contextly" / "repository.json"
         if not knowledge_file.exists():
-            raise FileNotFoundError("Repository knowledge not found. Please run 'contextly analyze' first.")
+            raise ContextlyError("Repository knowledge not found. Please run 'contextly analyze' first.")
             
         with open(knowledge_file, "r", encoding="utf-8") as f:
             data = json.load(f)

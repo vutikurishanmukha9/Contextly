@@ -55,7 +55,7 @@ def test_ignore_gitignore_errors(tmp_path, monkeypatch):
     
     # Instantiate engine, should silently pass permission errors
     engine = IgnoreEngine(tmp_path)
-    assert not engine.is_ignored(tmp_path / "node_modules")
+    assert not engine.is_ignored(tmp_path / "secrets")
 
 def test_ignore_outside_root(tmp_path):
     """Covers ignore.py lines 60-62: ValueError when relative_to fails."""
