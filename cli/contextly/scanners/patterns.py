@@ -66,7 +66,11 @@ class PatternScanner(BaseScanner):
             else:
                 from ..utils.config import load_config
                 config = load_config(root_dir) or {}
-                depth_config = config.get("depth_limits", {}) if isinstance(config, dict) else {}
+                if not isinstance(config, dict):
+                    config = {}
+                depth_config = config.get("depth_limits") or {}
+                if not isinstance(depth_config, dict):
+                    depth_config = {}
                 scanners_depth = depth_config.get("scanners", 4)
                 
                 walker = RepoWalker(root_dir, max_depth=scanners_depth, skip_predicate=is_skippable)

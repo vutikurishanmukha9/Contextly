@@ -159,3 +159,96 @@ def test_custom_depth_limits(temp_repo):
     # Depth 2 should have "src/dir_a/dir_b/", but not "dir_c/" or "dir_d/" or "deep.js"
     assert "dir_b/" in tree_str
     assert "dir_c/" not in tree_str
+
+def test_generator_tree_truncation_warning(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    # Create subdirectories
+    d1 = temp_repo / "src" / "dir1"
+    d1.mkdir(parents=True, exist_ok=True)
+    d2 = d1 / "dir2"
+    d2.mkdir(parents=True, exist_ok=True)
+    
+    # Update config: set tree depth to 1
+    config_path = temp_repo / ".contextly" / "config.yaml"
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    config["depth_limits"] = {
+        "generator_tree": 1
+    }
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(config, f)
+        
+    intel = RepositoryIntelligence(
+        language=LanguageScanResult(primary="Unknown"),
+        dependencies=DependencyScanResult(),
+        frameworks=FrameworkScanResult()
+    )
+    generator = DummyGenerator(temp_repo, intel)
+    tree_str = generator._generate_tree()
+    # verify "truncated" warning is rendered
+    assert "(truncated)" in tree_str
+
+def test_config_defensive_parsing(temp_repo):
+    runner.invoke(app, ["init"])
+    
+    # Write yaml config with null values to check defensive code paths
+    config_path = temp_repo / ".contextly" / "config.yaml"
+    with open(config_path, "w", encoding="utf-8") as f:
+        f.write("packer: null\ndepth_limits: null\n")
+        
+    # PackerEngine initialization should not crash
+    packer = PackerEngine(temp_repo)
+    assert packer.max_file_size == 5 * 1024 * 1024  # falls back to 5MB
+    
+    # AnalyzerEngine should not crash
+    analyzer = AnalyzerEngine(temp_repo)
+    assert isinstance(analyzer.config, dict)
+    
+    # BaseGenerator should not crash
+    intel = RepositoryIntelligence(
+        language=LanguageScanResult(primary="Unknown"),
+        dependencies=DependencyScanResult(),
+        frameworks=FrameworkScanResult()
+    )
+    generator = DummyGenerator(temp_repo, intel)
+    assert generator.max_tree_depth == 4  # falls back to default 4
+
+def test_dependency_scanner_throws_on_format_corruption(temp_repo):
+    from contextly.scanners.base import ScannerError
+    from contextly.scanners.dependencies import DependencyScanner
+    
+    runner.invoke(app, ["init"])
+    
+    # Write invalid package.json
+    pkg_json = temp_repo / "package.json"
+    pkg_json.write_text("{invalid json file format}", encoding="utf-8")
+    
+    scanner = DependencyScanner()
+    with pytest.raises(ScannerError) as exc_info:
+        scanner.scan(temp_repo, strict=True)
+    assert "Failed to parse package.json" in str(exc_info.value)
+
+def test_process_pool_fallback_chain(temp_repo, monkeypatch):
+    import concurrent.futures
+    from contextly.core.graph.builder import ImportGraphBuilder
+    
+    runner.invoke(app, ["init"])
+    
+    # Make ProcessPoolExecutor fail on initialization to trigger fallback logic
+    def mock_process_pool_init(*args, **kwargs):
+        raise RuntimeError("Subprocesses are restricted in this sandbox")
+        
+    monkeypatch.setattr(concurrent.futures, "ProcessPoolExecutor", mock_process_pool_init)
+    
+    # Add files to trigger use_pool = True (>100 files)
+    (temp_repo / "src").mkdir(exist_ok=True)
+    for i in range(120):
+        (temp_repo / "src" / f"file_{i}.py").write_text("def run(): pass")
+        
+    builder = ImportGraphBuilder(temp_repo)
+    graph = builder.build()
+    
+    # Verify parsing succeeds via ThreadPoolExecutor fallback
+    assert len(graph.nodes) == 121  # 120 files + index.js
+

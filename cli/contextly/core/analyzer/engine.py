@@ -24,6 +24,8 @@ class AnalyzerEngine:
         
         from ...utils.config import load_config
         self.config = load_config(root_dir) or {}
+        if not isinstance(self.config, dict):
+            self.config = {}
         
     def analyze(self, model: str = "chatgpt") -> RepositoryIntelligence:
         """
@@ -34,7 +36,9 @@ class AnalyzerEngine:
         from ...utils.ignore import IgnoreEngine
         import os
 
-        depth_config = self.config.get("depth_limits", {}) if isinstance(self.config, dict) else {}
+        depth_config = self.config.get("depth_limits") or {}
+        if not isinstance(depth_config, dict):
+            depth_config = {}
         analyzer_depth = depth_config.get("analyzer", 6)
         
         # 1. Single unified walk of the repository to discover all valid files

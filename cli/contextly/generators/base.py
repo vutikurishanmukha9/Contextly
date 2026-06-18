@@ -13,7 +13,11 @@ class BaseGenerator(ABC):
         
         from ..utils.config import load_config
         self.config = load_config(root_dir) or {}
-        depth_config = self.config.get("depth_limits", {}) if isinstance(self.config, dict) else {}
+        if not isinstance(self.config, dict):
+            self.config = {}
+        depth_config = self.config.get("depth_limits") or {}
+        if not isinstance(depth_config, dict):
+            depth_config = {}
         self.max_tree_depth = depth_config.get("generator_tree", 4)
 
     def _get_readme_content(self) -> str:
@@ -34,6 +38,7 @@ class BaseGenerator(ABC):
         
         def _controlled_walk(dir_path: Path, prefix: str = "", depth: int = 0):
             if depth > self.max_tree_depth: # Limit depth based on configuration
+                tree.append(f"{prefix}... (truncated)")
                 return
                 
             try:

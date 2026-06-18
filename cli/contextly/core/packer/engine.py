@@ -21,7 +21,11 @@ class PackerEngine:
 
         from ...utils.config import load_config
         self.config = load_config(root_dir) or {}
-        packer_config = self.config.get("packer", {}) if isinstance(self.config, dict) else {}
+        if not isinstance(self.config, dict):
+            self.config = {}
+        packer_config = self.config.get("packer") or {}
+        if not isinstance(packer_config, dict):
+            packer_config = {}
         self.max_file_size = packer_config.get("max_file_size_mb", 5) * 1024 * 1024
 
     def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None, compress: bool = False) -> Tuple[int, str, int, Path, List[Path], int]:
@@ -105,32 +109,32 @@ class PackerEngine:
                     skipped_files.append(path)
                     continue
 
-                # 2. Binary detection check via first 1024 bytes in binary mode
+                # 2. Read file once in binary mode
                 try:
-                    with open(path, "rb") as check_f:
-                        chunk = check_f.read(1024)
-                        if b'\x00' in chunk:
-                            skipped_files.append(path)
-                            continue
+                    with open(path, "rb") as in_f:
+                        raw_bytes = in_f.read()
                 except OSError:
                     skipped_files.append(path)
                     continue
 
-                # 3. Read and decode logic
+                # 3. Binary detection check on first 1024 bytes
+                if b'\x00' in raw_bytes[:1024]:
+                    skipped_files.append(path)
+                    continue
+
+                # 4. Decode logic in memory
                 try:
-                    with open(path, "r", encoding="utf-8") as in_f:
-                        raw_code = in_f.read()
+                    raw_code = raw_bytes.decode("utf-8")
                 except UnicodeDecodeError:
                     try:
-                        with open(path, "r", encoding="latin-1", errors="ignore") as in_f:
-                            raw_code = in_f.read()
+                        raw_code = raw_bytes.decode("latin-1")
                         if '\x00' in raw_code:
                             skipped_files.append(path)
                             continue
-                    except OSError:
+                    except Exception:
                         skipped_files.append(path)
                         continue
-                except OSError:
+                except Exception:
                     skipped_files.append(path)
                     continue
                     
@@ -149,8 +153,8 @@ class PackerEngine:
                     try:
                         file_cost = len(self.tokenizer.encode(full_text, disallowed_special=()))
                     except ValueError:
-                        skipped_files.append(path)
-                        continue
+                        # Fallback gracefully rather than silently skipping the file
+                        file_cost = len(full_text) / 3.5
                 else:
                     file_cost = len(full_text) / 3.5
 
@@ -163,9 +167,7 @@ class PackerEngine:
                 selected_files.append(path)
                 compressed_cache[path] = body
                 
-            except UnicodeDecodeError:
-                skipped_files.append(path)
-            except (FileNotFoundError, PermissionError, OSError):
+            except Exception:
                 skipped_files.append(path)
                 
                 

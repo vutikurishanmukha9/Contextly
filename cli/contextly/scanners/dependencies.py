@@ -27,22 +27,27 @@ class DependencyScanner(BaseScanner):
         try:
             npm_set: set[str] = set()
             python_set: set[str] = set()
+            strict = kwargs.get("strict", False)
 
             if file_paths is not None:
                 for rel in file_paths:
                     filename = Path(rel).name
                     if filename == "package.json":
-                        self._parse_package_json(root_dir / rel, root_dir, npm_set)
+                        self._parse_package_json(root_dir / rel, root_dir, npm_set, strict=strict)
                     elif filename == "requirements.txt":
-                        self._parse_requirements_txt(root_dir / rel, root_dir, python_set)
+                        self._parse_requirements_txt(root_dir / rel, root_dir, python_set, strict=strict)
                     elif filename == "Pipfile":
-                        self._parse_pipfile(root_dir / rel, root_dir, python_set)
+                        self._parse_pipfile(root_dir / rel, root_dir, python_set, strict=strict)
                     elif filename == "pyproject.toml":
-                        self._parse_pyproject_toml(root_dir / rel, root_dir, python_set)
+                        self._parse_pyproject_toml(root_dir / rel, root_dir, python_set, strict=strict)
             else:
                 from ..utils.config import load_config
                 config = load_config(root_dir) or {}
-                depth_config = config.get("depth_limits", {}) if isinstance(config, dict) else {}
+                if not isinstance(config, dict):
+                    config = {}
+                depth_config = config.get("depth_limits") or {}
+                if not isinstance(depth_config, dict):
+                    depth_config = {}
                 scanners_depth = depth_config.get("scanners", 4)
                 
                 walker = RepoWalker(root_dir, max_depth=scanners_depth, skip_predicate=is_skippable)
@@ -51,16 +56,16 @@ class DependencyScanner(BaseScanner):
                     current = Path(dirpath)
 
                     if "package.json" in filenames:
-                        self._parse_package_json(current / "package.json", root_dir, npm_set)
+                        self._parse_package_json(current / "package.json", root_dir, npm_set, strict=strict)
 
                     if "requirements.txt" in filenames:
-                        self._parse_requirements_txt(current / "requirements.txt", root_dir, python_set)
+                        self._parse_requirements_txt(current / "requirements.txt", root_dir, python_set, strict=strict)
 
                     if "Pipfile" in filenames:
-                        self._parse_pipfile(current / "Pipfile", root_dir, python_set)
+                        self._parse_pipfile(current / "Pipfile", root_dir, python_set, strict=strict)
 
                     if "pyproject.toml" in filenames:
-                        self._parse_pyproject_toml(current / "pyproject.toml", root_dir, python_set)
+                        self._parse_pyproject_toml(current / "pyproject.toml", root_dir, python_set, strict=strict)
 
             result = DependencyScanResult()
             result.npm = sorted(list(npm_set))
@@ -73,7 +78,7 @@ class DependencyScanner(BaseScanner):
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _parse_package_json(self, filepath: Path, root_dir: Path, npm_set: set[str]):
+    def _parse_package_json(self, filepath: Path, root_dir: Path, npm_set: set[str], strict: bool = False):
         try:
             with open(filepath, 'r', encoding="utf-8") as f:
                 data = json.load(f)
@@ -82,20 +87,25 @@ class DependencyScanner(BaseScanner):
                     dev_deps_dict = data.get("devDependencies") or {}
                     deps = list(deps_dict.keys()) + list(dev_deps_dict.keys())
                     npm_set.update(deps)
-        except (FileNotFoundError, json.JSONDecodeError, PermissionError) as e:
+        except (FileNotFoundError, PermissionError) as e:
             try:
                 rel = filepath.relative_to(root_dir)
             except ValueError:
                 rel = filepath
-            console.print(f"[yellow]Warning:[/yellow] Could not parse {rel}: {str(e)}")
+            console.print(f"[yellow]Warning:[/yellow] Could not access {rel}: {str(e)}")
+            if strict:
+                raise ScannerError(f"Could not access {rel}: {str(e)}")
         except Exception as e:
             try:
                 rel = filepath.relative_to(root_dir)
             except ValueError:
                 rel = filepath
-            console.print(f"[yellow]Warning:[/yellow] Unexpected error reading {rel}: {str(e)}")
+            if strict:
+                raise ScannerError(f"Failed to parse package.json {rel}: {str(e)}")
+            else:
+                console.print(f"[yellow]Warning:[/yellow] Failed to parse package.json {rel}: {str(e)}")
 
-    def _parse_requirements_txt(self, filepath: Path, root_dir: Path, python_set: set[str]):
+    def _parse_requirements_txt(self, filepath: Path, root_dir: Path, python_set: set[str], strict: bool = False):
         try:
             with open(filepath, 'r', encoding="utf-8") as f:
                 for line in f:
@@ -106,11 +116,16 @@ class DependencyScanner(BaseScanner):
                         if dep:
                             python_set.add(dep)
         except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
-            console.print(f"[yellow]Warning:[/yellow] Could not parse requirements.txt: {str(e)}")
+            console.print(f"[yellow]Warning:[/yellow] Could not access requirements.txt: {str(e)}")
+            if strict:
+                raise ScannerError(f"Could not access requirements.txt: {str(e)}")
         except Exception as e:
-            console.print(f"[yellow]Warning:[/yellow] Unexpected error reading requirements.txt: {str(e)}")
+            if strict:
+                raise ScannerError(f"Failed to parse requirements.txt: {str(e)}")
+            else:
+                console.print(f"[yellow]Warning:[/yellow] Failed to parse requirements.txt: {str(e)}")
 
-    def _parse_pyproject_toml(self, filepath: Path, root_dir: Path, python_set: set[str]):
+    def _parse_pyproject_toml(self, filepath: Path, root_dir: Path, python_set: set[str], strict: bool = False):
         try:
             with open(filepath, 'rb') as f:
                 if tomllib is not None:
@@ -155,10 +170,15 @@ class DependencyScanner(BaseScanner):
             raise
         except (FileNotFoundError, PermissionError) as e:
             console.print(f"[yellow]Warning:[/yellow] Could not access pyproject.toml: {str(e)}")
+            if strict:
+                raise ScannerError(f"Could not access pyproject.toml: {str(e)}")
         except Exception as e:
-            console.print(f"[yellow]Warning:[/yellow] Could not parse pyproject.toml: {str(e)}")
+            if strict:
+                raise ScannerError(f"Failed to parse pyproject.toml: {str(e)}")
+            else:
+                console.print(f"[yellow]Warning:[/yellow] Failed to parse pyproject.toml: {str(e)}")
 
-    def _parse_pipfile(self, filepath: Path, root_dir: Path, python_set: set[str]):
+    def _parse_pipfile(self, filepath: Path, root_dir: Path, python_set: set[str], strict: bool = False):
         try:
             with open(filepath, 'r', encoding="utf-8") as f:
                 in_packages = False
@@ -176,6 +196,11 @@ class DependencyScanner(BaseScanner):
                         if dep and not dep.startswith("#"):
                             python_set.add(dep)
         except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
-            console.print(f"[yellow]Warning:[/yellow] Could not parse Pipfile: {str(e)}")
+            console.print(f"[yellow]Warning:[/yellow] Could not access Pipfile: {str(e)}")
+            if strict:
+                raise ScannerError(f"Could not access Pipfile: {str(e)}")
         except Exception as e:
-            console.print(f"[yellow]Warning:[/yellow] Unexpected error reading Pipfile: {str(e)}")
+            if strict:
+                raise ScannerError(f"Failed to parse Pipfile: {str(e)}")
+            else:
+                console.print(f"[yellow]Warning:[/yellow] Failed to parse Pipfile: {str(e)}")

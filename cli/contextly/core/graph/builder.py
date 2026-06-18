@@ -29,13 +29,21 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
     try:
         abs_path = os.path.join(root_dir, file_path)
         try:
-            with open(abs_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            with open(abs_path, "rb") as f:
+                raw_bytes = f.read()
+        except OSError:
+            return None
+
+        if b'\x00' in raw_bytes[:1024]:
+            return None # Silently skip binaries
+
+        try:
+            content = raw_bytes.decode("utf-8")
         except UnicodeDecodeError:
-            with open(abs_path, "r", encoding="latin-1", errors="ignore") as f:
-                content = f.read()
-            if '\x00' in content:
-                return None # Silently skip binaries
+            try:
+                content = raw_bytes.decode("latin-1")
+            except Exception as e:
+                return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"DecodeError: {str(e)}")
             
         ext = file_path.lower().split('.')[-1]
         parsers = _get_parsers()
@@ -51,9 +59,8 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
             return parsers['ts'].parse(file_path, content, root_dir)
             
         return None
-    except Exception:
-        # Silently skip unreadable/broken files to maintain process pool resilience
-        return None
+    except Exception as e:
+        return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"ParseError: {str(e)}")
 
 class ImportGraphBuilder:
     """
@@ -100,8 +107,8 @@ class ImportGraphBuilder:
                         target_files.append(full_rel)
 
         # 2. Concurrently parse files into DTOs
-        # Using ThreadPoolExecutor since tree-sitter C bindings release the GIL
-        # Limit to 8 workers to prevent overwhelming the disk/system
+        # Using ProcessPoolExecutor to bypass Python's GIL bottlenecks for CPU-heavy AST parsing.
+        # Limit to optimal workers to prevent overwhelming the disk/system.
         dtos: List[ParsedFileDTO] = []
         
         # Heuristic: For small repositories, sequential is faster.
@@ -111,10 +118,10 @@ class ImportGraphBuilder:
         
         if use_pool:
             try:
-                # Leave 1 core free for OS, cap at 8 to prevent OOM on massive repos
+                # Leave 1 core free for OS, cap at 8 to prevent resource limit exhaustion
                 optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
-                with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
-                    # Process in chunks to prevent unbounded memory allocation for futures (C-3)
+                with concurrent.futures.ProcessPoolExecutor(max_workers=optimal_workers) as executor:
+                    # Process in chunks to prevent unbounded memory allocation for futures
                     chunk_size = optimal_workers * 4
                     for i in range(0, len(target_files), chunk_size):
                         chunk = target_files[i:i + chunk_size]
@@ -126,15 +133,43 @@ class ImportGraphBuilder:
                         for future in concurrent.futures.as_completed(futures):
                             try:
                                 dto = future.result(timeout=10) # 10s per file max
-                                if dto and not dto.error:
-                                    dtos.append(dto)
+                                if dto:
+                                    if dto.error:
+                                        from ...utils.console import console
+                                        console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
+                                    else:
+                                        dtos.append(dto)
                             except Exception:
                                 continue
             except Exception:
-                # If pool creation fails (e.g. strict sandboxing, no /dev/shm, etc.), fallback to sequential
-                use_pool = False
+                # ProcessPoolExecutor fallback: ThreadPoolExecutor fallback
+                try:
+                    optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
+                        chunk_size = optimal_workers * 4
+                        for i in range(0, len(target_files), chunk_size):
+                            chunk = target_files[i:i + chunk_size]
+                            futures = [
+                                executor.submit(_parse_file, file_path, root_str) 
+                                for file_path in chunk
+                            ]
+                            
+                            for future in concurrent.futures.as_completed(futures):
+                                try:
+                                    dto = future.result(timeout=10)
+                                    if dto:
+                                        if dto.error:
+                                            from ...utils.console import console
+                                            console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
+                                        else:
+                                            dtos.append(dto)
+                                except Exception:
+                                    continue
+                except Exception:
+                    # Fallback to sequential parsing
+                    use_pool = False
                 
-        # Pool failure is already handled in the except block which sets use_pool = False
+        # Sequential Parsing Fallback
         if not use_pool:
             parsed_paths = {d.file_path for d in dtos}
             for file_path in target_files:
@@ -142,8 +177,12 @@ class ImportGraphBuilder:
                     continue
                 try:
                     dto = _parse_file(file_path, root_str)
-                    if dto and not dto.error:
-                        dtos.append(dto)
+                    if dto:
+                        if dto.error:
+                            from ...utils.console import console
+                            console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
+                        else:
+                            dtos.append(dto)
                 except Exception:
                     continue
 
