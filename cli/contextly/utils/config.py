@@ -79,4 +79,6 @@ def load_config_model(root_dir: Path) -> ContextlyConfig:
                 console.print(f"[red]Configuration Error in .contextly/config.yaml:[/red]\n{e}")
             except Exception:
                 pass
+            import sys
+            sys.exit(1)
         return ContextlyConfig()

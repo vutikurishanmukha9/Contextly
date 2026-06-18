@@ -107,56 +107,41 @@ class ImportGraphBuilder:
         
         if use_pool:
             try:
-                # Leave 1 core free for OS, cap at 8 to prevent resource limit exhaustion
+                import itertools
                 optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
                 with concurrent.futures.ProcessPoolExecutor(max_workers=optimal_workers) as executor:
-                    future_to_file = {
-                        executor.submit(_parse_file, file_path, root_str): file_path 
-                        for file_path in target_files
-                    }
-                    
-                    for future in concurrent.futures.as_completed(future_to_file):
-                        file_path = future_to_file[future]
-                        try:
-                            dto = future.result(timeout=30)
+                    try:
+                        results = executor.map(_parse_file, target_files, itertools.repeat(root_str), chunksize=32, timeout=600)
+                        for dto in results:
                             if dto:
                                 if dto.error:
-                                    console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
+                                    from ..diagnostics import DiagnosticsContext
+                                    DiagnosticsContext().add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
                                     self.failed_files[dto.file_path] = dto.error
                                 else:
                                     dtos.append(dto)
-                            else:
-                                self.failed_files[file_path] = "Empty parser output"
-                        except Exception as e:
-                            console.print(f"[yellow]Warning:[/yellow] Concurrency error parsing {file_path}: {str(e)}")
-                            self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
+                    except Exception as e:
+                        from ..diagnostics import DiagnosticsContext
+                        DiagnosticsContext().add_error("ImportGraphBuilder", f"ProcessPool mapping error: {str(e)}")
+                        raise # Trigger fallback
             except Exception:
                 # ProcessPoolExecutor fallback: ThreadPoolExecutor fallback
                 try:
+                    import itertools
                     optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
                     with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
-                        future_to_file = {
-                            executor.submit(_parse_file, file_path, root_str): file_path 
-                            for file_path in target_files
-                        }
-                        
-                        for future in concurrent.futures.as_completed(future_to_file):
-                            file_path = future_to_file[future]
-                            try:
-                                dto = future.result(timeout=30)
-                                if dto:
-                                    if dto.error:
-                                        console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
-                                        self.failed_files[dto.file_path] = dto.error
-                                    else:
-                                        dtos.append(dto)
+                        results = executor.map(_parse_file, target_files, itertools.repeat(root_str), chunksize=32, timeout=600)
+                        for dto in results:
+                            if dto:
+                                if dto.error:
+                                    from ..diagnostics import DiagnosticsContext
+                                    DiagnosticsContext().add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
+                                    self.failed_files[dto.file_path] = dto.error
                                 else:
-                                    self.failed_files[file_path] = "Empty parser output"
-                            except Exception as err:
-                                console.print(f"[yellow]Warning:[/yellow] Concurrency error parsing {file_path}: {str(err)}")
-                                self.failed_files[file_path] = f"ConcurrencyError: {str(err)}"
-                except Exception:
-                    # Fallback to sequential parsing
+                                    dtos.append(dto)
+                except Exception as e:
+                    from ..diagnostics import DiagnosticsContext
+                    DiagnosticsContext().add_error("ImportGraphBuilder", f"ThreadPool mapping error: {str(e)}")
                     use_pool = False
                 
         # Sequential Parsing Fallback

@@ -54,7 +54,6 @@ class BaseGenerator(ABC):
                 return
 
             should_truncate = (depth == self.max_tree_depth)
-            has_truncated_dirs = should_truncate and any(is_dir for is_dir, _ in classified)
 
             breadth_limit = getattr(self.config.depth_limits, 'max_tree_breadth', 50)
             if len(classified) > breadth_limit:
@@ -66,23 +65,26 @@ class BaseGenerator(ABC):
                 truncated_count = 0
 
             for index, (is_dir, item) in enumerate(classified):
-                is_last = (index == len(classified) - 1) and not has_truncated_dirs and not has_truncated_breadth
+                is_last = (index == len(classified) - 1) and not has_truncated_breadth
                 connector = "`-- " if is_last else "|-- "
                 
                 if is_dir:
                     tree.append(f"{prefix}{connector}{item.name}/")
+                    extension = "    " if is_last else "|   "
                     if not should_truncate:
-                        extension = "    " if is_last else "|   "
                         _controlled_walk(item, prefix + extension, depth + 1)
+                    else:
+                        try:
+                            # Only print truncated marker if the directory actually has contents to skip
+                            if any(item.iterdir()):
+                                tree.append(f"{prefix}{extension}`-- ... (truncated)")
+                        except OSError:
+                            pass
                 else:
                     tree.append(f"{prefix}{connector}{item.name}")
 
-            if has_truncated_dirs and not has_truncated_breadth:
-                tree.append(f"{prefix}`-- ... (truncated)")
-            elif has_truncated_breadth and not has_truncated_dirs:
+            if has_truncated_breadth:
                 tree.append(f"{prefix}`-- ... ({truncated_count} more items)")
-            elif has_truncated_dirs and has_truncated_breadth:
-                tree.append(f"{prefix}`-- ... (truncated & {truncated_count} more items)")
                         
         tree.append(self.root_dir.name + "/")
         _controlled_walk(self.root_dir)

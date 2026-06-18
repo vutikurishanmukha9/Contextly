@@ -95,20 +95,15 @@ class PackerEngine:
             
             for path in ranked_files:
                 try:
-                    # 1. Size constraint check
-                    try:
-                        file_size = path.stat().st_size
-                    except OSError:
-                        skipped_files.append(path)
-                        continue
-
-                    if file_size > self.max_file_size:
-                        skipped_files.append(path)
-                        continue
-
-                    # 2. Read first 1024 bytes to check for binary signature
+                    # 1. Open file atomically to prevent TOCTOU
                     try:
                         with open(path, "rb") as in_f:
+                            file_size = os.fstat(in_f.fileno()).st_size
+                            if file_size > self.max_file_size:
+                                skipped_files.append(path)
+                                continue
+
+                            # 2. Read first 1024 bytes to check for binary signature
                             first_kb = in_f.read(1024)
                             if b'\x00' in first_kb:
                                 skipped_files.append(path)
