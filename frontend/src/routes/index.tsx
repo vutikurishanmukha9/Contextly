@@ -165,8 +165,6 @@ function Landing() {
             </div>
           </div>
         </section>
-
-
       </main>
 
       <SiteFooter />
