@@ -44,8 +44,22 @@ if __name__ == "__main__":
         app()
     except Exception as e:
         from .utils.exceptions import ConfigurationError
+        import sys
+        
         if isinstance(e, ConfigurationError):
             console.print(f"[bold red]Fatal Error:[/bold red] {e}")
-            import sys
             sys.exit(1)
-        raise
+            
+        import traceback
+        from pathlib import Path
+        
+        log_dir = Path(".contextly/logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        crash_log = log_dir / "crash.log"
+        
+        with open(crash_log, "w") as f:
+            traceback.print_exc(file=f)
+            
+        console.print("[bold red]An unexpected error occurred.[/bold red]")
+        console.print(f"Please check [bold]{crash_log}[/bold] for details or open an issue.")
+        sys.exit(1)

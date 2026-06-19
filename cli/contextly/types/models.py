@@ -44,6 +44,19 @@ class RepositoryIntelligence(BaseModel):
     patterns: PatternScanResult = Field(default_factory=PatternScanResult)
     memory: ProjectMemory = Field(default_factory=ProjectMemory)
 
+    def get_deduplicated_patterns(self) -> List[Pattern]:
+        saved_tuples = {(r.category, r.name) for r in self.memory.rules if r.name}
+        saved_descriptions = {r.rule for r in self.memory.rules if not r.name}
+        
+        filtered_patterns = []
+        for p in self.patterns.patterns:
+            if (p.category, p.name) in saved_tuples:
+                continue
+            if p.description in saved_descriptions:
+                continue
+            filtered_patterns.append(p)
+        return filtered_patterns
+
 # --- Knowledge Graph Schema (V2) ---
 
 class Discovery(BaseModel):

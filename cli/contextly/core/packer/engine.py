@@ -1,4 +1,5 @@
 import os
+import codecs
 from pathlib import Path
 from typing import Tuple, List, Optional
 
@@ -38,10 +39,15 @@ class PackerEngine:
         base_name = safe_pack_name
         output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
         counter = 1
-        while output_file.exists():
-            safe_pack_name = f"{base_name}_{counter}"
-            output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
-            counter += 1
+        fd = None
+        while True:
+            try:
+                fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
+                break
+            except FileExistsError:
+                safe_pack_name = f"{base_name}_{counter}"
+                output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
+                counter += 1
         
         # Pre-validate access
         for target_path in target_paths:
@@ -92,77 +98,117 @@ class PackerEngine:
         else:
             current_tokens = len(header_text) / 3.5
             
-        with open(output_file, "w", encoding="utf-8") as out_f:
+        with os.fdopen(fd, "w", encoding="utf-8") as out_f:
             out_f.write(header_text)
             
             for path in ranked_files:
                 try:
-                    # 1. Open file atomically to prevent TOCTOU
-                    try:
-                        with open(path, "rb") as in_f:
-                            file_size = os.fstat(in_f.fileno()).st_size
-                            if file_size > self.max_file_size:
-                                skipped_files.append(path)
-                                continue
-
-                            # 2. Read first 1024 bytes to check for binary signature
-                            first_kb = in_f.read(1024)
-                            if b'\x00' in first_kb:
-                                skipped_files.append(path)
-                                continue
-                            # If safe (not binary), read the rest
-                            rest = in_f.read()
-                            raw_bytes = first_kb + rest
-                    except OSError:
+                    file_size = path.stat().st_size
+                    if file_size > self.max_file_size:
                         skipped_files.append(path)
                         continue
 
-                    # 3. Decode logic in memory
-                    try:
-                        raw_code = raw_bytes.decode("utf-8")
-                    except UnicodeDecodeError:
-                        try:
-                            raw_code = raw_bytes.decode("latin-1")
-                            if '\x00' in raw_code:
-                                skipped_files.append(path)
-                                continue
-                        except Exception:
-                            skipped_files.append(path)
-                            continue
-                    except Exception:
-                        skipped_files.append(path)
-                        continue
-                        
-                    compressed_code = self.compressor.compress(path, raw_code) if compress else raw_code
-                    
                     try:
                         rel_path = path.relative_to(self.root_dir).as_posix()
                     except ValueError:
                         rel_path = path.name
                     ext = path.suffix.replace('.', '')
                     
-                    body = compressed_code if compressed_code.endswith('\n') else compressed_code + '\n'
-                    full_text = f"## File: `{rel_path}`\n```{ext}\n{body}```\n\n"
+                    is_py_compress = (compress and path.suffix.lower() == '.py')
                     
-                    if self.tokenizer:
-                        try:
-                            file_cost = len(self.tokenizer.encode(full_text, disallowed_special=()))
-                        except ValueError:
-                            # Fallback gracefully
-                            file_cost = len(full_text) / 3.5
-                    else:
-                        file_cost = len(full_text) / 3.5
-
-                    if max_tokens and current_tokens + file_cost > max_tokens:
-                        excluded_files.append(path)
-                        continue
+                    with open(path, "rb") as in_f:
+                        first_kb = in_f.read(1024)
+                        if b'\x00' in first_kb:
+                            skipped_files.append(path)
+                            continue
+                        in_f.seek(0)
                         
-                    current_tokens += file_cost
-                    selected_files.append(path)
-                    
-                    # Write immediately to output file, do not cache in memory
-                    out_f.write(full_text)
-                    
+                        start_pos = out_f.tell()
+                        header_str = f"## File: `{rel_path}`\n```{ext}\n"
+                        out_f.write(header_str)
+                        
+                        file_tokens = 0
+                        is_excluded = False
+                        
+                        if self.tokenizer:
+                            try:
+                                file_tokens += len(self.tokenizer.encode(header_str, disallowed_special=()))
+                            except ValueError:
+                                file_tokens += len(header_str) / 3.5
+                        else:
+                            file_tokens += len(header_str) / 3.5
+                        
+                        if is_py_compress:
+                            try:
+                                raw_code = in_f.read().decode("utf-8")
+                            except UnicodeDecodeError:
+                                skipped_files.append(path)
+                                out_f.seek(start_pos)
+                                out_f.truncate()
+                                continue
+                                
+                            compressed = self.compressor.compress(path, raw_code)
+                            body = compressed if compressed.endswith('\n') else compressed + '\n'
+                            
+                            if self.tokenizer:
+                                try:
+                                    file_tokens += len(self.tokenizer.encode(body, disallowed_special=()))
+                                except ValueError:
+                                    file_tokens += len(body) / 3.5
+                            else:
+                                file_tokens += len(body) / 3.5
+                                
+                            if max_tokens and current_tokens + file_tokens > max_tokens:
+                                excluded_files.append(path)
+                                out_f.seek(start_pos)
+                                out_f.truncate()
+                                continue
+                                
+                            out_f.write(body)
+                            out_f.write(f"```\n\n")
+                            current_tokens += file_tokens
+                            selected_files.append(path)
+                            
+                        else:
+                            decoder = codecs.getincrementaldecoder('utf-8')(errors='strict')
+                            try:
+                                while True:
+                                    chunk = in_f.read(4096)
+                                    text_chunk = decoder.decode(chunk, final=not bool(chunk))
+                                    if text_chunk:
+                                        if self.tokenizer:
+                                            try:
+                                                chunk_cost = len(self.tokenizer.encode(text_chunk, disallowed_special=()))
+                                            except ValueError:
+                                                chunk_cost = len(text_chunk) / 3.5
+                                        else:
+                                            chunk_cost = len(text_chunk) / 3.5
+                                            
+                                        file_tokens += chunk_cost
+                                        if max_tokens and current_tokens + file_tokens > max_tokens:
+                                            is_excluded = True
+                                            break
+                                        
+                                        out_f.write(text_chunk)
+                                        
+                                    if not chunk:
+                                        break
+                            except UnicodeDecodeError:
+                                skipped_files.append(path)
+                                out_f.seek(start_pos)
+                                out_f.truncate()
+                                continue
+                                
+                            if is_excluded:
+                                excluded_files.append(path)
+                                out_f.seek(start_pos)
+                                out_f.truncate()
+                                continue
+                                
+                            out_f.write(f"\n```\n\n")
+                            current_tokens += file_tokens
+                            selected_files.append(path)
+                            
                 except Exception:
                     skipped_files.append(path)
 

@@ -1,99 +1,52 @@
 from .base import BaseGenerator
-import html
+import xml.etree.ElementTree as ET
 
 class ClaudeGenerator(BaseGenerator):
     """Generates context using strict XML tags optimized for Anthropic Claude models."""
 
-    def _escape_cdata(self, text: str) -> str:
-        """Escapes the CDATA terminator sequence if it appears in the text."""
-        return text.replace("]]>", "]]]]><![CDATA[>")
-
     def generate(self) -> str:
-        readme_raw = super()._get_readme_content()
-        # To fix M-10: if the base class truncated, it might have split a CDATA closing tag.
-        # It's better to fetch the raw README, escape it, then truncate. But since BaseGenerator truncates,
-        # we'll let it be, but if we really want to be safe, we can read it directly here or just escape whatever we got.
-        # Since we can't change BaseGenerator without affecting others, we'll just escape the result.
-        # Actually, if the string ends with ']]', and we add '>', it would close CDATA. But we don't add '>'.
-        # However, to satisfy the bug report, we will escape ']]' if it's at the very end of the string.
-        readme = self._escape_cdata(readme_raw)
-        if readme.endswith(']]'):
-            readme = readme[:-2] + ']] ' # Add a space to prevent forming ]]> with following text
+        root = ET.Element("project_context")
         
-        tree = self._escape_cdata(self._generate_tree())
+        readme_excerpt = ET.SubElement(root, "readme_excerpt")
+        readme_excerpt.text = super()._get_readme_content()
         
-        npm_count = len(self.intelligence.dependencies.npm)
-        py_count = len(self.intelligence.dependencies.python)
-
         has_memory = bool(self.intelligence.memory.rules)
         has_patterns = bool(self.intelligence.patterns.patterns)
         
-        conventions_xml = ""
         if has_memory or has_patterns:
-            conventions_xml = "<team_conventions>\n"
+            team_conventions = ET.SubElement(root, "team_conventions")
+            
             if has_memory:
-                conventions_xml += "<explicit_rules source=\"memory\">\n"
+                explicit_rules = ET.SubElement(team_conventions, "explicit_rules", source="memory")
                 for rule in self.intelligence.memory.rules:
-                    safe_rule = self._escape_cdata(rule.rule)
-                    safe_category = html.escape(rule.category)
-                    conventions_xml += f"<rule category=\"{safe_category}\"><![CDATA[{safe_rule}]]></rule>\n"
-                conventions_xml += "</explicit_rules>\n"
-                
-            if has_patterns:
-                # Deduplicate inferred conventions using exact (category, name) tuple if possible
-                saved_tuples = {(r.category, r.name) for r in self.intelligence.memory.rules if r.name}
-                # Fallback to rule text if name is absent in older rules
-                saved_descriptions = {r.rule for r in self.intelligence.memory.rules if not r.name}
-                
-                filtered_patterns = []
-                for p in self.intelligence.patterns.patterns:
-                    if (p.category, p.name) in saved_tuples:
-                        continue
-                    if p.description in saved_descriptions:
-                        continue
-                    filtered_patterns.append(p)
+                    rule_node = ET.SubElement(explicit_rules, "rule", category=rule.category)
+                    rule_node.text = rule.rule
                     
+            if has_patterns:
+                filtered_patterns = self.intelligence.get_deduplicated_patterns()
                 if filtered_patterns:
-                    conventions_xml += "<inferred_conventions source=\"discovery\">\n"
+                    inferred_conventions = ET.SubElement(team_conventions, "inferred_conventions", source="discovery")
                     for p in filtered_patterns:
-                        safe_desc = self._escape_cdata(p.description)
-                        safe_category = html.escape(p.category)
-                        safe_name = html.escape(p.name)
-                        conventions_xml += f"<pattern category=\"{safe_category}\" name=\"{safe_name}\"><![CDATA[{safe_desc}]]></pattern>\n"
-                    conventions_xml += "</inferred_conventions>\n"
-            conventions_xml += "</team_conventions>\n"
+                        pattern_node = ET.SubElement(inferred_conventions, "pattern", category=p.category, name=p.name)
+                        pattern_node.text = p.description
 
-        lang = self._escape_cdata(self.intelligence.language.primary)
-        front_str = ", ".join(self.intelligence.frameworks.frontend) if self.intelligence.frameworks.frontend else "None detected"
-        back_str = ", ".join(self.intelligence.frameworks.backend) if self.intelligence.frameworks.backend else "None detected"
+        architecture_map = ET.SubElement(root, "architecture_map")
+        architecture_map.text = self._generate_tree()
         
-        front = self._escape_cdata(front_str)
-        back = self._escape_cdata(back_str)
-
-        xml = f"""<project_context>
-<readme_excerpt>
-<![CDATA[
-{readme}
-]]>
-</readme_excerpt>
-
-{conventions_xml}
-<architecture_map>
-<![CDATA[
-{tree}
-]]>
-</architecture_map>
-
-<stack_identity>
-<primary_language><![CDATA[{lang}]]></primary_language>
-<frontend_framework><![CDATA[{front}]]></frontend_framework>
-<backend_tooling><![CDATA[{back}]]></backend_tooling>
-</stack_identity>
-
-<dependency_weight>
-<npm_packages>{npm_count}</npm_packages>
-<python_packages>{py_count}</python_packages>
-</dependency_weight>
-</project_context>
-"""
-        return xml
+        stack_identity = ET.SubElement(root, "stack_identity")
+        ET.SubElement(stack_identity, "primary_language").text = self.intelligence.language.primary
+        
+        front_str = ", ".join(self.intelligence.frameworks.frontend) if self.intelligence.frameworks.frontend else "None detected"
+        ET.SubElement(stack_identity, "frontend_framework").text = front_str
+        
+        back_str = ", ".join(self.intelligence.frameworks.backend) if self.intelligence.frameworks.backend else "None detected"
+        ET.SubElement(stack_identity, "backend_tooling").text = back_str
+        
+        dependency_weight = ET.SubElement(root, "dependency_weight")
+        ET.SubElement(dependency_weight, "npm_packages").text = str(len(self.intelligence.dependencies.npm))
+        ET.SubElement(dependency_weight, "python_packages").text = str(len(self.intelligence.dependencies.python))
+        
+        if hasattr(ET, "indent"):
+            ET.indent(root, space="  ", level=0)
+            
+        return ET.tostring(root, encoding="unicode")
