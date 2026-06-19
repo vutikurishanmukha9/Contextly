@@ -119,7 +119,7 @@ class ImportGraphBuilder:
         
 
         # Dynamically load supported extensions from the registry
-        self._SUPPORTED_EXTENSIONS = set(ParserRegistry._registry.keys())
+        self._SUPPORTED_EXTENSIONS = ParserRegistry.supported_extensions()
 
     def build(self, file_paths: Optional[List[str]] = None) -> KnowledgeGraph:
         """
@@ -195,7 +195,6 @@ class ImportGraphBuilder:
                         future = executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)
                         in_flight.add(future)
                         future_to_file[future] = fp
-                        future_to_start[future] = time.monotonic()
                         return True
                     except StopIteration:
                         return False

@@ -21,6 +21,8 @@ dependencies = [
     "pyperclip>=1.8.2",
     "tomli>=2.0.1",
     "tiktoken>=0.7.0",
+    # tree-sitter-languages historically lags tree-sitter major version bumps.
+    # Keep tree-sitter < 0.22.0 pinned until tree-sitter-languages catches up to avoid breakages.
     "tree-sitter<0.22.0",
     "tree-sitter-languages>=1.10.0",
     "charset-normalizer>=3.3.0",

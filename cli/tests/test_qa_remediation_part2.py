@@ -380,4 +380,35 @@ def test_configuration_error_raised_on_invalid_yaml(temp_repo):
     
     import pytest
     with pytest.raises(ConfigurationError):
-        AnalyzerEngine(temp_repo)
+        AnalyzerEngine(temp_repo).analyze()
+
+def test_real_process_pool_no_fallback(temp_repo, monkeypatch):
+    """
+    ISSUE-001 / ISSUE-002: Test that the real ProcessPoolExecutor works
+    without throwing NameError, bypassing the conftest single-threaded mock.
+    """
+    import concurrent.futures.process
+    from contextly.core.graph.builder import ImportGraphBuilder
+    from contextly.core.diagnostics import DiagnosticsContext
+    
+    # Bypass the autouse fixture from conftest
+    monkeypatch.setattr(
+        "concurrent.futures.ProcessPoolExecutor", 
+        concurrent.futures.process.ProcessPoolExecutor
+    )
+    
+    DiagnosticsContext().clear()
+    
+    runner.invoke(app, ["init"])
+    (temp_repo / "src").mkdir(exist_ok=True, parents=True)
+    # Give it enough files to actually trigger pool usage and chunking behavior
+    for i in range(10):
+        (temp_repo / "src" / f"dummy_{i}.py").write_text("def f(): pass")
+        
+    builder = ImportGraphBuilder(temp_repo)
+    builder.build()
+    
+    # If NameError occurred, it would have been logged as an error and fallback triggered
+    messages = [msg for msg in DiagnosticsContext()._messages if msg.severity == "ERROR"]
+    assert len(messages) == 0, f"Expected no errors, got {messages}"
+    assert len(builder.failed_files) == 0

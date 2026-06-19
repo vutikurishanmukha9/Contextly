@@ -45,6 +45,8 @@ class PackerEngine:
                 fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
                 break
             except FileExistsError:
+                if counter > 10000:
+                    raise ContextlyError(f"Failed to generate a unique pack name for '{base_name}' after 10000 attempts.")
                 safe_pack_name = f"{base_name}_{counter}"
                 output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
                 counter += 1

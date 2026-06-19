@@ -58,5 +58,11 @@ class ParserRegistry:
             
         return None
 
+    @classmethod
+    def supported_extensions(cls) -> set[str]:
+        """Returns a set of all currently registered file extensions."""
+        with cls._lock:
+            return set(cls._registry.keys())
+
 # Auto-register defaults on module load
 ParserRegistry.register_defaults()
