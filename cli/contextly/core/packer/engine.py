@@ -103,6 +103,7 @@ class PackerEngine:
             
             for path in ranked_files:
                 try:
+                    start_pos = out_f.tell()
                     file_size = path.stat().st_size
                     if file_size > self.max_file_size:
                         skipped_files.append(path)
@@ -212,6 +213,9 @@ class PackerEngine:
                             selected_files.append(path)
                             
                 except Exception:
+                    # Roll back any partially written content to prevent stream corruption
+                    out_f.seek(start_pos)
+                    out_f.truncate()
                     skipped_files.append(path)
 
             if excluded_files:

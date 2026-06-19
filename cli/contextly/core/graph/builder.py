@@ -14,7 +14,9 @@ from ...utils.console import console
 import threading
 
 
-def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) -> Optional[ParsedFileDTO]:
+_WORKER_PARSE_TIMEOUT_SECONDS = 120
+
+def _parse_file_core(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) -> Optional[ParsedFileDTO]:
     """
     Module-level function required for ProcessPoolExecutor serialization.
     Instantiates the correct parser based on file extension and processes the file.
@@ -54,11 +56,9 @@ def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) ->
                     return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"Skipped: low encoding confidence ({detection.encoding}, coherence={detection.coherence:.2f})")
                 content = str(detection)
             except ImportError:
-                # Graceful degradation: if charset-normalizer is not installed, use latin-1
-                try:
-                    content = raw_bytes.decode("latin-1")
-                except Exception as e:
-                    return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"DecodeError: {str(e)}")
+                # charset-normalizer is required for non-UTF-8 files; skip to prevent data corruption from lossy decoding
+                return ParsedFileDTO(file_path=file_path, exports=[], imports=[],
+                    error="Skipped: non-UTF-8 encoding and charset-normalizer not installed")
             except Exception as e:
                 return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"DecodeError: {str(e)}")
             
@@ -71,6 +71,40 @@ def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) ->
         return None
     except Exception as e:
         return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"ParseError: {str(e)}")
+
+def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) -> Optional[ParsedFileDTO]:
+    """
+    Wrapper that enforces a hard timeout on the core parsing logic using a daemon thread.
+    This guarantees the future always completes within _WORKER_PARSE_TIMEOUT_SECONDS,
+    preventing ProcessPoolExecutor worker exhaustion from hung parsers (e.g. deeply nested
+    AST trees or C-extension deadlocks).
+    """
+    result_holder = [None]
+    exception_holder = [None]
+
+    def _worker():
+        try:
+            result_holder[0] = _parse_file_core(file_path, root_dir, max_file_size_mb)
+        except Exception as e:
+            exception_holder[0] = e
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    t.join(timeout=_WORKER_PARSE_TIMEOUT_SECONDS)
+
+    if t.is_alive():
+        return ParsedFileDTO(
+            file_path=file_path, exports=[], imports=[],
+            error=f"TimeoutError: AST parsing exceeded {_WORKER_PARSE_TIMEOUT_SECONDS}s deadline"
+        )
+
+    if exception_holder[0]:
+        return ParsedFileDTO(
+            file_path=file_path, exports=[], imports=[],
+            error=f"ParseError: {str(exception_holder[0])}"
+        )
+
+    return result_holder[0]
 
 class ImportGraphBuilder:
     """
@@ -133,13 +167,9 @@ class ImportGraphBuilder:
         
         def _process_chunk(chunk_files, pool_executor_class, pool_name, on_init=None):
             """
-            Processes a chunk of files through the given executor with per-file timeout tracking.
-            Individual files that exceed the deadline are cancelled and logged; the pool continues.
+            Processes a chunk of files through the given executor.
+            Per-file timeouts are enforced inside the worker function itself via daemon threads.
             """
-            import time
-            _PER_FILE_TIMEOUT_SECONDS = 120
-            _WAIT_CYCLE_SECONDS = 5
-            
             dtos = []
             optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
             batch_size = optimal_workers * 32
@@ -158,7 +188,6 @@ class ImportGraphBuilder:
                 in_flight = set()
                 target_iter = iter(chunk_files)
                 future_to_file = {}
-                future_to_start = {}
                 
                 def submit_next():
                     try:
@@ -177,34 +206,16 @@ class ImportGraphBuilder:
                 while in_flight:
                     done, _ = concurrent.futures.wait(
                         in_flight,
-                        timeout=_WAIT_CYCLE_SECONDS,
+                        timeout=5,
                         return_when=concurrent.futures.FIRST_COMPLETED
                     )
                     
-                    # Check for individually timed-out futures
                     if not done:
-                        now = time.monotonic()
-                        timed_out = [
-                            f for f in in_flight
-                            if (now - future_to_start.get(f, now)) > _PER_FILE_TIMEOUT_SECONDS
-                        ]
-                        for future in timed_out:
-                            file_path = future_to_file.pop(future, "unknown")
-                            future_to_start.pop(future, None)
-                            in_flight.discard(future)
-                            future.cancel()
-                            self.failed_files[file_path] = f"TimeoutError: AST parsing exceeded {_PER_FILE_TIMEOUT_SECONDS}s deadline"
-                            diagnostics.add_warning(
-                                "ImportGraphBuilder",
-                                f"File {file_path} exceeded {_PER_FILE_TIMEOUT_SECONDS}s parse deadline in {pool_name}. Skipping."
-                            )
-                            submit_next()
                         continue
-                        
+
                     for future in done:
                         in_flight.discard(future)
                         file_path = future_to_file.pop(future, "unknown")
-                        future_to_start.pop(future, None)
                         try:
                             dto = future.result()
                             if dto:

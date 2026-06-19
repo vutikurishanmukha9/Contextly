@@ -126,7 +126,7 @@ class TestParseFileEncoding:
         assert dto is None
 
     def test_charset_normalizer_import_error_fallback(self, tmp_path, monkeypatch):
-        """When charset-normalizer is not installed, falls back to latin-1."""
+        """When charset-normalizer is not installed, non-UTF-8 files are skipped to prevent data corruption."""
         py_file = tmp_path / "fallback.py"
         content = "# café\ndef func(): pass\n"
         py_file.write_bytes(content.encode("latin-1"))
@@ -143,8 +143,10 @@ class TestParseFileEncoding:
 
         monkeypatch.setattr("builtins.__import__", mock_import)
         dto = _parse_file("fallback.py", str(tmp_path))
-        # Should still succeed via latin-1 fallback
+        # Should return a DTO with a skip error, not silently decode with lossy latin-1
         assert dto is not None
+        assert dto.error is not None
+        assert "charset-normalizer not installed" in dto.error
 
 
 # ---------------------------------------------------------------------------

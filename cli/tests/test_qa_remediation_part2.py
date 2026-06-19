@@ -291,8 +291,8 @@ def test_security_critical_excludes(temp_repo):
         assert ".git" not in path
 
 def test_concurrency_error_logging(temp_repo, monkeypatch):
+    from contextly.core.graph import builder as builder_module
     from contextly.core.graph.builder import ImportGraphBuilder
-    import concurrent.futures
     
     runner.invoke(app, ["init"])
     
@@ -300,58 +300,51 @@ def test_concurrency_error_logging(temp_repo, monkeypatch):
     for i in range(110):
         (temp_repo / "src" / f"dummy_{i}.py").write_text("def f(): pass")
         
-    def mock_result(*args, **kwargs):
+    def mock_parse_file(file_path, root_dir, max_file_size_mb=2.0):
         raise RuntimeError("Simulated concurrency failure")
         
-    monkeypatch.setattr(concurrent.futures.Future, "result", mock_result)
+    monkeypatch.setattr(builder_module, "_parse_file", mock_parse_file)
     
     builder = ImportGraphBuilder(temp_repo)
     builder.build()
     
-    # We should have failed files because all futures raised exception
+    # We should have failed files because all parse calls raised exception
     assert len(builder.failed_files) > 0
-    # The error message should mention ConcurrencyError
+    # The error message should mention the simulated failure
     first_failed = list(builder.failed_files.values())[0]
-    assert "ConcurrencyError" in first_failed
+    assert "Simulated concurrency failure" in first_failed
 
 def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
-    """Verify that individual files exceeding the per-file deadline are cancelled gracefully
-    without aborting the entire pool."""
-    import concurrent.futures
+    """Verify that individual files exceeding the worker parse timeout produce
+    TimeoutError DTOs without deadlocking the executor pool."""
     import time
+    from contextly.core.graph import builder as builder_module
     from contextly.core.graph.builder import ImportGraphBuilder
     
     runner.invoke(app, ["init"])
     (temp_repo / "src").mkdir(exist_ok=True, parents=True)
-    for i in range(110):
+    for i in range(3):
         (temp_repo / "src" / f"dummy_{i}.py").write_text("def f(): pass")
 
-    # Simulate perpetual hang: wait() never returns completed futures
-    call_count = 0
-    def mock_wait(in_flight, timeout=None, return_when=None):
-        nonlocal call_count
-        call_count += 1
-        return set(), in_flight
-        
-    # Simulate elapsed time exceeding per-file deadline on second call
-    original_monotonic = time.monotonic
-    base_time = original_monotonic()
-    def mock_monotonic():
-        nonlocal call_count
-        # Advance time by 200s for each wait cycle so all batches eventually time out
-        return base_time + (call_count * 200)
-        
-    monkeypatch.setattr(concurrent.futures, "wait", mock_wait)
-    monkeypatch.setattr(time, "monotonic", mock_monotonic)
+    # Set a very short timeout so the test completes quickly
+    monkeypatch.setattr(builder_module, "_WORKER_PARSE_TIMEOUT_SECONDS", 0.5)
+    
+    # Make _parse_file_core hang indefinitely to simulate a stuck parser
+    original_core = builder_module._parse_file_core
+    def hanging_parse_core(file_path, root_dir, max_file_size_mb=2.0):
+        time.sleep(10)  # Will be interrupted by the 0.5s worker timeout
+        return original_core(file_path, root_dir, max_file_size_mb)
+    
+    monkeypatch.setattr(builder_module, "_parse_file_core", hanging_parse_core)
     
     builder = ImportGraphBuilder(temp_repo)
-    # Should NOT raise — per-file timeout cancels individually
+    # Should NOT raise — worker timeout produces error DTOs gracefully
     builder.build()
     
     assert any("TimeoutError" in str(msg) for msg in builder.failed_files.values())
 
 def test_builder_dto_error_handling(temp_repo, monkeypatch):
-    import concurrent.futures
+    from contextly.core.graph import builder as builder_module
     from contextly.core.graph.builder import ImportGraphBuilder
     from contextly.core.graph.parsers.base import ParsedFileDTO
     
@@ -360,7 +353,7 @@ def test_builder_dto_error_handling(temp_repo, monkeypatch):
     for i in range(110):
         (temp_repo / "src" / f"dummy_{i}.py").write_text("def f(): pass")
         
-    def mock_result(self):
+    def mock_parse_file(file_path, root_dir, max_file_size_mb=2.0):
         # Return a DTO with an error
         return ParsedFileDTO(
             file_path="dummy.py",
@@ -369,7 +362,7 @@ def test_builder_dto_error_handling(temp_repo, monkeypatch):
             error="Mock DTO Error"
         )
         
-    monkeypatch.setattr(concurrent.futures.Future, "result", mock_result)
+    monkeypatch.setattr(builder_module, "_parse_file", mock_parse_file)
     
     builder = ImportGraphBuilder(temp_repo)
     builder.build()

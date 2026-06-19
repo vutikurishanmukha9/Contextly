@@ -81,18 +81,22 @@ class AnalyzerEngine:
                 yield chunk
                 
         all_files = []
-        hash_obj = hashlib.sha256()
         
-        # Chunked file processing for hashing and gathering
+        # Gather all files from generator
         for chunk in get_chunks(file_generator(), 1000):
             all_files.extend(chunk)
-            for f in chunk:
-                try:
-                    with open(self.root_dir / f, "rb") as file_obj:
-                        for b in iter(lambda: file_obj.read(4096), b""):
-                            hash_obj.update(b)
-                except Exception:
-                    pass
+        
+        # Sort for deterministic hashing across OS/filesystem variations
+        all_files.sort()
+        
+        hash_obj = hashlib.sha256()
+        for f in all_files:
+            try:
+                with open(self.root_dir / f, "rb") as file_obj:
+                    for b in iter(lambda: file_obj.read(4096), b""):
+                        hash_obj.update(b)
+            except Exception:
+                pass
                     
         scan_results = ScannerRegistry.execute_pipeline(self.root_dir, all_files)
         
@@ -175,8 +179,13 @@ class AnalyzerEngine:
             # Safe pre-flight write permission check
             if output_file.exists() and not os.access(output_file, os.W_OK):
                 raise PermissionError(f"Cannot write to {output_file}")
-            if not output_file.exists() and not os.access(output_file.parent, os.W_OK):
-                raise PermissionError(f"Cannot write to directory {output_file.parent}")
+            if not output_file.exists():
+                # Walk up to find the nearest existing ancestor directory
+                check_dir = output_file.parent
+                while check_dir and not check_dir.exists():
+                    check_dir = check_dir.parent
+                if check_dir and not os.access(check_dir, os.W_OK):
+                    raise PermissionError(f"Cannot write to directory {check_dir}")
             from ...utils.io import atomic_write
             atomic_write(output_file, ctx_content)
         except Exception as e:
