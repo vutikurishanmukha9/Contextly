@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { Terminal, HardDrive, Cpu, Shield, ArrowRight } from "lucide-react";
@@ -69,12 +69,12 @@ function Landing() {
                 </svg>
               </button>
             </div>
-            <a
-              href="#docs"
+            <Link
+              to="/docs"
               className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-black text-white font-medium text-sm hover:bg-black/80 transition-colors"
             >
               Read Docs <ArrowRight className="w-4 h-4" />
-            </a>
+            </Link>
           </div>
         </section>
 
@@ -166,78 +166,7 @@ function Landing() {
           </div>
         </section>
 
-        {/* Command Reference */}
-        <section id="docs" className="border-t border-black/5 bg-[#FAFAFA] py-24 px-6">
-          <div className="max-w-5xl mx-auto">
-            <div className="mb-12">
-              <h2 className="text-3xl font-bold tracking-tight">Commands</h2>
-            </div>
 
-            <div className="rounded-2xl border border-black/10 bg-white overflow-hidden shadow-sm">
-              {[
-                {
-                  cmd: "init",
-                  desc: "Initialize a .contextly environment in the current directory.",
-                },
-                { cmd: "discover", desc: "Run static analysis to find unwritten team patterns." },
-                {
-                  cmd: "learn --auto",
-                  desc: "Interactively save discovered patterns to your rules memory.",
-                },
-                {
-                  cmd: "analyze",
-                  desc: "Build an ASCII architecture map of your entire repository.",
-                },
-                {
-                  cmd: "pack <dir>",
-                  desc: "Bundle code into a compressed, LLM-ready Context Pack.",
-                },
-                {
-                  cmd: "export <pack>",
-                  desc: "Fuse rules and packs into your clipboard instantly.",
-                },
-                { cmd: "inspect", desc: "Identify massive files that act as Token Hogs." },
-                { cmd: "memory", desc: "View all rules permanently saved to project memory." },
-                {
-                  cmd: "explain <domain>",
-                  desc: "Copy a structural context payload for a specific domain.",
-                },
-              ].map((c, i) => (
-                <div
-                  key={i}
-                  className="group flex flex-col sm:flex-row sm:items-center border-b border-black/5 last:border-0 hover:bg-black/[0.02] transition-colors"
-                >
-                  <div className="sm:w-1/3 p-5 font-mono text-sm border-b sm:border-b-0 sm:border-r border-black/5 bg-black/[0.01] flex items-center justify-between">
-                    <div>
-                      <span className="text-black/40">contextly</span>{" "}
-                      <span className="font-semibold">{c.cmd}</span>
-                    </div>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(`contextly ${c.cmd}`)}
-                      className="opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded-md bg-black/5 text-black/40 hover:bg-black/10 hover:text-black transition-all focus:opacity-100"
-                      title="Copy to clipboard"
-                    >
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="sm:w-2/3 p-5 text-[15px] text-black/70">{c.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
       </main>
 
       <SiteFooter />
