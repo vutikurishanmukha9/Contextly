@@ -31,7 +31,7 @@ function Landing() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
             <span className="text-xs font-medium text-black/70 tracking-wide">
-              v1.0.5 now available
+              v1.0.6 now available
             </span>
           </div>
 
@@ -94,7 +94,7 @@ function Landing() {
                 <span className="text-green-400">~/project</span>
                 <span className="text-white">$ contextly pack .</span>
               </div>
-              <div className="mt-4 text-blue-400">Context-Ly Engine v1.0.5</div>
+              <div className="mt-4 text-blue-400">Context-Ly Engine v1.0.6</div>
               <div className="mt-2 text-white/50">Analyzing 1,420 files...</div>
               <div className="mt-1 text-white/50">Applying AST compression...</div>
               <div className="mt-1 text-white/50">Writing fenced Markdown context...</div>
@@ -205,11 +205,32 @@ function Landing() {
               ].map((c, i) => (
                 <div
                   key={i}
-                  className="flex flex-col sm:flex-row sm:items-center border-b border-black/5 last:border-0 hover:bg-black/[0.02] transition-colors"
+                  className="group flex flex-col sm:flex-row sm:items-center border-b border-black/5 last:border-0 hover:bg-black/[0.02] transition-colors"
                 >
-                  <div className="sm:w-1/3 p-5 font-mono text-sm border-b sm:border-b-0 sm:border-r border-black/5 bg-black/[0.01]">
-                    <span className="text-black/40">contextly</span>{" "}
-                    <span className="font-semibold">{c.cmd}</span>
+                  <div className="sm:w-1/3 p-5 font-mono text-sm border-b sm:border-b-0 sm:border-r border-black/5 bg-black/[0.01] flex items-center justify-between">
+                    <div>
+                      <span className="text-black/40">contextly</span>{" "}
+                      <span className="font-semibold">{c.cmd}</span>
+                    </div>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(`contextly ${c.cmd}`)}
+                      className="opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded-md bg-black/5 text-black/40 hover:bg-black/10 hover:text-black transition-all focus:opacity-100"
+                      title="Copy to clipboard"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                      </svg>
+                    </button>
                   </div>
                   <div className="sm:w-2/3 p-5 text-[15px] text-black/70">{c.desc}</div>
                 </div>

@@ -46,6 +46,7 @@ The CLI acts as a persistent **Context Memory Layer** for your repository, enabl
 Contextly/
 |-- .github/
 |   `-- workflows/
+|       |-- frontend-ci.yml
 |       |-- publish.yml
 |       `-- test.yml
 |-- cli/
@@ -67,6 +68,7 @@ Contextly/
 |   |   |   |   `-- engine.py
 |   |   |   |-- discovery/
 |   |   |   |   |-- rules/
+|   |   |   |   |   `-- ... (truncated)
 |   |   |   |   |-- __init__.py
 |   |   |   |   |-- engine.py
 |   |   |   |   `-- registry.py
@@ -77,6 +79,7 @@ Contextly/
 |   |   |   |   `-- engine.py
 |   |   |   |-- graph/
 |   |   |   |   |-- parsers/
+|   |   |   |   |   `-- ... (truncated)
 |   |   |   |   |-- assembler.py
 |   |   |   |   |-- builder.py
 |   |   |   |   `-- cluster.py
@@ -97,12 +100,14 @@ Contextly/
 |   |   |   |   |-- compression.py
 |   |   |   |   |-- engine.py
 |   |   |   |   `-- ranking.py
-|   |   |   `-- __init__.py
+|   |   |   |-- __init__.py
+|   |   |   `-- diagnostics.py
 |   |   |-- generators/
 |   |   |   |-- __init__.py
 |   |   |   |-- base.py
 |   |   |   |-- chatgpt.py
-|   |   |   `-- claude.py
+|   |   |   |-- claude.py
+|   |   |   `-- registry.py
 |   |   |-- scanners/
 |   |   |   |-- __init__.py
 |   |   |   |-- architecture.py
@@ -111,7 +116,8 @@ Contextly/
 |   |   |   |-- dependencies.py
 |   |   |   |-- framework.py
 |   |   |   |-- language.py
-|   |   |   `-- patterns.py
+|   |   |   |-- patterns.py
+|   |   |   `-- registry.py
 |   |   |-- types/
 |   |   |   |-- __init__.py
 |   |   |   `-- models.py
@@ -123,6 +129,7 @@ Contextly/
 |   |   |   |-- exceptions.py
 |   |   |   |-- fs.py
 |   |   |   |-- ignore.py
+|   |   |   |-- io.py
 |   |   |   |-- validation.py
 |   |   |   `-- walker.py
 |   |   |-- __init__.py
@@ -146,6 +153,7 @@ Contextly/
 |   |   |-- test_learn.py
 |   |   |-- test_memory.py
 |   |   |-- test_pack.py
+|   |   |-- test_qa_remediation_part2.py
 |   |   |-- test_ranking.py
 |   |   |-- test_scanner_base.py
 |   |   |-- test_scanner_dependencies.py
@@ -153,8 +161,9 @@ Contextly/
 |   |   |-- test_scanner_language.py
 |   |   `-- test_scanner_patterns.py
 |   |-- CHANGELOG.md
-|   |-- README.md
-|   `-- pyproject.toml
+|   |-- missing.txt
+|   |-- pyproject.toml
+|   `-- README.md
 |-- frontend/
 |   |-- .tanstack/
 |   |   `-- tmp/
@@ -216,12 +225,12 @@ Contextly/
 |   |   |-- hooks/
 |   |   |   `-- use-mobile.tsx
 |   |   |-- routes/
-|   |   |   |-- README.md
 |   |   |   |-- __root.tsx
-|   |   |   `-- index.tsx
+|   |   |   |-- index.tsx
+|   |   |   `-- README.md
 |   |   |-- main.tsx
-|   |   |-- routeTree.gen.ts
 |   |   |-- router.tsx
+|   |   |-- routeTree.gen.ts
 |   |   `-- styles.css
 |   |-- .gitignore
 |   |-- .prettierignore
@@ -235,6 +244,7 @@ Contextly/
 |   |-- tsconfig.json
 |   `-- vite.config.ts
 |-- .gitignore
+|-- LICENSE
 |-- PROJECT_CONTEXT.md
 `-- README.md
 ````
