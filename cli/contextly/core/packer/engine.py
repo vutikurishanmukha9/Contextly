@@ -123,6 +123,7 @@ class PackerEngine:
                             continue
                         in_f.seek(0)
                         
+                        out_f.flush()
                         start_pos = out_f.tell()
                         header_str = f"## File: `{rel_path}`\n```{ext}\n"
                         out_f.write(header_str)
@@ -201,8 +202,9 @@ class PackerEngine:
                                 
                             if is_excluded:
                                 excluded_files.append(path)
+                                out_f.flush()
+                                out_f.truncate(start_pos)
                                 out_f.seek(start_pos)
-                                out_f.truncate()
                                 continue
                                 
                             out_f.write(f"\n```\n\n")

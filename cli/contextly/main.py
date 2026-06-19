@@ -39,7 +39,7 @@ app.command(name="explain", help="Explain repository concepts and structure")(ex
 
 console = Console()
 
-if __name__ == "__main__":
+def main():
     try:
         app()
     except Exception as e:
@@ -49,17 +49,19 @@ if __name__ == "__main__":
         if isinstance(e, ConfigurationError):
             console.print(f"[bold red]Fatal Error:[/bold red] {e}")
             sys.exit(1)
-            
+        
+        # Determine if we're in a completely unhandled crash scenario
+        console.print(f"[bold red]CRASH REPORT[/bold red]: An unhandled exception occurred.")
+        console.print(f"[red]Exception Type:[/red] {type(e).__name__}")
+        console.print(f"[red]Message:[/red] {str(e)}")
+        
         import traceback
-        from pathlib import Path
+        console.print("\n[dim]--- Traceback ---[/dim]")
+        traceback.print_exc()
+        console.print("[dim]-------------------[/dim]\n")
         
-        log_dir = Path(".contextly/logs")
-        log_dir.mkdir(parents=True, exist_ok=True)
-        crash_log = log_dir / "crash.log"
-        
-        with open(crash_log, "w") as f:
-            traceback.print_exc(file=f)
-            
-        console.print("[bold red]An unexpected error occurred.[/bold red]")
-        console.print(f"Please check [bold]{crash_log}[/bold] for details or open an issue.")
+        console.print("[yellow]Please report this issue to the Contextly maintainers.[/yellow]")
         sys.exit(1)
+
+if __name__ == "__main__":
+    main()

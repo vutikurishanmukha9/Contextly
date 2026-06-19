@@ -105,17 +105,19 @@ def test_chatgpt_generator_memory_rules(tmp_path):
     assert "[Cat] Rule1 [High confidence]" in res
 
 def test_claude_generator_memory_rules(tmp_path):
-    """Covers claude.py 21-26: memory formatting."""
+    """Covers claude.py memory formatting."""
     mem = ProjectMemory(rules=[MemoryRule(id="1", category="Cat", rule="Rule1", confidence=1.0, source="user", created_at="2023")])
     intel = get_dummy_intel()
     intel.memory = mem
     gen = ClaudeGenerator(tmp_path, intel)
     res = gen.generate()
-    assert "<explicit_rules source=\"memory\">" in res
-    assert "<rule category=\"Cat\"><![CDATA[Rule1]]></rule>" in res
+    assert "explicit_rules" in res
+    assert "source=\"memory\"" in res
+    assert "Rule1" in res
+    assert "category=\"Cat\"" in res
 
 def test_claude_generator_cdata_escaping(tmp_path):
-    """Verifies that the `]]>` sequence is correctly escaped so the final XML is valid."""
+    """Verifies that the `]]>` sequence is correctly handled natively by ElementTree."""
     import xml.etree.ElementTree as ET
     
     mem = ProjectMemory(rules=[MemoryRule(id="1", category="Cat", rule="Rule containing ]]> to break it", confidence=1.0, source="user", created_at="2023")])
@@ -129,15 +131,13 @@ def test_claude_generator_cdata_escaping(tmp_path):
     gen = ClaudeGenerator(tmp_path, intel)
     res = gen.generate()
     
-    assert "]]]]><![CDATA[>" in res
-    
-    # Because res is not a single root XML document (it has <project_context> but also other tags 
-    # depending on what generate() produces, let's wrap it to be sure).
-    wrapped_res = f"<root>{res}</root>"
-    
     # This should parse without raising xml.etree.ElementTree.ParseError
-    root = ET.fromstring(wrapped_res)
+    root = ET.fromstring(res)
     assert root is not None
+    
+    # Verify the rule was properly serialized and deserialized
+    rules = root.findall(".//rule")
+    assert rules[0].text == "Rule containing ]]> to break it"
 
 def test_base_generator_exceptions(tmp_path, monkeypatch):
     """Covers base.py 22-23 (README exceptions), 34 (not is_dir inside walk)."""
