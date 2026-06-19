@@ -300,11 +300,15 @@ def test_concurrency_error_logging(temp_repo, monkeypatch):
     for i in range(110):
         (temp_repo / "src" / f"dummy_{i}.py").write_text("def f(): pass")
         
-    # Monkeypatch Future.result to raise a timeout/concurrency error
     def mock_result(*args, **kwargs):
         raise RuntimeError("Simulated concurrency failure")
         
+    class MockProcessPoolExecutor(concurrent.futures.ThreadPoolExecutor):
+        def __init__(self, max_workers=None, mp_context=None, initializer=None, initargs=()):
+            super().__init__(max_workers=max_workers, initializer=initializer, initargs=initargs)
+            
     monkeypatch.setattr(concurrent.futures.Future, "result", mock_result)
+    monkeypatch.setattr(concurrent.futures, "ProcessPoolExecutor", MockProcessPoolExecutor)
     
     builder = ImportGraphBuilder(temp_repo)
     builder.build()
@@ -346,6 +350,12 @@ def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
         
     monkeypatch.setattr(concurrent.futures, "wait", mock_wait)
     monkeypatch.setattr(time, "monotonic", mock_monotonic)
+    
+    class MockProcessPoolExecutor(concurrent.futures.ThreadPoolExecutor):
+        def __init__(self, max_workers=None, mp_context=None, initializer=None, initargs=()):
+            super().__init__(max_workers=max_workers, initializer=initializer, initargs=initargs)
+            
+    monkeypatch.setattr(concurrent.futures, "ProcessPoolExecutor", MockProcessPoolExecutor)
     
     builder = ImportGraphBuilder(temp_repo)
     # Should NOT raise — per-file timeout cancels individually
