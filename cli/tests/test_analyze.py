@@ -98,14 +98,15 @@ def test_analyze_cmd_unexpected_error(temp_repo, monkeypatch):
 def test_analyze_cmd_permission_error(temp_repo, monkeypatch):
     runner.invoke(app, ["init"])
 
-    import builtins
-    original_open = builtins.open
-    def mock_open(*args, **kwargs):
-        if "PROJECT_CONTEXT.md" in str(args[0]) and "w" in args[1]:
-            raise PermissionError("Access denied")
-        return original_open(*args, **kwargs)
+    import os
+    original_access = os.access
+    def mock_access(path, mode):
+        if mode == os.W_OK:
+            # Pre-flight check simulates a failure
+            return False
+        return original_access(path, mode)
 
-    monkeypatch.setattr(builtins, "open", mock_open)
+    monkeypatch.setattr(os, "access", mock_access)
     result = runner.invoke(app, ["analyze"])
     assert result.exit_code == 1
     assert "Failed to write PROJECT_CONTEXT.md" in result.stdout

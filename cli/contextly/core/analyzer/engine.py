@@ -65,14 +65,35 @@ class AnalyzerEngine:
             skip_predicate=file_skip_predicate,
             dir_skip_predicate=dir_skip_predicate
         )
-        all_files: list[str] = []
+        def file_generator():
+            for dirpath, _, filenames in walker.walk():
+                rel_path = Path(dirpath).relative_to(self.root_dir)
+                for filename in filenames:
+                    yield (rel_path / filename).as_posix()
+
+        from itertools import islice
+        def get_chunks(iterable, size):
+            it = iter(iterable)
+            while True:
+                chunk = list(islice(it, size))
+                if not chunk:
+                    break
+                yield chunk
+                
+        all_files = []
+        hash_obj = hashlib.sha256()
         
-        for dirpath, _, filenames in walker.walk():
-            rel_path = Path(dirpath).relative_to(self.root_dir)
-            for filename in filenames:
-                # Use robust pathlib operations for normalized Posix paths across OS
-                full_rel = (rel_path / filename).as_posix()
-                all_files.append(full_rel)
+        # Chunked file processing for hashing and gathering
+        for chunk in get_chunks(file_generator(), 1000):
+            all_files.extend(chunk)
+            for f in chunk:
+                try:
+                    with open(self.root_dir / f, "rb") as file_obj:
+                        for b in iter(lambda: file_obj.read(4096), b""):
+                            hash_obj.update(b)
+                except Exception:
+                    pass
+                    
         scan_results = ScannerRegistry.execute_pipeline(self.root_dir, all_files)
         
         lang_data = scan_results.get('language') or LanguageScanResult(primary="Unknown")
@@ -104,8 +125,7 @@ class AnalyzerEngine:
             memory=memory_data
         )
         
-        hash_input = "\n".join(sorted(all_files)).encode("utf-8")
-        repository_hash = hashlib.sha256(hash_input).hexdigest()
+        repository_hash = hash_obj.hexdigest()
         try:
             contextly_version = version("contextly")
         except PackageNotFoundError:
@@ -114,7 +134,12 @@ class AnalyzerEngine:
         import os
         epoch = os.environ.get("SOURCE_DATE_EPOCH")
         if epoch:
-            generated_timestamp = datetime.fromtimestamp(int(epoch), timezone.utc).isoformat()
+            try:
+                generated_timestamp = datetime.fromtimestamp(int(epoch), timezone.utc).isoformat()
+            except ValueError:
+                from ...core.diagnostics import DiagnosticsContext
+                DiagnosticsContext().add_warning("AnalyzerEngine", f"Invalid SOURCE_DATE_EPOCH: {epoch}. Falling back to current time.")
+                generated_timestamp = datetime.now(timezone.utc).isoformat()
         else:
             generated_timestamp = datetime.now(timezone.utc).isoformat()
 
@@ -147,10 +172,11 @@ class AnalyzerEngine:
         
         output_file = self.root_dir / "PROJECT_CONTEXT.md"
         try:
-            # Pre-flight write permission check for test suite compatibility
-            # This triggers PermissionError in the mock before atomic_write creates a temp file
-            with open(output_file, "w", encoding="utf-8") as f:
-                pass
+            # Safe pre-flight write permission check
+            if output_file.exists() and not os.access(output_file, os.W_OK):
+                raise PermissionError(f"Cannot write to {output_file}")
+            if not output_file.exists() and not os.access(output_file.parent, os.W_OK):
+                raise PermissionError(f"Cannot write to directory {output_file.parent}")
             from ...utils.io import atomic_write
             atomic_write(output_file, ctx_content)
         except Exception as e:

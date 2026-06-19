@@ -9,8 +9,13 @@ def find_project_root(start_path: Path) -> Path:
     current = start_path.resolve()
     
     while True:
-        if (current / ".contextly").is_dir() or (current / ".git").is_dir():
-            return current
+        try:
+            if (current / ".contextly").is_dir() or (current / ".git").is_dir():
+                return current
+        except PermissionError:
+            # Reached a locked filesystem boundary, stop traversal
+            break
+            
         if current.parent == current:
             break
         current = current.parent

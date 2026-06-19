@@ -22,23 +22,29 @@ class IgnoreEngine:
         if not self.no_default_excludes:
             patterns.extend(self.default_ignores)
         
+        def _read_patterns_with_fallback(filepath: Path) -> list:
+            if not filepath.exists():
+                return []
+            
+            from ..core.diagnostics import DiagnosticsContext
+            for enc in ("utf-8", "utf-16", "latin-1"):
+                try:
+                    with open(filepath, "r", encoding=enc) as f:
+                        return f.readlines()
+                except UnicodeDecodeError:
+                    continue
+                except OSError as e:
+                    DiagnosticsContext().add_warning("IgnoreEngine", f"Failed to read {filepath.name}: {str(e)}")
+                    return []
+                    
+            DiagnosticsContext().add_warning("IgnoreEngine", f"Failed to decode {filepath.name} using any supported encoding.")
+            return []
+
         # Read .gitignore
-        gitignore_path = self.root_dir / ".gitignore"
-        if gitignore_path.exists():
-            try:
-                with open(gitignore_path, "r", encoding="utf-8") as f:
-                    patterns.extend(f.readlines())
-            except (OSError, UnicodeDecodeError):
-                pass
-                
+        patterns.extend(_read_patterns_with_fallback(self.root_dir / ".gitignore"))
+        
         # Read .contextlyignore
-        contextlyignore_path = self.root_dir / ".contextlyignore"
-        if contextlyignore_path.exists():
-            try:
-                with open(contextlyignore_path, "r", encoding="utf-8") as f:
-                    patterns.extend(f.readlines())
-            except (OSError, UnicodeDecodeError):
-                pass
+        patterns.extend(_read_patterns_with_fallback(self.root_dir / ".contextlyignore"))
                 
         # Filter empty lines and comments
         patterns = [p.strip() for p in patterns if p.strip() and not p.strip().startswith("#")]

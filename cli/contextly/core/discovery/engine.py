@@ -32,11 +32,10 @@ class DiscoveryEngine:
         
         return patterns_result
 
-    def _get_evaluation_paths(self, file_paths: Optional[List[str]] = None) -> List[str]:
-        """Returns the paths to evaluate against, constructing path mappings dynamically."""
+    def _get_evaluation_paths(self, file_paths: Optional[List[str]] = None):
+        """Yields the paths to evaluate against, constructing path mappings dynamically."""
         if file_paths is not None:
             # LOCAL list for targeted scans.
-            local_cache = []
             seen = set()
             for rel_path in file_paths:
                 full_rel = rel_path.replace("\\", "/")
@@ -44,13 +43,12 @@ class DiscoveryEngine:
                 for parent in [path_obj] + list(path_obj.parents):
                     partial = parent.as_posix()
                     if partial != "." and partial not in seen:
-                        local_cache.append(partial)
                         seen.add(partial)
-            return local_cache
+                        yield partial
+            return
 
         # Full repo scans are cheap enough for correctness and avoid stale state
         # when a long-lived engine instance observes filesystem changes.
-        paths = []
         from ...utils.config import load_config_model
         config = load_config_model(self.root_dir)
         discovery_depth = config.depth_limits.discovery
@@ -62,13 +60,11 @@ class DiscoveryEngine:
             
             # Add directories
             for dirname in dirnames:
-                paths.append((rel_path / dirname).as_posix())
+                yield (rel_path / dirname).as_posix()
                 
             # Add files
             for filename in filenames:
-                paths.append((rel_path / filename).as_posix())
-            
-        return paths
+                yield (rel_path / filename).as_posix()
 
     def evaluate_registry(
         self, 
@@ -78,33 +74,44 @@ class DiscoveryEngine:
         file_paths: Optional[List[str]] = None
     ) -> List[Any]:
         """
-        Evaluates a dictionary mapping names to rulesets.
-        
-        Args:
-            registry: Dict of "Target Name" -> [Rules]
-            discovery_class: Pydantic model to construct (Discovery or RepositoryCapability)
-            source_name: Tag for provenance auditing
-            file_paths: Optional list of file paths to restrict evaluation
-            
-        Returns:
-            List of constructed discovery_class instances.
+        Evaluates a dictionary mapping names to rulesets using bounded chunk pipelines.
         """
-        paths_to_evaluate = self._get_evaluation_paths(file_paths)
+        path_generator = self._get_evaluation_paths(file_paths)
+        
+        from itertools import islice
+        def get_chunks(iterable, size):
+            it = iter(iterable)
+            while True:
+                chunk = list(islice(it, size))
+                if not chunk:
+                    break
+                yield chunk
+
+        # Track evidence and maximum score seen for each rule per target
+        target_states = {
+            name: {
+                'evidence': set(),
+                'rule_scores': [0.0] * len(rules)
+            }
+            for name, rules in registry.items()
+        }
+
+        for chunk in get_chunks(path_generator, 1000):
+            for target_name, rules in registry.items():
+                state = target_states[target_name]
+                for idx, rule in enumerate(rules):
+                    result = rule.evaluate(chunk)
+                    # We max the score to avoid double-counting if a rule matches multiple chunks
+                    state['rule_scores'][idx] = max(state['rule_scores'][idx], result.score_delta)
+                    state['evidence'].update(result.matched_evidence)
+
         results = []
-
-        for target_name, rules in registry.items():
-            total_score = 0.0
-            all_evidence: Set[str] = set()
-
-            for rule in rules:
-                result = rule.evaluate(paths_to_evaluate)
-                total_score += result.score_delta
-                all_evidence.update(result.matched_evidence)
-
+        for target_name, state in target_states.items():
+            total_score = sum(state['rule_scores'])
             if total_score > 0:
                 confidence = min(1.0, total_score)
                 # Keep top 5 evidence to avoid giant JSON files
-                limited_evidence = sorted(list(all_evidence))[:5]
+                limited_evidence = sorted(list(state['evidence']))[:5]
                 
                 if discovery_class == RepositoryCapability:
                     results.append(RepositoryCapability(

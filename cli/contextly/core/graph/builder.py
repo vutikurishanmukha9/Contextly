@@ -101,21 +101,31 @@ class ImportGraphBuilder:
 
         # 2. Concurrently parse files into DTOs
         # Using ProcessPoolExecutor to bypass Python's GIL bottlenecks for CPU-heavy AST parsing.
-        # Limit to optimal workers to prevent overwhelming the disk/system.
-        dtos: List[ParsedFileDTO] = []
         
-        # Heuristic: For small repositories, sequential is faster.
-        # Also provides fallback if multithreading fails.
-        use_pool = len(target_files) > 100
+        # We process target_files in chunks to avoid OOM in large repos
+        from itertools import islice
+        def chunk_iterable(iterable, size):
+            it = iter(iterable)
+            while True:
+                c = list(islice(it, size))
+                if not c:
+                    break
+                yield c
+
+        use_pool = True
         root_str = str(self.root_dir)
         
-        def _run_pool(executor_class, pool_name: str, on_init):
+        # Initialize assembler once for the whole build
+        
+        def _process_chunk(chunk_files, pool_executor_class, pool_name, on_init=None):
+            dtos = []
             optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
             batch_size = optimal_workers * 32
-            with executor_class(max_workers=optimal_workers) as executor:
-                on_init()
+            with pool_executor_class(max_workers=optimal_workers) as executor:
+                if on_init:
+                    on_init()
                 in_flight = set()
-                target_iter = iter(target_files)
+                target_iter = iter(chunk_files)
                 future_to_file = {}
                 
                 def submit_next():
@@ -160,47 +170,56 @@ class ImportGraphBuilder:
                             self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
                             
                         submit_next()
+            return dtos
 
-        if use_pool:
-            from ..diagnostics import DiagnosticsContext
-            diagnostics = DiagnosticsContext()
-            pool_initialized = False
-            
-            def set_initialized():
-                nonlocal pool_initialized
-                pool_initialized = True
-                
-            try:
-                _run_pool(concurrent.futures.ProcessPoolExecutor, "ProcessPool", set_initialized)
-            except Exception as e:
-                if pool_initialized:
-                    diagnostics.add_error("ImportGraphBuilder", f"ProcessPool execution error (no retry): {str(e)}")
-                    use_pool = False
-                else:
-                    try:
-                        _run_pool(concurrent.futures.ThreadPoolExecutor, "ThreadPool", set_initialized)
-                    except Exception as thread_err:
-                        diagnostics.add_error("ImportGraphBuilder", f"ThreadPool fallback error: {str(thread_err)}")
-                        use_pool = False
-                
-        # Sequential Parsing Fallback
-        if not use_pool:
-            parsed_paths = {d.file_path for d in dtos}
-            for file_path in target_files:
-                if file_path in parsed_paths:
-                    continue
+        from ..diagnostics import DiagnosticsContext
+        diagnostics = DiagnosticsContext()
+        
+        all_dtos_for_relationships = []
+        
+        # Process in chunks of 500 files at a time
+        for chunk in chunk_iterable(target_files, 500):
+            chunk_dtos = []
+            if use_pool:
+                pool_initialized = False
+                def set_initialized():
+                    nonlocal pool_initialized
+                    pool_initialized = True
+                    
                 try:
-                    dto = _parse_file(file_path, root_str)
-                    if dto:
-                        if dto.error:
-                            console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
-                            self.failed_files[dto.file_path] = dto.error
-                        else:
-                            dtos.append(dto)
-                    else:
-                        self.failed_files[file_path] = "Empty parser output"
+                    chunk_dtos = _process_chunk(chunk, concurrent.futures.ProcessPoolExecutor, "ProcessPool", set_initialized)
                 except Exception as e:
-                    self.failed_files[file_path] = f"SequentialError: {str(e)}"
+                    if pool_initialized:
+                        diagnostics.add_error("ImportGraphBuilder", f"ProcessPool execution error (no retry): {str(e)}")
+                        use_pool = False
+                    else:
+                        try:
+                            chunk_dtos = _process_chunk(chunk, concurrent.futures.ThreadPoolExecutor, "ThreadPool", set_initialized)
+                        except Exception as thread_err:
+                            diagnostics.add_error("ImportGraphBuilder", f"ThreadPool fallback error: {str(thread_err)}")
+                            use_pool = False
+            
+            # Sequential fallback for this chunk if pool failed
+            if not use_pool:
+                for file_path in chunk:
+                    try:
+                        dto = _parse_file(file_path, root_str, self.max_file_size_mb)
+                        if dto:
+                            if dto.error:
+                                console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
+                                self.failed_files[dto.file_path] = dto.error
+                            else:
+                                chunk_dtos.append(dto)
+                        else:
+                            self.failed_files[file_path] = "Empty parser output"
+                    except Exception as e:
+                        self.failed_files[file_path] = f"SequentialError: {str(e)}"
+                        
+            # Immediately add nodes to assembler to free up memory from the full DTO tree
+            for dto in chunk_dtos:
+                self.assembler.add_node(dto)
+                # Keep lightweight DTO structure for building relationships later
+                all_dtos_for_relationships.append(dto)
 
         if self.failed_files:
             console.print(
@@ -211,11 +230,8 @@ class ImportGraphBuilder:
 
         # 3. Assemble the Graph deterministically
         # Sort DTOs by path to ensure stable IDs and predictable relationships.
-        dtos.sort(key=lambda x: x.file_path)
+        all_dtos_for_relationships.sort(key=lambda x: x.file_path)
         
-        for dto in dtos:
-            self.assembler.add_node(dto)
-            
-        self.assembler.build_relationships(dtos)
+        self.assembler.build_relationships(all_dtos_for_relationships)
         
         return self.assembler.graph
