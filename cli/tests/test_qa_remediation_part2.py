@@ -338,10 +338,8 @@ def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
     base_time = original_monotonic()
     def mock_monotonic():
         nonlocal call_count
-        # After the first wait cycle returns empty, time jumps 200s past deadline
-        if call_count > 0:
-            return base_time + 200
-        return base_time
+        # Advance time by 200s for each wait cycle so all batches eventually time out
+        return base_time + (call_count * 200)
         
     monkeypatch.setattr(concurrent.futures, "wait", mock_wait)
     monkeypatch.setattr(time, "monotonic", mock_monotonic)
