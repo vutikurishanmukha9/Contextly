@@ -109,10 +109,11 @@ class ImportGraphBuilder:
         use_pool = len(target_files) > 100
         root_str = str(self.root_dir)
         
-        def _run_pool(executor_class, pool_name: str):
+        def _run_pool(executor_class, pool_name: str, on_init):
             optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
             batch_size = optimal_workers * 32
             with executor_class(max_workers=optimal_workers) as executor:
+                on_init()
                 in_flight = set()
                 target_iter = iter(target_files)
                 future_to_file = {}
@@ -164,16 +165,20 @@ class ImportGraphBuilder:
             from ..diagnostics import DiagnosticsContext
             diagnostics = DiagnosticsContext()
             pool_initialized = False
-            try:
-                _run_pool(concurrent.futures.ProcessPoolExecutor, "ProcessPool")
+            
+            def set_initialized():
+                nonlocal pool_initialized
                 pool_initialized = True
+                
+            try:
+                _run_pool(concurrent.futures.ProcessPoolExecutor, "ProcessPool", set_initialized)
             except Exception as e:
                 if pool_initialized:
                     diagnostics.add_error("ImportGraphBuilder", f"ProcessPool execution error (no retry): {str(e)}")
                     use_pool = False
                 else:
                     try:
-                        _run_pool(concurrent.futures.ThreadPoolExecutor, "ThreadPool")
+                        _run_pool(concurrent.futures.ThreadPoolExecutor, "ThreadPool", set_initialized)
                     except Exception as thread_err:
                         diagnostics.add_error("ImportGraphBuilder", f"ThreadPool fallback error: {str(thread_err)}")
                         use_pool = False
