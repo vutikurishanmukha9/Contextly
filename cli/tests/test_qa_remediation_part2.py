@@ -316,20 +316,39 @@ def test_concurrency_error_logging(temp_repo, monkeypatch):
     assert "ConcurrencyError" in first_failed
 
 def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
+    """Verify that individual files exceeding the per-file deadline are cancelled gracefully
+    without aborting the entire pool."""
     import concurrent.futures
+    import time
     from contextly.core.graph.builder import ImportGraphBuilder
     
     runner.invoke(app, ["init"])
     (temp_repo / "src").mkdir(exist_ok=True, parents=True)
     for i in range(110):
         (temp_repo / "src" / f"dummy_{i}.py").write_text("def f(): pass")
-        
+
+    # Simulate perpetual hang: wait() never returns completed futures
+    call_count = 0
     def mock_wait(in_flight, timeout=None, return_when=None):
+        nonlocal call_count
+        call_count += 1
         return set(), in_flight
         
+    # Simulate elapsed time exceeding per-file deadline on second call
+    original_monotonic = time.monotonic
+    base_time = original_monotonic()
+    def mock_monotonic():
+        nonlocal call_count
+        # After the first wait cycle returns empty, time jumps 200s past deadline
+        if call_count > 0:
+            return base_time + 200
+        return base_time
+        
     monkeypatch.setattr(concurrent.futures, "wait", mock_wait)
+    monkeypatch.setattr(time, "monotonic", mock_monotonic)
     
     builder = ImportGraphBuilder(temp_repo)
+    # Should NOT raise — per-file timeout cancels individually
     builder.build()
     
     assert any("TimeoutError" in str(msg) for msg in builder.failed_files.values())

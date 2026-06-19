@@ -44,7 +44,21 @@ def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) ->
             content = raw_bytes.decode("utf-8")
         except UnicodeDecodeError:
             try:
-                content = raw_bytes.decode("latin-1")
+                from charset_normalizer import from_bytes
+                detection = from_bytes(raw_bytes).best()
+                if detection is None or detection.encoding is None:
+                    return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error="Skipped: undetectable encoding (likely binary)")
+                # charset-normalizer provides a coherence score (0.0-1.0); reject low-confidence detections
+                _MIN_ENCODING_COHERENCE = 0.5
+                if detection.coherence < _MIN_ENCODING_COHERENCE:
+                    return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"Skipped: low encoding confidence ({detection.encoding}, coherence={detection.coherence:.2f})")
+                content = str(detection)
+            except ImportError:
+                # Graceful degradation: if charset-normalizer is not installed, use latin-1
+                try:
+                    content = raw_bytes.decode("latin-1")
+                except Exception as e:
+                    return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"DecodeError: {str(e)}")
             except Exception as e:
                 return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"DecodeError: {str(e)}")
             
@@ -118,6 +132,14 @@ class ImportGraphBuilder:
         # Initialize assembler once for the whole build
         
         def _process_chunk(chunk_files, pool_executor_class, pool_name, on_init=None):
+            """
+            Processes a chunk of files through the given executor with per-file timeout tracking.
+            Individual files that exceed the deadline are cancelled and logged; the pool continues.
+            """
+            import time
+            _PER_FILE_TIMEOUT_SECONDS = 120
+            _WAIT_CYCLE_SECONDS = 5
+            
             dtos = []
             optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
             batch_size = optimal_workers * 32
@@ -127,6 +149,7 @@ class ImportGraphBuilder:
                 in_flight = set()
                 target_iter = iter(chunk_files)
                 future_to_file = {}
+                future_to_start = {}
                 
                 def submit_next():
                     try:
@@ -134,6 +157,7 @@ class ImportGraphBuilder:
                         future = executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)
                         in_flight.add(future)
                         future_to_file[future] = fp
+                        future_to_start[future] = time.monotonic()
                         return True
                     except StopIteration:
                         return False
@@ -142,22 +166,36 @@ class ImportGraphBuilder:
                     submit_next()
                     
                 while in_flight:
-                    done, not_done = concurrent.futures.wait(
+                    done, _ = concurrent.futures.wait(
                         in_flight,
-                        timeout=30,
+                        timeout=_WAIT_CYCLE_SECONDS,
                         return_when=concurrent.futures.FIRST_COMPLETED
                     )
                     
+                    # Check for individually timed-out futures
                     if not done:
-                        diagnostics.add_error("ImportGraphBuilder", f"{pool_name} timeout (Zombie detected). Aborting pool.")
-                        for future in in_flight:
-                            self.failed_files[future_to_file[future]] = f"ConcurrencyError: TimeoutError (Zombie {pool_name})"
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        raise TimeoutError(f"{pool_name} deadlocked.")
+                        now = time.monotonic()
+                        timed_out = [
+                            f for f in in_flight
+                            if (now - future_to_start.get(f, now)) > _PER_FILE_TIMEOUT_SECONDS
+                        ]
+                        for future in timed_out:
+                            file_path = future_to_file.pop(future, "unknown")
+                            future_to_start.pop(future, None)
+                            in_flight.discard(future)
+                            future.cancel()
+                            self.failed_files[file_path] = f"TimeoutError: AST parsing exceeded {_PER_FILE_TIMEOUT_SECONDS}s deadline"
+                            diagnostics.add_warning(
+                                "ImportGraphBuilder",
+                                f"File {file_path} exceeded {_PER_FILE_TIMEOUT_SECONDS}s parse deadline in {pool_name}. Skipping."
+                            )
+                            submit_next()
+                        continue
                         
                     for future in done:
-                        in_flight.remove(future)
-                        file_path = future_to_file.pop(future)
+                        in_flight.discard(future)
+                        file_path = future_to_file.pop(future, "unknown")
+                        future_to_start.pop(future, None)
                         try:
                             dto = future.result()
                             if dto:

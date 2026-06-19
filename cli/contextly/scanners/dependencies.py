@@ -7,6 +7,49 @@ from .base import BaseScanner, ScannerError
 from ..types.models import DependencyScanResult
 from ..utils.console import console
 
+# PEP 508-compliant patterns to skip non-package lines
+_URL_PREFIXES = ("git+", "http://", "https://", "svn+", "hg+")
+_SKIP_LINE_PREFIXES = ("-e", "-r", "-c", "-f", "--")
+
+
+def _extract_dep_name(raw: str) -> Optional[str]:
+    """
+    Extracts a normalized package name from a PEP 508 dependency string.
+    Handles version constraints, extras, environment markers, and URL specifications.
+    Returns None for lines that are not valid package references.
+    """
+    stripped = raw.strip()
+    if not stripped or stripped.startswith("#"):
+        return None
+
+    # Skip pip flags and editable installs
+    if any(stripped.lower().startswith(p) for p in _SKIP_LINE_PREFIXES):
+        return None
+
+    # Skip direct URL references (PEP 440 direct references, VCS URIs)
+    if any(stripped.startswith(p) for p in _URL_PREFIXES):
+        return None
+
+    # Handle PEP 508 URL specs: "requests @ https://..."
+    if " @ " in stripped:
+        name_part = stripped.split(" @ ")[0].strip()
+        # Strip extras from the name part
+        name_part = name_part.split("[")[0].strip()
+        return name_part if name_part else None
+
+    # Try spec-compliant parsing first
+    try:
+        from packaging.requirements import Requirement
+        req = Requirement(stripped)
+        return req.name
+    except Exception:
+        pass
+
+    # Fallback: strip environment markers, extras, and version constraints
+    clean = stripped.split(";")[0].split("[")[0].strip()
+    dep = re.split(r'[=<>~!]', clean)[0].strip()
+    return dep if dep else None
+
 try:
     import tomllib
 except ImportError:
@@ -106,12 +149,9 @@ class DependencyScanner(BaseScanner):
         try:
             with open(filepath, 'r', encoding="utf-8") as f:
                 for line in f:
-                    stripped = line.strip()
-                    if stripped and not stripped.startswith("#") and not stripped.startswith("-"):
-                        clean_dep = stripped.split(';')[0].split('[')[0].strip()
-                        dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
-                        if dep:
-                            python_set.add(dep)
+                    dep = _extract_dep_name(line)
+                    if dep:
+                        python_set.add(dep)
         except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
             console.print(f"[yellow]Warning:[/yellow] Could not access requirements.txt: {str(e)}")
             if strict:
@@ -132,24 +172,22 @@ class DependencyScanner(BaseScanner):
                         # Extract standard [project.dependencies]
                         deps = project.get("dependencies", [])
                         if isinstance(deps, list):
-                            for dep in deps:
-                                if isinstance(dep, str):
-                                    clean_dep = dep.split(';')[0].split('[')[0].strip()
-                                    clean_dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
-                                    if clean_dep:
-                                        python_set.add(clean_dep)
+                            for dep_str in deps:
+                                if isinstance(dep_str, str):
+                                    name = _extract_dep_name(dep_str)
+                                    if name:
+                                        python_set.add(name)
                                         
                         # Also extract [project.optional-dependencies]
                         opt_deps = project.get("optional-dependencies", {})
                         if isinstance(opt_deps, dict):
                             for group_deps in opt_deps.values():
                                 if isinstance(group_deps, list):
-                                    for dep in group_deps:
-                                        if isinstance(dep, str):
-                                            clean_dep = dep.split(';')[0].split('[')[0].strip()
-                                            clean_dep = re.split(r'[=<>~!]', clean_dep)[0].strip()
-                                            if clean_dep:
-                                                python_set.add(clean_dep)
+                                    for dep_str in group_deps:
+                                        if isinstance(dep_str, str):
+                                            name = _extract_dep_name(dep_str)
+                                            if name:
+                                                python_set.add(name)
                                                 
                     # Also extract Poetry dependencies
                     tool = data.get("tool")
