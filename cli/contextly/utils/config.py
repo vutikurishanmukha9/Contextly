@@ -7,11 +7,11 @@ class ProjectConfig(BaseModel):
     name: str = ""
 
 class DepthLimitsConfig(BaseModel):
-    analyzer: int = 6
-    generator_tree: int = 4
-    max_tree_breadth: int = 50
-    scanners: int = 4
-    discovery: int = 4
+    analyzer: int = Field(6, ge=0)
+    generator_tree: int = Field(4, ge=0)
+    max_tree_breadth: int = Field(50, ge=0)
+    scanners: int = Field(4, ge=0)
+    discovery: int = Field(4, ge=0)
 
 class PackerConfig(BaseModel):
     max_file_size_mb: float = 5.0

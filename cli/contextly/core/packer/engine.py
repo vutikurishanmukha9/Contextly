@@ -18,6 +18,8 @@ class PackerEngine:
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
         except ImportError:
             self.tokenizer = None
+            from ...core.diagnostics import DiagnosticsContext
+            DiagnosticsContext().add_warning("PackerEngine", "tiktoken not installed. Using character-count heuristic for token estimates, which may be inaccurate.")
 
         from ...utils.config import load_config_model
         self.config = load_config_model(root_dir)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import uuid
 import yaml
 from pathlib import Path
@@ -45,7 +46,7 @@ class MemoryEngine:
                 time.sleep(0.1)
                 attempts += 1
         else:
-            console.print("[yellow]Warning: Could not acquire memory lock, proceeding anyway.[/yellow]")
+            raise MemoryVaultError("Could not acquire memory lock after 5 seconds. Vault is deadlocked.")
             
         try:
             yield

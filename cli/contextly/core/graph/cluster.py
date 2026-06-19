@@ -95,6 +95,10 @@ class DomainClusterer:
                     node_to_domain[node.id] = new_domain
                     changed = True
 
+        if iterations == 100:
+            from contextly.core.diagnostics import DiagnosticsContext
+            DiagnosticsContext().add_warning("DomainClusterer", "Graph propagation reached 100 iterations. Cyclic dependencies detected.")
+
         # Pass 3: Fallback for orphans
         for node in graph.nodes:
             if node.id not in node_to_domain:

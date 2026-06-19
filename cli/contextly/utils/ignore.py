@@ -8,16 +8,9 @@ class IgnoreEngine:
         self.root_dir = root_dir
         self.no_default_excludes = no_default_excludes
         
+        from .constants import ALWAYS_SKIP_DIRS
         # Hardcoded defaults that should never be scanned
-        self.default_ignores = [
-            "node_modules",
-            "venv",
-            ".venv",
-            "__pycache__",
-            "dist",
-            "build",
-            ".next"
-        ]
+        self.default_ignores = list(ALWAYS_SKIP_DIRS)
         
         self.spec = self._build_spec()
         

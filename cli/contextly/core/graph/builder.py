@@ -14,7 +14,7 @@ from ...utils.console import console
 import threading
 
 
-def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
+def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) -> Optional[ParsedFileDTO]:
     """
     Module-level function required for ProcessPoolExecutor serialization.
     Instantiates the correct parser based on file extension and processes the file.
@@ -25,8 +25,8 @@ def _parse_file(file_path: str, root_dir: str) -> Optional[ParsedFileDTO]:
         file_path_obj = Path(file_path)
         abs_path = root_path / file_path_obj
 
-        # Guard: enforce a hard 2MB ceiling to prevent OOM on generated bundles
-        _AST_PARSE_MAX_BYTES = 2 * 1024 * 1024
+        # Guard: enforce a hard ceiling to prevent OOM on generated bundles
+        _AST_PARSE_MAX_BYTES = int(max_file_size_mb * 1024 * 1024)
 
         try:
             with open(abs_path, "rb") as f:
@@ -64,15 +64,12 @@ class ImportGraphBuilder:
     Handles file discovery, thread/process pool management, and graph assembly delegation.
     """
     
-    def __init__(self, root_dir: Path):
+    def __init__(self, root_dir: Path, max_file_size_mb: float = 2.0):
         self.root_dir = root_dir
         self.failed_files = {} # file_path -> error_message
+        self.max_file_size_mb = max_file_size_mb
         
-        self._ALWAYS_SKIP = {
-            ".git", "node_modules", "venv", ".venv", "__pycache__",
-            ".contextly", "dist", "build", ".next", ".tox", ".eggs"
-        }
-        
+
         # Dynamically load supported extensions from the registry
         self._SUPPORTED_EXTENSIONS = set(ParserRegistry._registry.keys())
 
@@ -112,122 +109,71 @@ class ImportGraphBuilder:
         use_pool = len(target_files) > 100
         root_str = str(self.root_dir)
         
+        def _run_pool(executor_class, pool_name: str):
+            optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
+            batch_size = optimal_workers * 32
+            with executor_class(max_workers=optimal_workers) as executor:
+                in_flight = set()
+                target_iter = iter(target_files)
+                future_to_file = {}
+                
+                def submit_next():
+                    try:
+                        fp = next(target_iter)
+                        future = executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)
+                        in_flight.add(future)
+                        future_to_file[future] = fp
+                        return True
+                    except StopIteration:
+                        return False
+                        
+                for _ in range(batch_size):
+                    submit_next()
+                    
+                while in_flight:
+                    done, not_done = concurrent.futures.wait(
+                        in_flight,
+                        timeout=30,
+                        return_when=concurrent.futures.FIRST_COMPLETED
+                    )
+                    
+                    if not done:
+                        diagnostics.add_error("ImportGraphBuilder", f"{pool_name} timeout (Zombie detected). Aborting pool.")
+                        for future in in_flight:
+                            self.failed_files[future_to_file[future]] = f"ConcurrencyError: TimeoutError (Zombie {pool_name})"
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        raise TimeoutError(f"{pool_name} deadlocked.")
+                        
+                    for future in done:
+                        in_flight.remove(future)
+                        file_path = future_to_file.pop(future)
+                        try:
+                            dto = future.result()
+                            if dto:
+                                if dto.error:
+                                    diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
+                                    self.failed_files[dto.file_path] = dto.error
+                                else:
+                                    dtos.append(dto)
+                        except Exception as e:
+                            self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
+                            
+                        submit_next()
+
         if use_pool:
             from ..diagnostics import DiagnosticsContext
             diagnostics = DiagnosticsContext()
             pool_initialized = False
             try:
-                optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
-                batch_size = optimal_workers * 32  # Bounded submission window
-                with concurrent.futures.ProcessPoolExecutor(max_workers=optimal_workers) as executor:
-                    pool_initialized = True
-                    in_flight = set()
-                    target_iter = iter(target_files)
-                    future_to_file = {}
-                    
-                    def submit_next():
-                        try:
-                            fp = next(target_iter)
-                            future = executor.submit(_parse_file, fp, root_str)
-                            in_flight.add(future)
-                            future_to_file[future] = fp
-                            return True
-                        except StopIteration:
-                            return False
-                            
-                    # Initial fill to bounded limit
-                    for _ in range(batch_size):
-                        submit_next()
-                        
-                    while in_flight:
-                        done, not_done = concurrent.futures.wait(
-                            in_flight,
-                            timeout=30,
-                            return_when=concurrent.futures.FIRST_COMPLETED
-                        )
-                        
-                        if not done:
-                            diagnostics.add_error("ImportGraphBuilder", "ProcessPool timeout (Zombie process detected). Aborting pool.")
-                            for future in in_flight:
-                                self.failed_files[future_to_file[future]] = "ConcurrencyError: TimeoutError (Zombie Process)"
-                            
-                            # Orphan the deadlocked pool (cancel pending tasks, don't wait for zombies)
-                            executor.shutdown(wait=False, cancel_futures=True)
-                            raise TimeoutError("Process pool deadlocked.")
-                            
-                        for future in done:
-                            in_flight.remove(future)
-                            file_path = future_to_file.pop(future)
-                            try:
-                                dto = future.result()
-                                if dto:
-                                    if dto.error:
-                                        diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
-                                        self.failed_files[dto.file_path] = dto.error
-                                    else:
-                                        dtos.append(dto)
-                            except Exception as e:
-                                self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
-                                
-                            # Keep queue saturated
-                            submit_next()
+                _run_pool(concurrent.futures.ProcessPoolExecutor, "ProcessPool")
+                pool_initialized = True
             except Exception as e:
                 if pool_initialized:
-                    # Execution failure (OOM, Timeout): do NOT retry in ThreadPool — fall through to sequential
                     diagnostics.add_error("ImportGraphBuilder", f"ProcessPool execution error (no retry): {str(e)}")
                     use_pool = False
                 else:
-                    # Initialization failure (fork/spawn restrictions): safe to retry with threads
                     try:
-                        optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
-                        batch_size = optimal_workers * 32
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
-                            in_flight = set()
-                            target_iter = iter(target_files)
-                            future_to_file = {}
-                            
-                            def submit_next():
-                                try:
-                                    fp = next(target_iter)
-                                    future = executor.submit(_parse_file, fp, root_str)
-                                    in_flight.add(future)
-                                    future_to_file[future] = fp
-                                    return True
-                                except StopIteration:
-                                    return False
-                                    
-                            for _ in range(batch_size):
-                                submit_next()
-                                
-                            while in_flight:
-                                done, not_done = concurrent.futures.wait(
-                                    in_flight,
-                                    timeout=30,
-                                    return_when=concurrent.futures.FIRST_COMPLETED
-                                )
-                                
-                                if not done:
-                                    diagnostics.add_error("ImportGraphBuilder", "ThreadPool timeout. Aborting pool.")
-                                    for future in in_flight:
-                                        self.failed_files[future_to_file[future]] = "ConcurrencyError: TimeoutError (Zombie Thread)"
-                                    executor.shutdown(wait=False, cancel_futures=True)
-                                    raise TimeoutError("Thread pool deadlocked.")
-                                    
-                                for future in done:
-                                    in_flight.remove(future)
-                                    file_path = future_to_file.pop(future)
-                                    try:
-                                        dto = future.result()
-                                        if dto:
-                                            if dto.error:
-                                                diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
-                                                self.failed_files[dto.file_path] = dto.error
-                                            else:
-                                                dtos.append(dto)
-                                    except Exception as e:
-                                        self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
-                                        
-                                    submit_next()
+                        _run_pool(concurrent.futures.ThreadPoolExecutor, "ThreadPool")
                     except Exception as thread_err:
                         diagnostics.add_error("ImportGraphBuilder", f"ThreadPool fallback error: {str(thread_err)}")
                         use_pool = False

@@ -6,6 +6,9 @@ ALWAYS_SKIP_DIRS = {
     ".mypy_cache", ".pytest_cache", "htmlcov"
 }
 
+SECURITY_CRITICAL_NAMES = {".git", ".contextly", ".npmrc", "id_rsa", "id_ed25519"}
+SENSITIVE_DIRS = {".ssh", ".aws", ".kube", ".gcp", ".docker", ".gnupg"}
+
 def is_skippable(path: Path) -> bool:
     """
     Returns True if the path represents a common build artifact, cache, 

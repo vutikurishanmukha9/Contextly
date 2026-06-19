@@ -18,15 +18,15 @@ class TypeScriptASTParser(BaseASTParser):
     Extracts exports and resolves import paths accurately without regex.
     """
     
-    def __init__(self):
+    def __init__(self, extension: str = "ts"):
         self.parser = None
         self._tsconfig_paths = None
         self._root_dir = None
         if HAS_TREE_SITTER:
             try:
-                # Use typescript language
-                self.language = get_language('typescript')
-                self.parser = get_parser('typescript')
+                lang_name = 'tsx' if extension.lower() in ('tsx', 'jsx') else 'typescript'
+                self.language = get_language(lang_name)
+                self.parser = get_parser(lang_name)
             except Exception:
                 pass
 

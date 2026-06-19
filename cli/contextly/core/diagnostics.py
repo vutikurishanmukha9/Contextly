@@ -43,6 +43,11 @@ class DiagnosticsContext:
             if not self._messages:
                 return
 
+    def clear(self) -> None:
+        """Clears all diagnostics."""
+        with self._msg_lock:
+            self._messages = []
+
             console.print("\n[bold]Diagnostic Report:[/bold]")
             for msg in self._messages:
                 if msg.severity == "ERROR":

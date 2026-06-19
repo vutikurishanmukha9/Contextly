@@ -49,7 +49,10 @@ class ParserRegistry:
             parser_class = cls._registry.get(ext)
             
         if parser_class:
-            instance = parser_class()
+            if issubclass(parser_class, TypeScriptASTParser):
+                instance = parser_class(extension=ext)
+            else:
+                instance = parser_class()
             cls._local.instances[ext] = instance
             return instance
             

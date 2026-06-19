@@ -27,6 +27,9 @@ class AnalyzerEngine:
         Orchestrates all scanners and generates PROJECT_CONTEXT.md.
         Returns the generated RepositoryIntelligence object.
         """
+        from ...core.diagnostics import DiagnosticsContext
+        DiagnosticsContext().clear()
+        
         from ...utils.walker import RepoWalker
         from ...utils.ignore import IgnoreEngine
         import os
@@ -35,12 +38,7 @@ class AnalyzerEngine:
         
         # 1. Single unified walk of the repository to discover all valid files
         # We use a depth of 6 and the standard exclusion list for maximum coverage
-        SECURITY_CRITICAL_NAMES = {".git", ".contextly", ".npmrc", "id_rsa", "id_ed25519"}
-        SENSITIVE_DIRS = {".ssh", ".aws", ".kube", ".gcp", ".docker", ".gnupg"}
-        BUILD_DIRS = {
-            "node_modules", "venv", ".venv", "__pycache__",
-            "dist", "build", ".next", ".tox", ".eggs"
-        }
+        from ...utils.constants import ALWAYS_SKIP_DIRS, SECURITY_CRITICAL_NAMES, SENSITIVE_DIRS
         
         ignorer = IgnoreEngine(self.root_dir, no_default_excludes=self.no_default_excludes)
         
@@ -48,7 +46,7 @@ class AnalyzerEngine:
             name = path.name.lower()
             if name in SENSITIVE_DIRS or name == ".git" or name == ".contextly":
                 return True
-            if not self.no_default_excludes and name in BUILD_DIRS:
+            if not self.no_default_excludes and name in ALWAYS_SKIP_DIRS:
                 return True
             return ignorer.is_ignored(path)
 
@@ -90,7 +88,7 @@ class AnalyzerEngine:
         memory_data = memory_engine.load_memory()
         
         # Build the AST graph
-        graph_builder = ImportGraphBuilder(self.root_dir)
+        graph_builder = ImportGraphBuilder(self.root_dir, max_file_size_mb=self.config.packer.max_file_size_mb)
         ast_graph = graph_builder.build(file_paths=all_files)
         
         # Cluster the graph into Domains
