@@ -57,7 +57,7 @@ def load_config(root_dir: Path) -> Optional[Dict[str, Any]]:
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
-    except Exception:
+    except (yaml.YAMLError, ValueError):
         return None
 
 def load_config_model(root_dir: Path) -> ContextlyConfig:
@@ -71,9 +71,13 @@ def load_config_model(root_dir: Path) -> ContextlyConfig:
             if not isinstance(data, dict):
                 return ContextlyConfig()
             return ContextlyConfig.model_validate(data)
+    except (yaml.YAMLError, ValueError) as e:
+        from .exceptions import ConfigurationError
+        raise ConfigurationError(f"Configuration Error in .contextly/config.yaml:\n{e}") from e
     except Exception as e:
         import pydantic
-        if isinstance(e, (pydantic.ValidationError, yaml.YAMLError)):
+        if isinstance(e, pydantic.ValidationError):
             from .exceptions import ConfigurationError
             raise ConfigurationError(f"Configuration Error in .contextly/config.yaml:\n{e}") from e
-        return ContextlyConfig()
+        # Let OSError (e.g. PermissionError) bubble up instead of silently masking it
+        raise

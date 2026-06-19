@@ -34,13 +34,13 @@ class GraphAssembler:
         node_id = f"node_{node_hash}"
         
         # Determine basic Node Type using strict segment-level and suffix checks
-        path_parts = [p.lower() for p in Path(dto.file_path).parts]
+        dir_parts = [p.lower() for p in Path(dto.file_path).parent.parts]
         file_stem = Path(dto.file_path).stem.lower()
         
-        is_service_dir = "services" in path_parts or "service" in path_parts
+        is_service_dir = any("service" in p for p in dir_parts)
         is_service_file = file_stem == "service" or file_stem.endswith("service") or file_stem.endswith("_service") or file_stem.endswith(".service")
         
-        is_model_dir = "models" in path_parts or "model" in path_parts or "schemas" in path_parts or "schema" in path_parts
+        is_model_dir = any(x in p for p in dir_parts for x in ("model", "schema"))
         is_model_file = file_stem in ("model", "schema") or file_stem.endswith("model") or file_stem.endswith("_model") or file_stem.endswith(".model") or file_stem.endswith("schema") or file_stem.endswith("_schema") or file_stem.endswith(".schema")
         
         node_type = NodeType.COMPONENT
@@ -60,12 +60,18 @@ class GraphAssembler:
         self.graph.nodes.append(node)
         
         # Add to resolution tables
-        # Strip extension for module imports
         base_path = dto.file_path
         if "." in dto.file_path:
             base_path = dto.file_path.rsplit(".", 1)[0]
             
-        self._path_to_node_id[base_path] = node_id
+        current_id = self._path_to_node_id.get(base_path)
+        if current_id:
+            ext = dto.file_path.split(".")[-1].lower()
+            if ext not in ("css", "scss", "test", "spec", "md", "json", "yaml", "yml"):
+                self._path_to_node_id[base_path] = node_id
+        else:
+            self._path_to_node_id[base_path] = node_id
+            
         self._exact_to_node_id[dto.file_path] = node_id
         
         return node_id

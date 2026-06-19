@@ -28,33 +28,14 @@ class MemoryEngine:
 
     @contextmanager
     def _lock(self):
-        """Cross-platform directory-based locking mechanism."""
-        lock_dir = self.memory_dir / "rules.lock"
-        attempts = 0
-        while attempts < 50:
-            try:
-                lock_dir.mkdir()
-                break
-            except FileExistsError:
-                try:
-                    # Check for stale lock (older than 10 seconds)
-                    if lock_dir.stat().st_mtime < time.time() - 10:
-                        lock_dir.rmdir()
-                        continue
-                except OSError:
-                    pass
-                time.sleep(0.1)
-                attempts += 1
-        else:
-            raise MemoryVaultError("Could not acquire memory lock after 5 seconds. Vault is deadlocked.")
-            
+        """Cross-platform atomic locking using filelock."""
+        from filelock import FileLock, Timeout
+        lock_file = self.memory_dir / "rules.lock"
         try:
-            yield
-        finally:
-            try:
-                lock_dir.rmdir()
-            except OSError:
-                pass
+            with FileLock(lock_file, timeout=5):
+                yield
+        except Timeout:
+            raise MemoryVaultError("Could not acquire memory lock after 5 seconds. Vault is deadlocked.")
             
     def _save_memory(self, memory: ProjectMemory):
         """Serializes the ProjectMemory model to YAML and writes it atomically."""
@@ -77,9 +58,16 @@ class MemoryEngine:
                     console.print("[yellow]Warning: Memory file is corrupt (not a mapping). Falling back to empty memory.[/yellow]")
                     return ProjectMemory()
                 return ProjectMemory.model_validate(data)
-        except Exception as e:
+        except (yaml.YAMLError, ValueError) as e:
             console.print(f"[yellow]Warning: Failed to load memory ({e}). Falling back to empty memory.[/yellow]")
             return ProjectMemory()
+        except Exception as e:
+            import pydantic
+            if isinstance(e, pydantic.ValidationError):
+                console.print(f"[yellow]Warning: Memory file validation failed ({e}). Falling back to empty memory.[/yellow]")
+                return ProjectMemory()
+            # Allow OS/IO errors to propagate and abort operations to prevent data destruction
+            raise
             
     def add_rule(self, category: str, rule_text: str, confidence: float, source: str, name: str | None = None) -> bool:
         """Adds a rule to memory, avoiding exact duplicates."""
