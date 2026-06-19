@@ -47,4 +47,18 @@ def temp_python_repo(monkeypatch):
         except Exception:
             pass
 
+@pytest.fixture(autouse=True)
+def disable_process_pool(monkeypatch):
+    """
+    Globally replaces ProcessPoolExecutor with ThreadPoolExecutor during tests.
+    This prevents pytest-cov from deadlocking on Linux when using 'spawn' context 
+    with tree-sitter C-extensions.
+    """
+    import concurrent.futures
+    class MockProcessPoolExecutor(concurrent.futures.ThreadPoolExecutor):
+        def __init__(self, max_workers=None, mp_context=None, initializer=None, initargs=()):
+            super().__init__(max_workers=max_workers, initializer=initializer, initargs=initargs)
+            
+    monkeypatch.setattr(concurrent.futures, "ProcessPoolExecutor", MockProcessPoolExecutor)
+
 
