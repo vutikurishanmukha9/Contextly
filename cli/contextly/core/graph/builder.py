@@ -143,7 +143,16 @@ class ImportGraphBuilder:
             dtos = []
             optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
             batch_size = optimal_workers * 32
-            with pool_executor_class(max_workers=optimal_workers) as executor:
+            
+            kwargs = {"max_workers": optimal_workers}
+            if pool_executor_class is concurrent.futures.ProcessPoolExecutor:
+                import multiprocessing
+                try:
+                    kwargs["mp_context"] = multiprocessing.get_context("spawn")
+                except ValueError:
+                    pass
+                    
+            with pool_executor_class(**kwargs) as executor:
                 if on_init:
                     on_init()
                 in_flight = set()
