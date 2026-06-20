@@ -45,8 +45,7 @@ jobs:
       - name: Audit CLI dependencies
         run: |
           cd cli
-          pip install -e .
-          pip-audit --strict --desc --skip-editable
+          pip-audit . --strict --desc
 
   pypi-publish:
     name: Build and publish to PyPI
