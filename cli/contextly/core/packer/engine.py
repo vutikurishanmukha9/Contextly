@@ -70,10 +70,9 @@ class PackerEngine:
         base_name = safe_pack_name
         output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
         counter = 1
-        fd = None
         while True:
             try:
-                fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
+                fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
                 break
             except FileExistsError:
                 if counter > 10000:
@@ -96,6 +95,11 @@ class PackerEngine:
         for target_path in target_paths:
             try:
                 target_path = target_path.resolve()
+                if not str(target_path).startswith(str(self.root_dir.resolve())):
+                    from ...core.diagnostics import DiagnosticsContext
+                    DiagnosticsContext().add_warning("PackerEngine", f"Path traversal attempt blocked: {target_path}")
+                    continue
+
                 if target_path.is_file():
                     if not self.ignorer.is_ignored(target_path):
                         all_files_set.add(target_path)
@@ -103,6 +107,10 @@ class PackerEngine:
                     
                 for root, dirs, files in os.walk(target_path):
                     root_path = Path(root).resolve()
+                    if not str(root_path).startswith(str(self.root_dir.resolve())):
+                        from ...core.diagnostics import DiagnosticsContext
+                        DiagnosticsContext().add_warning("PackerEngine", f"Path traversal attempt blocked: {root_path}")
+                        continue
                     
                     # Prune ignored directories in-place to avoid deep traversal
                     dirs[:] = [d for d in dirs if not self.ignorer.is_ignored(root_path / d)]
@@ -127,11 +135,16 @@ class PackerEngine:
         header_text = f"# Context Pack: {pack_name}\n\n"
         current_tokens = self._estimate_tokens(header_text)
             
-        with os.fdopen(fd, "w", encoding="utf-8") as out_f:
-            out_f.write(header_text)
+        with os.fdopen(fd, "wb") as out_f:
+            out_f.write(header_text.encode("utf-8"))
             
             for path in ranked_files:
+                start_pos = None
                 try:
+                    # Flush before recording position for reliable rollback
+                    out_f.flush()
+                    start_pos = out_f.tell()
+                    
                     file_size = path.stat().st_size
                     if file_size > self.max_file_size:
                         skipped_files.append(path)
@@ -142,10 +155,6 @@ class PackerEngine:
                     except ValueError:
                         rel_path = path.name
                     ext = path.suffix.replace('.', '')
-                    
-                    # Flush before recording position for reliable rollback
-                    out_f.flush()
-                    start_pos = out_f.tell()
                     
                     with open(path, "rb") as in_f:
                         first_kb = in_f.read(1024)
@@ -183,9 +192,9 @@ class PackerEngine:
                                 out_f.truncate(start_pos)
                                 continue
                                 
-                            out_f.write(header_str)
-                            out_f.write(body)
-                            out_f.write(footer_str)
+                            out_f.write(header_str.encode("utf-8"))
+                            out_f.write(body.encode("utf-8"))
+                            out_f.write(footer_str.encode("utf-8"))
                             current_tokens += file_tokens
                             selected_files.append(path)
                             
@@ -213,15 +222,15 @@ class PackerEngine:
                                 out_f.truncate(start_pos)
                                 continue
                                 
-                            out_f.write(header_str)
-                            out_f.write(body)
-                            out_f.write(footer_str)
+                            out_f.write(header_str.encode("utf-8"))
+                            out_f.write(body.encode("utf-8"))
+                            out_f.write(footer_str.encode("utf-8"))
                             current_tokens += file_tokens
                             selected_files.append(path)
                             
                         else:
                             header_str = f"## File: `{rel_path}`\n```{ext}\n"
-                            out_f.write(header_str)
+                            out_f.write(header_str.encode("utf-8"))
                             
                             file_tokens = self._estimate_tokens(header_str)
                             decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
@@ -235,7 +244,7 @@ class PackerEngine:
                                         is_excluded = True
                                         break
                                     
-                                    out_f.write(text_chunk)
+                                    out_f.write(text_chunk.encode("utf-8"))
                                     
                                 if not chunk:
                                     break
@@ -247,29 +256,30 @@ class PackerEngine:
                                 out_f.seek(start_pos)
                                 continue
                                 
-                            out_f.write(f"\n```\n\n")
+                            out_f.write(b"\n```\n\n")
                             current_tokens += file_tokens
                             selected_files.append(path)
                             
                 except Exception as e:
                     # Roll back any partially written content to prevent stream corruption
                     # Defensive flush before rollback
-                    out_f.flush()
-                    out_f.seek(start_pos)
-                    out_f.truncate(start_pos)
+                    if start_pos is not None:
+                        out_f.flush()
+                        out_f.seek(start_pos)
+                        out_f.truncate(start_pos)
                     skipped_files.append(path)
                     from ...core.diagnostics import DiagnosticsContext
                     DiagnosticsContext().add_warning("PackerEngine", f"Failed to pack {path.name}: {type(e).__name__} - {str(e)}")
 
             if excluded_files:
-                out_f.write(f"## Excluded Files (Token Limit)\n")
-                out_f.write(f"The following {len(excluded_files)} files were excluded to fit within the {max_tokens} token limit:\n")
+                out_f.write(b"## Excluded Files (Token Limit)\n")
+                out_f.write(f"The following {len(excluded_files)} files were excluded to fit within the {max_tokens} token limit:\n".encode("utf-8"))
                 for path in excluded_files:
                     try:
                         rel_path = path.relative_to(self.root_dir).as_posix()
                     except ValueError:
                         rel_path = path.name
-                    out_f.write(f"- `{rel_path}`\n")
+                    out_f.write(f"- `{rel_path}`\n".encode("utf-8"))
 
         # Compute final exact token count from the completed output file
         if self.tokenizer:

@@ -71,19 +71,20 @@ class AnalyzerEngine:
 
     def _compute_hash(self, all_files: list) -> str:
         """
-        Computes a SHA-256 hash over the byte content of all discovered files.
-        Files that cannot be read are logged via DiagnosticsContext, not silently dropped.
+        Computes a SHA-256 hash using file metadata (path, size, mtime) to 
+        minimize TOCTOU race conditions and drastically improve performance.
         """
         hash_obj = hashlib.sha256()
         for f in all_files:
             try:
-                with open(self.root_dir / f, "rb") as f_in:
-                    while chunk := f_in.read(8192):
-                        hash_obj.update(chunk)
+                abs_path = self.root_dir / f
+                stat = abs_path.stat()
+                metadata = f"{f}|{stat.st_size}|{stat.st_mtime}"
+                hash_obj.update(metadata.encode("utf-8"))
             except OSError as e:
                 DiagnosticsContext().add_warning(
                     "AnalyzerEngine",
-                    f"Cannot hash file {f}: {type(e).__name__} - {e}"
+                    f"Cannot hash metadata for {f}: {type(e).__name__} - {e}"
                 )
         return hash_obj.hexdigest()
 

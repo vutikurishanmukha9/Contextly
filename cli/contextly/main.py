@@ -59,13 +59,21 @@ def main():
         # Write full traceback to a secure log file instead of exposing
         # internal paths and dependency versions to stdout/CI logs.
         import traceback
+        import os
         from pathlib import Path
         from datetime import datetime
         
         log_dir = Path.home() / ".contextly" / "logs"
         try:
             log_dir.mkdir(parents=True, exist_ok=True)
+            os.chmod(log_dir, 0o700)
+            
             crash_log = log_dir / "crash.log"
+            if not crash_log.exists():
+                crash_log.touch(mode=0o600)
+            else:
+                os.chmod(crash_log, 0o600)
+                
             with open(crash_log, "a", encoding="utf-8") as lf:
                 lf.write(f"\n--- {datetime.now().isoformat()} ---\n")
                 traceback.print_exc(file=lf)
