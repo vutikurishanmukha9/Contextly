@@ -31,7 +31,7 @@ function Landing() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
             <span className="text-xs font-medium text-black/70 tracking-wide">
-              v1.0.6 now available
+              v1.0.7 now available
             </span>
           </div>
 
@@ -94,7 +94,7 @@ function Landing() {
                 <span className="text-green-400">~/project</span>
                 <span className="text-white">$ contextly pack .</span>
               </div>
-              <div className="mt-4 text-blue-400">Context-Ly Engine v1.0.6</div>
+              <div className="mt-4 text-blue-400">Context-Ly Engine v1.0.7</div>
               <div className="mt-2 text-white/50">Analyzing 1,420 files...</div>
               <div className="mt-1 text-white/50">Applying AST compression...</div>
               <div className="mt-1 text-white/50">Writing fenced Markdown context...</div>

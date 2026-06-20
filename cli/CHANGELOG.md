@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [1.0.7] - 2026-06-20
+
+#### Added
+- **Analytics & Stats Command**: Added `contextly stats` command offering deep insights into project health, structure, and cyclomatic complexity using pluggable metric providers.
+
+#### Fixed
+- **Packer Engine Integrity**: Fixed a state-rollback truncation bug (`PACK-001`) that could silently discard bytes if an error occurred mid-pack stream.
+- **Repository Path Traversal Security**: Hardened context generation paths against arbitrary symlink traversal outside of the root boundary (`SEC-001`).
+- **File Output Security**: Pack outputs and crash logs are now strictly masked to `0o600` and `0o700` (`SEC-002`, `SEC-003`).
+- **Stream Corruption**: Enforced binary-mode stream handling (`REL-001`) to prevent Windows text-translation corruptions during pack rollbacks.
+- **Cache TOCTOU Mitigations**: Replaced full-byte hashing with high-performance metadata snapshots in the `AnalyzerEngine` (`ARCH-001`) to eliminate Time-Of-Check to Time-Of-Use cache race conditions.
+- **Root Discovery Resilience**: Patched a legacy lookup path (`FS-002`) in `find_project_root` to correctly target `config.yaml`.
+
 ### [1.0.6] - 2026-06-16
 
 #### Fixed
