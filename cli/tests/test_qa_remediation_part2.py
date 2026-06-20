@@ -303,6 +303,8 @@ def test_concurrency_error_logging(temp_repo, monkeypatch):
     def mock_parse_file(file_path, root_dir, max_file_size_mb=2.0):
         raise RuntimeError("Simulated concurrency failure")
         
+    import pebble
+    monkeypatch.setattr(pebble, "ProcessPool", pebble.ThreadPool)
     monkeypatch.setattr(builder_module, "_parse_file", mock_parse_file)
     
     builder = ImportGraphBuilder(temp_repo)
@@ -314,10 +316,15 @@ def test_concurrency_error_logging(temp_repo, monkeypatch):
     first_failed = list(builder.failed_files.values())[0]
     assert "Simulated concurrency failure" in first_failed
 
+import time
+def _hanging_parse_for_timeout(file_path, root_dir, max_file_size_mb=2.0):
+    time.sleep(10)
+    # Will be killed by Pebble process pool timeout
+    return None
+
 def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
     """Verify that individual files exceeding the worker parse timeout produce
     TimeoutError DTOs without deadlocking the executor pool."""
-    import time
     from contextly.core.graph import builder as builder_module
     from contextly.core.graph.builder import ImportGraphBuilder
     
@@ -329,13 +336,10 @@ def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
     # Set a very short timeout so the test completes quickly
     monkeypatch.setattr(builder_module, "_WORKER_PARSE_TIMEOUT_SECONDS", 0.5)
     
-    # Make _parse_file_core hang indefinitely to simulate a stuck parser
-    original_core = builder_module._parse_file_core
-    def hanging_parse_core(file_path, root_dir, max_file_size_mb=2.0):
-        time.sleep(10)  # Will be interrupted by the 0.5s worker timeout
-        return original_core(file_path, root_dir, max_file_size_mb)
+    # Do not mock ProcessPool -> ThreadPool here, because we NEED ProcessPool
+    # to actually kill the hanging worker and unblock `wait()`.
     
-    monkeypatch.setattr(builder_module, "_parse_file_core", hanging_parse_core)
+    monkeypatch.setattr(builder_module, "_parse_file", _hanging_parse_for_timeout)
     
     builder = ImportGraphBuilder(temp_repo)
     # Should NOT raise — worker timeout produces error DTOs gracefully
@@ -362,6 +366,8 @@ def test_builder_dto_error_handling(temp_repo, monkeypatch):
             error="Mock DTO Error"
         )
         
+    import pebble
+    monkeypatch.setattr(pebble, "ProcessPool", pebble.ThreadPool)
     monkeypatch.setattr(builder_module, "_parse_file", mock_parse_file)
     
     builder = ImportGraphBuilder(temp_repo)
@@ -387,14 +393,14 @@ def test_real_process_pool_no_fallback(temp_repo, monkeypatch):
     ISSUE-001 / ISSUE-002: Test that the real ProcessPoolExecutor works
     without throwing NameError, bypassing the conftest single-threaded mock.
     """
-    import concurrent.futures.process
+    import pebble
     from contextly.core.graph.builder import ImportGraphBuilder
     from contextly.core.diagnostics import DiagnosticsContext
     
-    # Bypass the autouse fixture from conftest
+    # Bypass the autouse fixture from conftest if necessary
     monkeypatch.setattr(
         "concurrent.futures.ProcessPoolExecutor", 
-        concurrent.futures.process.ProcessPoolExecutor
+        pebble.ProcessPool
     )
     
     DiagnosticsContext().clear()

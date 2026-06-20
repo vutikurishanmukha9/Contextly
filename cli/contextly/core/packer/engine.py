@@ -148,7 +148,7 @@ class PackerEngine:
                             except UnicodeDecodeError:
                                 skipped_files.append(path)
                                 out_f.seek(start_pos)
-                                out_f.truncate()
+                                out_f.truncate(start_pos)
                                 continue
                                 
                             compressed = self.compressor.compress(path, raw_code)
@@ -165,7 +165,7 @@ class PackerEngine:
                             if max_tokens and current_tokens + file_tokens > max_tokens:
                                 excluded_files.append(path)
                                 out_f.seek(start_pos)
-                                out_f.truncate()
+                                out_f.truncate(start_pos)
                                 continue
                                 
                             out_f.write(body)
@@ -200,7 +200,7 @@ class PackerEngine:
                             except UnicodeDecodeError:
                                 skipped_files.append(path)
                                 out_f.seek(start_pos)
-                                out_f.truncate()
+                                out_f.truncate(start_pos)
                                 continue
                                 
                             if is_excluded:
@@ -214,11 +214,13 @@ class PackerEngine:
                             current_tokens += file_tokens
                             selected_files.append(path)
                             
-                except Exception:
+                except Exception as e:
                     # Roll back any partially written content to prevent stream corruption
                     out_f.seek(start_pos)
-                    out_f.truncate()
+                    out_f.truncate(start_pos)
                     skipped_files.append(path)
+                    from ...core.diagnostics import DiagnosticsContext
+                    DiagnosticsContext().add_warning("PackerEngine", f"Failed to pack {path.name}: {type(e).__name__} - {str(e)}")
 
             if excluded_files:
                 out_f.write(f"## Excluded Files (Token Limit)\n")

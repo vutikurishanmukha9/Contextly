@@ -27,7 +27,7 @@ def export_cmd(
         raise typer.Exit(code=1)
         
     if clipboard_success:
-        clipboard_status = "[green]Successfully copied to clipboard![/green]"
+        clipboard_status = "[green]Successfully copied to clipboard![/green]\n[yellow]Notice: Proprietary source code has been copied to your OS clipboard. Clear it when finished if on a shared/synced device.[/yellow]"
     else:
         clipboard_status = "[yellow]Could not copy to clipboard. The export file was saved successfully.[/yellow]"
         

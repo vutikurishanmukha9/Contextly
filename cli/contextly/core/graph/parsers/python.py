@@ -1,8 +1,19 @@
 import ast
 import os
+import sys
+import contextlib
 from pathlib import Path
 from typing import List
 from .base import BaseASTParser, ParsedFileDTO
+
+@contextlib.contextmanager
+def scoped_recursion_limit(limit):
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(limit)
+    try:
+        yield
+    finally:
+        sys.setrecursionlimit(old_limit)
 
 class PythonASTParser(BaseASTParser):
     """
@@ -12,7 +23,12 @@ class PythonASTParser(BaseASTParser):
     
     def parse(self, file_path: str, content: str, root_dir: str) -> ParsedFileDTO:
         try:
-            tree = ast.parse(content, filename=file_path)
+            # Prevent zip-bomb/DoS attacks by limiting AST parseable file size
+            if len(content) > 500 * 1024:
+                return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error="File exceeds 500KB AST parse limit")
+                
+            with scoped_recursion_limit(1500):
+                tree = ast.parse(content, filename=file_path)
             
             exports: List[str] = []
             imports: List[str] = []

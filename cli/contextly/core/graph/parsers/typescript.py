@@ -1,9 +1,20 @@
 import os
+import sys
 import json
 import re
+import contextlib
 from pathlib import Path
 from typing import List
 from .base import BaseASTParser, ParsedFileDTO
+
+@contextlib.contextmanager
+def scoped_recursion_limit(limit):
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(limit)
+    try:
+        yield
+    finally:
+        sys.setrecursionlimit(old_limit)
 
 try:
     from tree_sitter import Language, Parser
@@ -85,8 +96,12 @@ class TypeScriptASTParser(BaseASTParser):
             return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error="Tree-sitter not available")
             
         try:
+            if len(content) > 500 * 1024:
+                return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error="File exceeds 500KB AST parse limit")
+                
             self._load_tsconfig(root_dir)
-            tree = self.parser.parse(bytes(content, "utf8"))
+            with scoped_recursion_limit(1500):
+                tree = self.parser.parse(bytes(content, "utf8"))
             
             exports: List[str] = []
             imports: List[str] = []

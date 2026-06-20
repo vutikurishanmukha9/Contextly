@@ -28,6 +28,7 @@ def explain_cmd(
         prompt = engine.explain(domain)
         try:
             pyperclip.copy(prompt)
+            console.print("[yellow]Notice: Proprietary source architecture has been copied to your OS clipboard. Clear it when finished if on a shared/synced device.[/yellow]")
             console.print(f"[bold green][OK][/bold green] [bold]Copied context payload for domain '{domain}' to clipboard![/bold]")
             console.print("Paste this into your AI tool to provide structural context without wasting tokens on file scanning.")
         except Exception as e:

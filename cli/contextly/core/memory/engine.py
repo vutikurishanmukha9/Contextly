@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from ...types.models import ProjectMemory, MemoryRule
 from ...utils.console import console
-from ...utils.exceptions import MemoryVaultError
+from ...utils.exceptions import MemoryVaultError, MemoryVaultCorruptionError
 from contextlib import contextmanager
 import time
 
@@ -59,13 +59,11 @@ class MemoryEngine:
                     return ProjectMemory()
                 return ProjectMemory.model_validate(data)
         except (yaml.YAMLError, ValueError) as e:
-            console.print(f"[yellow]Warning: Failed to load memory ({e}). Falling back to empty memory.[/yellow]")
-            return ProjectMemory()
+            raise MemoryVaultCorruptionError(f"Memory file is corrupt ({e}).") from e
         except Exception as e:
             import pydantic
             if isinstance(e, pydantic.ValidationError):
-                console.print(f"[yellow]Warning: Memory file validation failed ({e}). Falling back to empty memory.[/yellow]")
-                return ProjectMemory()
+                raise MemoryVaultCorruptionError(f"Memory file validation failed ({e}).") from e
             # Allow OS/IO errors to propagate and abort operations to prevent data destruction
             raise
             

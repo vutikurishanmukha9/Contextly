@@ -13,6 +13,11 @@ class DiagnosticsContext:
     """
     Aggregates non-fatal errors, warnings, and parser failures across the repository.
     Ensures the CLI does not silently drop data or crash abruptly.
+    
+    WARNING: This is an in-process singleton. Do NOT call `DiagnosticsContext().add_warning(...)` 
+    from within a ProcessPoolExecutor worker function, as those warnings will be stored in the 
+    worker's local memory space and silently lost when the process terminates. Route worker 
+    diagnostics via DTO return values instead.
     """
     _instance = None
     _lock = threading.Lock()

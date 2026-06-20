@@ -11,12 +11,9 @@ from .parsers.registry import ParserRegistry
 from ...utils.constants import is_skippable
 from ...utils.console import console
 
-import threading
-
-
 _WORKER_PARSE_TIMEOUT_SECONDS = 120
 
-def _parse_file_core(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) -> Optional[ParsedFileDTO]:
+def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) -> Optional[ParsedFileDTO]:
     """
     Module-level function required for ProcessPoolExecutor serialization.
     Instantiates the correct parser based on file extension and processes the file.
@@ -71,40 +68,6 @@ def _parse_file_core(file_path: str, root_dir: str, max_file_size_mb: float = 2.
         return None
     except Exception as e:
         return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error=f"ParseError: {str(e)}")
-
-def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) -> Optional[ParsedFileDTO]:
-    """
-    Wrapper that enforces a hard timeout on the core parsing logic using a daemon thread.
-    This guarantees the future always completes within _WORKER_PARSE_TIMEOUT_SECONDS,
-    preventing ProcessPoolExecutor worker exhaustion from hung parsers (e.g. deeply nested
-    AST trees or C-extension deadlocks).
-    """
-    result_holder = [None]
-    exception_holder = [None]
-
-    def _worker():
-        try:
-            result_holder[0] = _parse_file_core(file_path, root_dir, max_file_size_mb)
-        except Exception as e:
-            exception_holder[0] = e
-
-    t = threading.Thread(target=_worker, daemon=True)
-    t.start()
-    t.join(timeout=_WORKER_PARSE_TIMEOUT_SECONDS)
-
-    if t.is_alive():
-        return ParsedFileDTO(
-            file_path=file_path, exports=[], imports=[],
-            error=f"TimeoutError: AST parsing exceeded {_WORKER_PARSE_TIMEOUT_SECONDS}s deadline"
-        )
-
-    if exception_holder[0]:
-        return ParsedFileDTO(
-            file_path=file_path, exports=[], imports=[],
-            error=f"ParseError: {str(exception_holder[0])}"
-        )
-
-    return result_holder[0]
 
 class ImportGraphBuilder:
     """
@@ -165,24 +128,31 @@ class ImportGraphBuilder:
         
         # Initialize assembler once for the whole build
         
-        def _process_chunk(chunk_files, pool_executor_class, pool_name, on_init=None):
+        def _process_chunk(chunk_files, is_process_pool, pool_name, on_init=None):
             """
-            Processes a chunk of files through the given executor.
-            Per-file timeouts are enforced inside the worker function itself via daemon threads.
+            Processes a chunk of files through pebble.ProcessPool or concurrent.futures.ThreadPoolExecutor.
             """
             dtos = []
             optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
             batch_size = optimal_workers * 32
             
             kwargs = {"max_workers": optimal_workers}
-            if pool_executor_class is concurrent.futures.ProcessPoolExecutor:
-                import multiprocessing
+            
+            if is_process_pool:
                 try:
-                    kwargs["mp_context"] = multiprocessing.get_context("spawn")
-                except ValueError:
-                    pass
+                    from pebble import ProcessPool
+                    from concurrent.futures import TimeoutError as FuturesTimeoutError
+                    pool_class = ProcessPool
+                    kwargs["max_tasks"] = 10
+                    import multiprocessing
+                    kwargs["context"] = multiprocessing.get_context("spawn")
+                except ImportError:
+                    pool_class = concurrent.futures.ProcessPoolExecutor
+            else:
+                pool_class = concurrent.futures.ThreadPoolExecutor
+                from concurrent.futures import TimeoutError as FuturesTimeoutError
                     
-            with pool_executor_class(**kwargs) as executor:
+            with pool_class(**kwargs) as executor:
                 if on_init:
                     on_init()
                 in_flight = set()
@@ -192,7 +162,10 @@ class ImportGraphBuilder:
                 def submit_next():
                     try:
                         fp = next(target_iter)
-                        future = executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)
+                        if is_process_pool and pool_class.__name__ == "ProcessPool":
+                            future = executor.schedule(_parse_file, args=(fp, root_str, self.max_file_size_mb), timeout=_WORKER_PARSE_TIMEOUT_SECONDS)
+                        else:
+                            future = executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)
                         in_flight.add(future)
                         future_to_file[future] = fp
                         return True
@@ -224,7 +197,12 @@ class ImportGraphBuilder:
                                 else:
                                     dtos.append(dto)
                         except Exception as e:
-                            self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
+                            # Catch TimeoutError (either pebble.ProcessExpired, concurrent.futures.TimeoutError, etc.)
+                            if type(e).__name__ in ('TimeoutError', 'ProcessExpired'):
+                                self.failed_files[file_path] = f"TimeoutError: AST parsing exceeded deadline"
+                                diagnostics.add_warning("ImportGraphBuilder", f"Timeout parsing {file_path}")
+                            else:
+                                self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
                             
                         submit_next()
             return dtos
@@ -244,14 +222,14 @@ class ImportGraphBuilder:
                     pool_initialized = True
                     
                 try:
-                    chunk_dtos = _process_chunk(chunk, concurrent.futures.ProcessPoolExecutor, "ProcessPool", set_initialized)
+                    chunk_dtos = _process_chunk(chunk, True, "ProcessPool", set_initialized)
                 except Exception as e:
                     if pool_initialized:
                         diagnostics.add_error("ImportGraphBuilder", f"ProcessPool execution error (no retry): {str(e)}")
                         use_pool = False
                     else:
                         try:
-                            chunk_dtos = _process_chunk(chunk, concurrent.futures.ThreadPoolExecutor, "ThreadPool", set_initialized)
+                            chunk_dtos = _process_chunk(chunk, False, "ThreadPool", set_initialized)
                         except Exception as thread_err:
                             diagnostics.add_error("ImportGraphBuilder", f"ThreadPool fallback error: {str(thread_err)}")
                             use_pool = False

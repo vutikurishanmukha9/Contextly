@@ -61,19 +61,12 @@ class IgnoreEngine:
         name_lower = path.name.lower()
         parts_lower = {p.lower() for p in path.parts}
         
-        # Sensitive directory hierarchies — skip entire trees
-        _SENSITIVE_DIRS = {".git", ".contextly", ".ssh", ".aws", ".kube", ".gcp", ".docker", ".gnupg"}
-        if parts_lower.intersection(_SENSITIVE_DIRS):
+        from .constants import is_security_critical_dir, is_security_critical_file
+        
+        if is_security_critical_dir(name_lower) or any(is_security_critical_dir(p) for p in parts_lower):
             return True
 
-        # Exact filenames and precise patterns
-        _SENSITIVE_FILES = {".npmrc", "id_rsa", "id_ed25519", "master.key", "credentials"}
-        if (
-            name_lower in _SENSITIVE_FILES
-            or name_lower.startswith(".env")
-            or name_lower.endswith(".pem")
-            or name_lower.endswith(".key")
-        ):
+        if is_security_critical_file(name_lower):
             return True
 
         # Convert path to a relative POSIX string for matching (pathspec requires POSIX style)

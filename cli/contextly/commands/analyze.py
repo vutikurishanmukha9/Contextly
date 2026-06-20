@@ -13,7 +13,8 @@ from ..utils.exceptions import ValidationError
 def analyze_cmd(
     target: str = typer.Argument(".", help="Directory to analyze"),
     model: str = typer.Option("chatgpt", "--model", "-m", help="Target LLM format ('chatgpt' or 'claude')"),
-    no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)")
+    no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)"),
+    output_format: str = typer.Option("text", "--format", help="Output format ('text' or 'json')")
 ):
     """Analyze a repository and print intelligence summary"""
     root_dir = find_project_root(Path.cwd())
@@ -28,42 +29,80 @@ def analyze_cmd(
         if not target_path.exists() or not target_path.is_dir():
             raise ValidationError(f"Target is not a valid directory: {target}")
     except ValidationError as e:
-        console.print(f"\n[bold red]Error:[/bold red] {e}")
+        if output_format == "json":
+            import json
+            console.print(json.dumps({"error": str(e)}, indent=2))
+        else:
+            console.print(f"\n[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
         
-    with console.status("[bold blue]Scanning repository intelligence...", spinner="dots"):
-        try:
-            engine = AnalyzerEngine(root_dir, no_default_excludes=no_default_excludes)
-            intelligence = engine.analyze(model)
-        except ScannerError as e:
+    if output_format != "json":
+        status_ctx = console.status("[bold blue]Scanning repository intelligence...", spinner="dots")
+        status_ctx.start()
+    
+    try:
+        engine = AnalyzerEngine(root_dir, no_default_excludes=no_default_excludes)
+        intelligence = engine.analyze(model)
+    except ScannerError as e:
+        if output_format != "json":
+            status_ctx.stop()
             console.print(f"\n[bold red]Scanner Error:[/bold red] {e}")
-            raise typer.Exit(1)
-        except ContextlyError as e:
+        else:
+            import json
+            console.print(json.dumps({"error": f"Scanner Error: {str(e)}"}, indent=2))
+        raise typer.Exit(1)
+    except ContextlyError as e:
+        if output_format != "json":
+            status_ctx.stop()
             console.print(f"\n[bold red]Context-Ly Error:[/bold red] {e}")
-            raise typer.Exit(1)
-        except Exception as e:
+        else:
+            import json
+            console.print(json.dumps({"error": f"Context-Ly Error: {str(e)}"}, indent=2))
+        raise typer.Exit(1)
+    except Exception as e:
+        if output_format != "json":
+            status_ctx.stop()
             console.print(f"\n[bold red]Unexpected Error:[/bold red] {e}")
-            raise typer.Exit(1)
-            
-    console.print("\n[bold green][OK][/bold green] Repository scan complete!\n")
-    
-    table = Table(title="Repository Intelligence", show_header=False, box=None)
-    table.add_column("Category", style="cyan", justify="right")
-    table.add_column("Value", style="magenta")
-    
-    table.add_row("Primary Language", f"[bold]{intelligence.language.primary}[/bold]")
-    table.add_row("Frontend Framework", ", ".join(intelligence.frameworks.frontend) if intelligence.frameworks.frontend else "None detected")
-    table.add_row("Backend/Tooling", ", ".join(intelligence.frameworks.backend) if intelligence.frameworks.backend else "None detected")
-    
-    npm_count = len(intelligence.dependencies.npm)
-    py_count = len(intelligence.dependencies.python)
-    
-    if npm_count > 0:
-        table.add_row("NPM Dependencies", str(npm_count))
-    if py_count > 0:
-        table.add_row("Python Dependencies", str(py_count))
+        else:
+            import json
+            console.print(json.dumps({"error": f"Unexpected Error: {str(e)}"}, indent=2))
+        raise typer.Exit(1)
         
-    console.print(table)
-    console.print()
-    console.print(f"[dim]Generated advanced PROJECT_CONTEXT.md ({model.lower()} format) in current directory.[/dim]")
+    if output_format != "json":
+        status_ctx.stop()
+        console.print("\n[bold green][OK][/bold green] Repository scan complete!\n")
+        
+        table = Table(title="Repository Intelligence", show_header=False, box=None)
+        table.add_column("Category", style="cyan", justify="right")
+        table.add_column("Value", style="magenta")
+        
+        table.add_row("Primary Language", f"[bold]{intelligence.language.primary}[/bold]")
+        table.add_row("Frontend Framework", ", ".join(intelligence.frameworks.frontend) if intelligence.frameworks.frontend else "None detected")
+        table.add_row("Backend/Tooling", ", ".join(intelligence.frameworks.backend) if intelligence.frameworks.backend else "None detected")
+        
+        npm_count = len(intelligence.dependencies.npm)
+        py_count = len(intelligence.dependencies.python)
+        
+        if npm_count > 0:
+            table.add_row("NPM Dependencies", str(npm_count))
+        if py_count > 0:
+            table.add_row("Python Dependencies", str(py_count))
+            
+        console.print(table)
+        console.print()
+        console.print(f"[dim]Generated advanced PROJECT_CONTEXT.md ({model.lower()} format) in current directory.[/dim]")
+    else:
+        import json
+        console.print(json.dumps({
+            "language": intelligence.language.primary,
+            "frameworks": {
+                "frontend": intelligence.frameworks.frontend,
+                "backend": intelligence.frameworks.backend
+            },
+            "dependencies": {
+                "npm_count": len(intelligence.dependencies.npm),
+                "python_count": len(intelligence.dependencies.python)
+            },
+            "output_file": f"PROJECT_CONTEXT.md"
+        }, indent=2))
 

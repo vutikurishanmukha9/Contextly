@@ -22,6 +22,7 @@ class GraphAssembler:
         self.graph = KnowledgeGraph(nodes=[], relationships=[])
         # Mapping from module absolute repository paths (e.g., 'src/index') to node_id
         self._path_to_node_id: Dict[str, str] = {}
+        self._path_to_priority: Dict[str, int] = {}
         # We also need a mapping from full extensions (e.g. 'src/index.ts') to node_id
         self._exact_to_node_id: Dict[str, str] = {}
 
@@ -61,16 +62,22 @@ class GraphAssembler:
         
         # Add to resolution tables
         base_path = dto.file_path
+        ext = ""
         if "." in dto.file_path:
             base_path = dto.file_path.rsplit(".", 1)[0]
+            ext = dto.file_path.rsplit(".", 1)[1].lower()
             
-        current_id = self._path_to_node_id.get(base_path)
-        if current_id:
-            ext = dto.file_path.split(".")[-1].lower()
-            if ext not in ("css", "scss", "test", "spec", "md", "json", "yaml", "yml"):
-                self._path_to_node_id[base_path] = node_id
-        else:
+        EXT_PRIORITY = {
+            "ts": 100, "tsx": 90, "py": 80, "js": 70, "jsx": 60,
+            "css": 10, "scss": 10, "test": 0, "spec": 0, "md": 0,
+            "json": 0, "yaml": 0, "yml": 0
+        }
+        priority = EXT_PRIORITY.get(ext, 50)
+        
+        current_priority = self._path_to_priority.get(base_path, -1)
+        if priority > current_priority:
             self._path_to_node_id[base_path] = node_id
+            self._path_to_priority[base_path] = priority
             
         self._exact_to_node_id[dto.file_path] = node_id
         

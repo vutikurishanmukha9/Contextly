@@ -17,7 +17,8 @@ def pack_cmd(
     profile: str = typer.Option(None, "--profile", "-p", help="Use a profile defined in .contextly/config.yaml"),
     max_tokens: int = typer.Option(None, "--max-tokens", help="Drop least relevant files to fit within this limit"),
     compress: bool = typer.Option(False, "--compress", "-c", help="Compress AST representations to save tokens"),
-    no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)")
+    no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)"),
+    output_format: str = typer.Option("text", "--format", help="Output format ('text' or 'json')")
 ):
     """Bundle a directory into an LLM-ready Context Pack markdown file"""
     root_dir = find_project_root(Path.cwd())
@@ -46,7 +47,8 @@ def pack_cmd(
                     raise ValidationError(f"Profile path '{p}' must be inside the project root directory.")
                 
                 if not resolved_path.exists():
-                    console.print(f"[yellow]Warning:[/yellow] Profile path '{p}' does not exist. Skipping.")
+                    if output_format != "json":
+                        console.print(f"[yellow]Warning:[/yellow] Profile path '{p}' does not exist. Skipping.")
                     continue
                 
                 target_paths.append(resolved_path)
@@ -78,43 +80,70 @@ def pack_cmd(
             pack_name = root_dir.name
                     
     except ValidationError as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
+        if output_format == "json":
+            import json
+            console.print(json.dumps({"error": str(e)}, indent=2))
+        else:
+            console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
         
     engine = PackerEngine(root_dir, no_default_excludes=no_default_excludes)
     
     target_str = f"profile '{profile}'" if profile else f"'{target}'"
-    with console.status(f"[bold blue]Packing {target_str} into '{pack_name}'...", spinner="point"):
-        try:
-            token_estimate, token_type, file_count, output_file, skipped_files, excluded_count = engine.pack(target_paths, pack_name, max_tokens, compress)
-        except ContextlyError as e:
-            console.print(f"[bold red]Error:[/bold red] {e}")
-            raise typer.Exit(1)
-    
-    console.print(f"\n[bold green][OK][/bold green] Context Pack '{pack_name}' created!\n")
-
-    if skipped_files:
-        for path in skipped_files:
-            console.print(f"[yellow]Warning:[/yellow] Could not read {path.relative_to(root_dir)}")
-        console.print()
-    
-    table = Table(title="Pack Summary", show_header=False, box=None)
-    table.add_column("Metric", style="cyan", justify="right")
-    table.add_column("Value", style="magenta")
-    
-    table.add_row("Source", target_str)
-    table.add_row("Files Packed", str(file_count))
-    table.add_row(token_type, f"{token_estimate:,}")
-    table.add_row("Output Location", str(output_file.relative_to(root_dir)))
-    
-    if max_tokens and excluded_count > 0:
-        table.add_row("Files Excluded (Token Limit)", str(excluded_count), style="red")
+    if output_format != "json":
+        status_ctx = console.status(f"[bold blue]Packing {target_str} into '{pack_name}'...", spinner="point")
+        status_ctx.start()
         
-    console.print(table)
+    try:
+        token_estimate, token_type, file_count, output_file, skipped_files, excluded_count = engine.pack(target_paths, pack_name, max_tokens, compress)
+    except Exception as e:
+        if output_format != "json":
+            status_ctx.stop()
+        if output_format == "json":
+            import json
+            console.print(json.dumps({"error": str(e)}, indent=2))
+        else:
+            console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
     
-    if max_tokens and excluded_count > 0:
-        console.print(f"\n[bold yellow]Note:[/bold yellow] {excluded_count} files were automatically excluded to fit within the {max_tokens} token limit.")
-    elif token_estimate > 100000:
-        console.print("\n[bold red]Warning:[/bold red] This pack is massive (>100k tokens). Make sure your LLM supports large context windows!")
+    if output_format != "json":
+        status_ctx.stop()
+        console.print(f"\n[bold green][OK][/bold green] Context Pack '{pack_name}' created!\n")
+
+        if skipped_files:
+            for path in skipped_files:
+                console.print(f"[yellow]Warning:[/yellow] Could not read {path.relative_to(root_dir)}")
+            console.print()
+        
+        table = Table(title="Pack Summary", show_header=False, box=None)
+        table.add_column("Metric", style="cyan", justify="right")
+        table.add_column("Value", style="magenta")
+        
+        table.add_row("Source", target_str)
+        table.add_row("Files Packed", str(file_count))
+        table.add_row(token_type, f"{token_estimate:,}")
+        table.add_row("Output Location", str(output_file.relative_to(root_dir)))
+        
+        if max_tokens and excluded_count > 0:
+            table.add_row("Files Excluded (Token Limit)", str(excluded_count), style="red")
+            
+        console.print(table)
+        
+        if max_tokens and excluded_count > 0:
+            console.print(f"\n[bold yellow]Note:[/bold yellow] {excluded_count} files were automatically excluded to fit within the {max_tokens} token limit.")
+        elif token_estimate > 100000:
+            console.print("\n[bold red]Warning:[/bold red] This pack is massive (>100k tokens). Make sure your LLM supports large context windows!")
+    else:
+        import json
+        console.print(json.dumps({
+            "source": target_str,
+            "pack_name": pack_name,
+            "files_packed": file_count,
+            "token_estimate": token_estimate,
+            "token_type": token_type,
+            "output_location": str(output_file.relative_to(root_dir)),
+            "excluded_count": excluded_count,
+            "skipped_count": len(skipped_files)
+        }, indent=2))
     console.print()
 

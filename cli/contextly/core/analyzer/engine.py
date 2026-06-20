@@ -38,13 +38,13 @@ class AnalyzerEngine:
         
         # 1. Single unified walk of the repository to discover all valid files
         # We use a depth of 6 and the standard exclusion list for maximum coverage
-        from ...utils.constants import ALWAYS_SKIP_DIRS, SECURITY_CRITICAL_NAMES, SENSITIVE_DIRS
+        from ...utils.constants import ALWAYS_SKIP_DIRS, is_security_critical_dir, is_security_critical_file
         
         ignorer = IgnoreEngine(self.root_dir, no_default_excludes=self.no_default_excludes)
         
         def dir_skip_predicate(path: Path) -> bool:
             name = path.name.lower()
-            if name in SENSITIVE_DIRS or name == ".git" or name == ".contextly":
+            if is_security_critical_dir(name):
                 return True
             if not self.no_default_excludes and name in ALWAYS_SKIP_DIRS:
                 return True
@@ -52,8 +52,7 @@ class AnalyzerEngine:
 
         def file_skip_predicate(path: Path) -> bool:
             name = path.name.lower()
-            # Basename heuristics: substring, suffix, and exact-match
-            if ".env" in name or name in SECURITY_CRITICAL_NAMES or name.endswith(".key") or name.endswith(".pem"):
+            if is_security_critical_file(name):
                 return True
             if not self.no_default_excludes and name.endswith(".egg-info"):
                 return True
@@ -92,9 +91,9 @@ class AnalyzerEngine:
         hash_obj = hashlib.sha256()
         for f in all_files:
             try:
-                with open(self.root_dir / f, "rb") as file_obj:
-                    for b in iter(lambda: file_obj.read(4096), b""):
-                        hash_obj.update(b)
+                with open(self.root_dir / f, "rb") as f_in:
+                    while chunk := f_in.read(8192):
+                        hash_obj.update(chunk)
             except Exception:
                 pass
                     

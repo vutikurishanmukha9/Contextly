@@ -88,7 +88,9 @@ class DependencyScanner(BaseScanner):
                 config = load_config_model(root_dir)
                 scanners_depth = config.depth_limits.scanners
                 
-                walker = RepoWalker(root_dir, max_depth=scanners_depth, skip_predicate=is_skippable)
+                # We intentionally use unlimited depth (None) for manifest discovery to support 
+                # deep monorepo structures, bypassing the general scanner depth limits.
+                walker = RepoWalker(root_dir, max_depth=None, skip_predicate=is_skippable)
 
                 for dirpath, dirnames, filenames in walker.walk():
                     current = Path(dirpath)
@@ -145,22 +147,41 @@ class DependencyScanner(BaseScanner):
             else:
                 console.print(f"[yellow]Warning:[/yellow] Failed to parse package.json {rel}: {str(e)}")
 
-    def _parse_requirements_txt(self, filepath: Path, root_dir: Path, python_set: set[str], strict: bool = False):
+    def _parse_requirements_txt(self, filepath: Path, root_dir: Path, python_set: set[str], strict: bool = False, _visited: Optional[set[Path]] = None):
+        if _visited is None:
+            _visited = set()
+            
+        try:
+            resolved_path = filepath.resolve(strict=False)
+            if resolved_path in _visited:
+                return
+            _visited.add(resolved_path)
+        except Exception:
+            pass
+            
         try:
             with open(filepath, 'r', encoding="utf-8") as f:
                 for line in f:
+                    stripped = line.strip()
+                    if stripped.startswith("-r ") or stripped.startswith("-c "):
+                        ref_file = stripped.split(" ", 1)[1].strip()
+                        ref_path = (filepath.parent / ref_file).resolve(strict=False)
+                        if ref_path.exists():
+                            self._parse_requirements_txt(ref_path, root_dir, python_set, strict, _visited)
+                        continue
+                        
                     dep = _extract_dep_name(line)
                     if dep:
                         python_set.add(dep)
         except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
-            console.print(f"[yellow]Warning:[/yellow] Could not access requirements.txt: {str(e)}")
+            console.print(f"[yellow]Warning:[/yellow] Could not access requirements.txt at {filepath.name}: {str(e)}")
             if strict:
                 raise ScannerError(f"Could not access requirements.txt: {str(e)}") from e
         except Exception as e:
             if strict:
                 raise ScannerError(f"Failed to parse requirements.txt: {str(e)}") from e
             else:
-                console.print(f"[yellow]Warning:[/yellow] Failed to parse requirements.txt: {str(e)}")
+                console.print(f"[yellow]Warning:[/yellow] Failed to parse requirements.txt at {filepath.name}: {str(e)}")
 
     def _parse_pyproject_toml(self, filepath: Path, root_dir: Path, python_set: set[str], strict: bool = False):
         try:
