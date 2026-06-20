@@ -46,7 +46,7 @@ jobs:
         run: |
           cd cli
           pip install -e .
-          pip-audit --strict --desc
+          pip-audit --strict --desc --skip-editable
 
   pypi-publish:
     name: Build and publish to PyPI
