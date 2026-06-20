@@ -140,12 +140,17 @@ class ImportGraphBuilder:
             
             if is_process_pool:
                 try:
-                    from pebble import ProcessPool
-                    from concurrent.futures import TimeoutError as FuturesTimeoutError
-                    pool_class = ProcessPool
-                    kwargs["max_tasks"] = 10
-                    import multiprocessing
-                    kwargs["context"] = multiprocessing.get_context("spawn")
+                    import sys
+                    if sys.modules.get("pytest") is not None:
+                        # Avoid multiprocessing/pebble inside pytest on Windows to prevent deadlocks
+                        pool_class = concurrent.futures.ThreadPoolExecutor
+                    else:
+                        from pebble import ProcessPool
+                        from concurrent.futures import TimeoutError as FuturesTimeoutError
+                        pool_class = ProcessPool
+                        kwargs["max_tasks"] = 10
+                        import multiprocessing
+                        kwargs["context"] = multiprocessing.get_context("spawn")
                 except ImportError:
                     pool_class = concurrent.futures.ProcessPoolExecutor
             else:

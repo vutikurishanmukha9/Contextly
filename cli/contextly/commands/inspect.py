@@ -18,7 +18,7 @@ def inspect_cmd(
     except ValidationError as e:
         if output_format == "json":
             import json
-            console.print(json.dumps({"error": str(e)}, indent=2))
+            print(json.dumps({"error": str(e)}, indent=2))
         else:
             console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)
@@ -36,7 +36,7 @@ def inspect_cmd(
             status_ctx.stop()
         if output_format == "json":
             import json
-            console.print(json.dumps({"error": str(e)}, indent=2))
+            print(json.dumps({"error": str(e)}, indent=2))
         else:
             console.print(f"\n[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)
@@ -62,7 +62,7 @@ def inspect_cmd(
         console.print("\n[dim]Tip: Files over 50KB (yellow) or 100KB (red) consume massive LLM context windows. Keep them out of your Context Packs if possible.[/dim]\n")
     else:
         import json
-        console.print(json.dumps([
+        print(json.dumps([
             {
                 "file": str(path.relative_to(root_dir)),
                 "size_bytes": size,

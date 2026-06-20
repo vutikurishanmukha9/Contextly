@@ -2,7 +2,7 @@ from pathlib import Path
 from rich.table import Table
 from ..utils.console import console
 from ..core.memory import MemoryEngine
-from ..utils.exceptions import ValidationError
+from ..utils.exceptions import ValidationError, ContextlyError
 from ..utils.validation import require_contextly_initialized
 from ..utils.fs import find_project_root
 import typer
@@ -19,7 +19,11 @@ def memory_cmd():
         
     engine = MemoryEngine(root_dir)
     
-    memory = engine.load_memory()
+    try:
+        memory = engine.load_memory()
+    except ContextlyError as e:
+        console.print(f"\n[bold red]Memory Error:[/bold red] {e}")
+        raise typer.Exit(code=1)
     
     if not memory.rules:
         console.print("[yellow]Context-Ly memory is currently empty.[/yellow]")

@@ -82,7 +82,7 @@ def test_memory_cmd_corrupted_yaml(temp_repo):
 
     result = runner.invoke(app, ["memory"])
     assert result.exit_code != 0
-    assert "Memory file is corrupt" in str(result.exception)
+    assert "Memory file is corrupt" in result.stdout
 
 
 def test_memory_cmd_sorting(temp_repo):

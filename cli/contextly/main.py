@@ -55,10 +55,25 @@ def main():
         console.print(f"[red]Exception Type:[/red] {type(e).__name__}")
         console.print(f"[red]Message:[/red] {str(e)}")
         
+        # Write full traceback to a secure log file instead of exposing
+        # internal paths and dependency versions to stdout/CI logs.
         import traceback
-        console.print("\n[dim]--- Traceback ---[/dim]")
-        traceback.print_exc()
-        console.print("[dim]-------------------[/dim]\n")
+        from pathlib import Path
+        from datetime import datetime
+        
+        log_dir = Path.home() / ".contextly" / "logs"
+        try:
+            log_dir.mkdir(parents=True, exist_ok=True)
+            crash_log = log_dir / "crash.log"
+            with open(crash_log, "a", encoding="utf-8") as lf:
+                lf.write(f"\n--- {datetime.now().isoformat()} ---\n")
+                traceback.print_exc(file=lf)
+            console.print(f"\n[dim]Full crash details written to: {crash_log}[/dim]")
+        except OSError:
+            # If we can't write the log file, fall back to showing the traceback
+            console.print("\n[dim]--- Traceback ---[/dim]")
+            traceback.print_exc()
+            console.print("[dim]-------------------[/dim]\n")
         
         console.print("[yellow]Please report this issue to the Contextly maintainers.[/yellow]")
         sys.exit(1)

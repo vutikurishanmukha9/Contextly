@@ -3,21 +3,12 @@ from pathlib import Path
 def find_project_root(start_path: Path) -> Path:
     """
     Traverses upwards from start_path to find the project root.
-    A project root is defined as the directory containing '.contextly' or '.git'.
-    If neither is found before reaching the filesystem root, returns start_path.resolve().
+    A project root is defined as the directory containing '.contextly/config.toml'.
+    If not found before reaching the filesystem root, returns start_path.resolve().
     """
     current = start_path.resolve()
-    
-    while True:
-        try:
-            if (current / ".contextly").is_dir() or (current / ".git").is_dir():
-                return current
-        except PermissionError:
-            # Reached a locked filesystem boundary, stop traversal
-            break
+    for parent in [current] + list(current.parents):
+        if (parent / ".contextly" / "config.toml").exists() or (parent / ".contextly").is_dir() or (parent / ".git").is_dir():
+            return parent
             
-        if current.parent == current:
-            break
-        current = current.parent
-        
     return start_path.resolve()

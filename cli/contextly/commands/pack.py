@@ -82,7 +82,7 @@ def pack_cmd(
     except ValidationError as e:
         if output_format == "json":
             import json
-            console.print(json.dumps({"error": str(e)}, indent=2))
+            print(json.dumps({"error": str(e)}, indent=2))
         else:
             console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
@@ -101,7 +101,7 @@ def pack_cmd(
             status_ctx.stop()
         if output_format == "json":
             import json
-            console.print(json.dumps({"error": str(e)}, indent=2))
+            print(json.dumps({"error": str(e)}, indent=2))
         else:
             console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
@@ -135,7 +135,7 @@ def pack_cmd(
             console.print("\n[bold red]Warning:[/bold red] This pack is massive (>100k tokens). Make sure your LLM supports large context windows!")
     else:
         import json
-        console.print(json.dumps({
+        print(json.dumps({
             "source": target_str,
             "pack_name": pack_name,
             "files_packed": file_count,

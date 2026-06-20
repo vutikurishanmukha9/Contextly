@@ -25,12 +25,28 @@ def test_find_project_root_with_git(tmp_path):
     found_root = find_project_root(deep_dir)
     assert found_root == root.resolve()
 
-def test_find_project_root_fallback(tmp_path):
+def test_find_project_root_fallback(tmp_path, monkeypatch):
     root = tmp_path / "no_project"
     root.mkdir()
     
     deep_dir = root / "deep" / "dir"
     deep_dir.mkdir(parents=True)
+    
+    original_is_dir = Path.is_dir
+    original_exists = Path.exists
+    
+    def mock_is_dir(self):
+        if self.parent == Path("C:/Users/V SHANMUKH") or self.parent.parent == Path("C:/Users/V SHANMUKH"):
+            return False
+        return original_is_dir(self)
+        
+    def mock_exists(self):
+        if self.parent == Path("C:/Users/V SHANMUKH") or self.parent.parent == Path("C:/Users/V SHANMUKH"):
+            return False
+        return original_exists(self)
+        
+    monkeypatch.setattr(Path, "is_dir", mock_is_dir)
+    monkeypatch.setattr(Path, "exists", mock_exists)
     
     found_root = find_project_root(deep_dir)
     # Should fallback to the start_path because it hit the top without finding a root marker

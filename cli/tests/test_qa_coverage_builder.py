@@ -36,8 +36,9 @@ def test_builder_process_chunk_fallback_pool_initialized(tmp_path):
     
     with patch("pebble.ProcessPool", return_value=mock_pool_context), \
          patch("concurrent.futures.ThreadPoolExecutor") as mock_threadpool, \
-         patch("contextly.core.graph.builder.ParserRegistry") as mock_registry:
-         
+         patch("contextly.core.graph.builder.ParserRegistry") as mock_registry, \
+         patch.dict('sys.modules', {'pytest': None}):
+        
         mock_parser = MagicMock()
         mock_parser.parse.return_value = MagicMock(file_path="test1.py", imports=[], exports=[], error=None)
         mock_registry.get_parser.return_value = mock_parser

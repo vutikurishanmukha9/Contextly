@@ -36,40 +36,41 @@ def analyze_cmd(
             console.print(f"\n[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
         
-    if output_format != "json":
-        status_ctx = console.status("[bold blue]Scanning repository intelligence...", spinner="dots")
-        status_ctx.start()
+    class DummyContext:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def start(self): pass
+        def stop(self): pass
+    status_ctx = DummyContext()
     
     try:
         engine = AnalyzerEngine(root_dir, no_default_excludes=no_default_excludes)
+        
         intelligence = engine.analyze(model)
+        
     except ScannerError as e:
         if output_format != "json":
-            status_ctx.stop()
             console.print(f"\n[bold red]Scanner Error:[/bold red] {e}")
         else:
             import json
-            console.print(json.dumps({"error": f"Scanner Error: {str(e)}"}, indent=2))
+            print(json.dumps({"error": f"Scanner Error: {str(e)}"}, indent=2))
         raise typer.Exit(1)
     except ContextlyError as e:
         if output_format != "json":
-            status_ctx.stop()
             console.print(f"\n[bold red]Context-Ly Error:[/bold red] {e}")
         else:
             import json
-            console.print(json.dumps({"error": f"Context-Ly Error: {str(e)}"}, indent=2))
+            print(json.dumps({"error": f"Context-Ly Error: {str(e)}"}, indent=2))
         raise typer.Exit(1)
     except Exception as e:
         if output_format != "json":
-            status_ctx.stop()
             console.print(f"\n[bold red]Unexpected Error:[/bold red] {e}")
         else:
             import json
-            console.print(json.dumps({"error": f"Unexpected Error: {str(e)}"}, indent=2))
+            print(json.dumps({"error": f"Unexpected Error: {str(e)}"}, indent=2))
         raise typer.Exit(1)
         
     if output_format != "json":
-        status_ctx.stop()
         console.print("\n[bold green][OK][/bold green] Repository scan complete!\n")
         
         table = Table(title="Repository Intelligence", show_header=False, box=None)

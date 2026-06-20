@@ -14,7 +14,7 @@ def test_packer_engine_streaming(tmp_path):
     
     # Binary file
     bin_file = repo_dir / "test.bin"
-    bin_file.write_bytes(b"\x00\x01\x02\x03" * 100)
+    bin_file.write_bytes(b"\x00\x01\x02\x03" * 100 + b"\x00")
     
     # Large file
     large_file = repo_dir / "large.txt"

@@ -47,12 +47,16 @@ def learn_cmd(
     saved_count = 0
     for p in sorted_patterns:
         if apply_all or Confirm.ask(f"Save convention: [cyan]{p.name}[/cyan] ({p.description})?"):
-            added = engine.save_convention(p)
-            if added:
-                saved_count += 1
-                console.print(f"  [green]\\[OK][/green] Saved to memory.")
-            else:
-                console.print(f"  [dim]Skipped (Already in memory).[/dim]")
+            try:
+                added = engine.save_convention(p)
+                if added:
+                    saved_count += 1
+                    console.print(f"  [green]\\[OK][/green] Saved to memory.")
+                else:
+                    console.print(f"  [dim]Skipped (Already in memory).[/dim]")
+            except ContextlyError as e:
+                console.print(f"\n[bold red]Memory Error:[/bold red] {e}")
+                raise typer.Exit(code=1)
         else:
             console.print(f"  [dim]Skipped.[/dim]")
             

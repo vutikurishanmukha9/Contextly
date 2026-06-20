@@ -98,15 +98,14 @@ def test_analyze_cmd_unexpected_error(temp_repo, monkeypatch):
 def test_analyze_cmd_permission_error(temp_repo, monkeypatch):
     runner.invoke(app, ["init"])
 
-    import os
-    original_access = os.access
-    def mock_access(path, mode):
-        if mode == os.W_OK:
-            # Pre-flight check simulates a failure
-            return False
-        return original_access(path, mode)
+    import contextly.utils.io as io_mod
+    original_atomic_write = io_mod.atomic_write
+    def mock_atomic_write(filepath, content, **kwargs):
+        if "PROJECT_CONTEXT.md" in str(filepath):
+            raise PermissionError("Access denied")
+        return original_atomic_write(filepath, content, **kwargs)
 
-    monkeypatch.setattr(os, "access", mock_access)
+    monkeypatch.setattr(io_mod, "atomic_write", mock_atomic_write)
     result = runner.invoke(app, ["analyze"])
     assert result.exit_code == 1
     assert "Failed to write PROJECT_CONTEXT.md" in result.stdout

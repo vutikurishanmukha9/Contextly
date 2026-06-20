@@ -1,5 +1,6 @@
 from pathlib import Path
 import hashlib
+import os
 from importlib.metadata import PackageNotFoundError, version
 
 from ...scanners.registry import ScannerRegistry
@@ -13,6 +14,7 @@ from datetime import datetime, timezone
 from ...core.memory.engine import MemoryEngine
 from ...core.initializer.engine import InitEngine
 from ...utils.exceptions import ContextlyError
+from ...core.diagnostics import DiagnosticsContext
 
 class AnalyzerEngine:
     def __init__(self, root_dir: Path, no_default_excludes: bool = False):
@@ -21,27 +23,19 @@ class AnalyzerEngine:
         
         from ...utils.config import load_config_model
         self.config = load_config_model(root_dir)
-        
-    def analyze(self, model: str = "chatgpt") -> RepositoryIntelligence:
+
+    def _collect_files(self) -> list:
         """
-        Orchestrates all scanners and generates PROJECT_CONTEXT.md.
-        Returns the generated RepositoryIntelligence object.
+        Walks the repository and returns a sorted list of relative file paths.
+        Applies ignore rules, security filters, and depth limits.
         """
-        from ...core.diagnostics import DiagnosticsContext
-        DiagnosticsContext().clear()
-        
         from ...utils.walker import RepoWalker
         from ...utils.ignore import IgnoreEngine
-        import os
+        from ...utils.constants import ALWAYS_SKIP_DIRS, is_security_critical_dir, is_security_critical_file
 
         analyzer_depth = self.config.depth_limits.analyzer
-        
-        # 1. Single unified walk of the repository to discover all valid files
-        # We use a depth of 6 and the standard exclusion list for maximum coverage
-        from ...utils.constants import ALWAYS_SKIP_DIRS, is_security_critical_dir, is_security_critical_file
-        
         ignorer = IgnoreEngine(self.root_dir, no_default_excludes=self.no_default_excludes)
-        
+
         def dir_skip_predicate(path: Path) -> bool:
             name = path.name.lower()
             if is_security_critical_dir(name):
@@ -57,46 +51,81 @@ class AnalyzerEngine:
             if not self.no_default_excludes and name.endswith(".egg-info"):
                 return True
             return ignorer.is_ignored(path)
-            
+
         walker = RepoWalker(
-            self.root_dir, 
+            self.root_dir,
             max_depth=analyzer_depth,
             skip_predicate=file_skip_predicate,
             dir_skip_predicate=dir_skip_predicate
         )
-        def file_generator():
-            for dirpath, _, filenames in walker.walk():
-                rel_path = Path(dirpath).relative_to(self.root_dir)
-                for filename in filenames:
-                    yield (rel_path / filename).as_posix()
 
-        from itertools import islice
-        def get_chunks(iterable, size):
-            it = iter(iterable)
-            while True:
-                chunk = list(islice(it, size))
-                if not chunk:
-                    break
-                yield chunk
-                
-        all_files = []
-        
-        # Gather all files from generator
-        for chunk in get_chunks(file_generator(), 1000):
-            all_files.extend(chunk)
-        
+        all_files = [
+            (Path(dirpath).relative_to(self.root_dir) / filename).as_posix()
+            for dirpath, _, filenames in walker.walk()
+            for filename in filenames
+        ]
+
         # Sort for deterministic hashing across OS/filesystem variations
         all_files.sort()
-        
+        return all_files
+
+    def _compute_hash(self, all_files: list) -> str:
+        """
+        Computes a SHA-256 hash over the byte content of all discovered files.
+        Files that cannot be read are logged via DiagnosticsContext, not silently dropped.
+        """
         hash_obj = hashlib.sha256()
         for f in all_files:
             try:
                 with open(self.root_dir / f, "rb") as f_in:
                     while chunk := f_in.read(8192):
                         hash_obj.update(chunk)
-            except Exception:
-                pass
-                    
+            except OSError as e:
+                DiagnosticsContext().add_warning(
+                    "AnalyzerEngine",
+                    f"Cannot hash file {f}: {type(e).__name__} - {e}"
+                )
+        return hash_obj.hexdigest()
+
+    def _write_outputs(self, repo_knowledge: RepositoryKnowledge, intelligence: RepositoryIntelligence, model: str) -> None:
+        """
+        Writes repository.json and PROJECT_CONTEXT.md to disk.
+        Uses atomic_write to prevent partial file corruption.
+        """
+        from ...utils.io import atomic_write
+        from ...generators.registry import GeneratorRegistry
+
+        contextly_dir = self.root_dir / ".contextly"
+        if not contextly_dir.exists():
+            InitEngine(self.root_dir).initialize()
+
+        atomic_write(contextly_dir / "repository.json", repo_knowledge.model_dump_json(indent=2))
+
+        from contextly.generators.registry import GeneratorRegistry
+        generator = GeneratorRegistry.get_generator(model, self.root_dir, intelligence)
+            
+        ctx_content = generator.generate()
+        
+        output_file = self.root_dir / "PROJECT_CONTEXT.md"
+        try:
+            atomic_write(output_file, ctx_content)
+        except Exception as e:
+            raise ContextlyError(f"Failed to write PROJECT_CONTEXT.md: {e}") from e
+        
+    def analyze(self, model: str = "chatgpt") -> RepositoryIntelligence:
+        """
+        Orchestrates all scanners and generates PROJECT_CONTEXT.md.
+        Returns the generated RepositoryIntelligence object.
+        """
+        DiagnosticsContext().clear()
+
+        # 1. Collect all files
+        all_files = self._collect_files()
+
+        # 2. Compute deterministic repository hash
+        repository_hash = self._compute_hash(all_files)
+        
+        # 3. Run scanner pipeline
         scan_results = ScannerRegistry.execute_pipeline(self.root_dir, all_files)
         
         lang_data = scan_results.get('language') or LanguageScanResult(primary="Unknown")
@@ -108,18 +137,21 @@ class AnalyzerEngine:
         )
         cap_data = scan_results.get('capabilities') or []
         
+        # 4. Load team memory
+        # 4. Load team memory
         memory_engine = MemoryEngine(self.root_dir)
         memory_data = memory_engine.load_memory()
         
-        # Build the AST graph
+        # 5. Build AST graph and cluster into domains
         graph_builder = ImportGraphBuilder(self.root_dir, max_file_size_mb=self.config.packer.max_file_size_mb)
         ast_graph = graph_builder.build(file_paths=all_files)
         
-        # Cluster the graph into Domains
+        # 6. Cluster the graph into Domains
         from contextly.core.graph.cluster import DomainClusterer
         clusterer = DomainClusterer()
         domains = clusterer.cluster(ast_graph)
         
+        # 6. Assemble intelligence object
         intelligence = RepositoryIntelligence(
             language=lang_data,
             dependencies=dep_data,
@@ -128,19 +160,17 @@ class AnalyzerEngine:
             memory=memory_data
         )
         
-        repository_hash = hash_obj.hexdigest()
+        # 7. Build repository knowledge metadata
         try:
             contextly_version = version("contextly")
         except PackageNotFoundError:
             contextly_version = "unknown"
 
-        import os
         epoch = os.environ.get("SOURCE_DATE_EPOCH")
         if epoch:
             try:
                 generated_timestamp = datetime.fromtimestamp(int(epoch), timezone.utc).isoformat()
             except ValueError:
-                from ...core.diagnostics import DiagnosticsContext
                 DiagnosticsContext().add_warning("AnalyzerEngine", f"Invalid SOURCE_DATE_EPOCH: {epoch}. Falling back to current time.")
                 generated_timestamp = datetime.now(timezone.utc).isoformat()
         else:
@@ -161,36 +191,9 @@ class AnalyzerEngine:
             graph=ast_graph
         )
         
-        contextly_dir = self.root_dir / ".contextly"
-        if not contextly_dir.exists():
-            InitEngine(self.root_dir).initialize()
-            
-        from ...utils.io import atomic_write
-        atomic_write(contextly_dir / "repository.json", repo_knowledge.model_dump_json(indent=2))
+        # 8. Write output files
+        self._write_outputs(repo_knowledge, intelligence, model)
         
-        from ...generators.registry import GeneratorRegistry
-        generator = GeneratorRegistry.get_generator(model, self.root_dir, intelligence)
-            
-        ctx_content = generator.generate()
-        
-        output_file = self.root_dir / "PROJECT_CONTEXT.md"
-        try:
-            # Safe pre-flight write permission check
-            if output_file.exists() and not os.access(output_file, os.W_OK):
-                raise PermissionError(f"Cannot write to {output_file}")
-            if not output_file.exists():
-                # Walk up to find the nearest existing ancestor directory
-                check_dir = output_file.parent
-                while check_dir and not check_dir.exists():
-                    check_dir = check_dir.parent
-                if check_dir and not os.access(check_dir, os.W_OK):
-                    raise PermissionError(f"Cannot write to directory {check_dir}")
-            from ...utils.io import atomic_write
-            atomic_write(output_file, ctx_content)
-        except Exception as e:
-            raise ContextlyError(f"Failed to write PROJECT_CONTEXT.md: {e}") from e
-            
-        from ...core.diagnostics import DiagnosticsContext
         DiagnosticsContext().report()
             
         return intelligence

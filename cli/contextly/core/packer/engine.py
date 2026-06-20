@@ -26,6 +26,37 @@ class PackerEngine:
         self.config = load_config_model(root_dir)
         self.max_file_size = self.config.packer.max_file_size_mb * 1024 * 1024
 
+    def _estimate_tokens(self, text: str) -> float:
+        """Fast character-count heuristic for in-loop token budget enforcement."""
+        return len(text) / 3.5
+
+    def _exact_token_count(self, text: str) -> int:
+        """Exact token count using tiktoken. Falls back to heuristic if unavailable."""
+        if self.tokenizer:
+            try:
+                return len(self.tokenizer.encode(text, disallowed_special=()))
+            except ValueError:
+                return int(len(text) / 3.5)
+        return int(len(text) / 3.5)
+
+    def _is_binary_file(self, first_kb: bytes) -> bool:
+        """
+        Detects binary files by checking for null bytes, with an exemption
+        for UTF-16 encoded text files which legitimately contain null bytes.
+        """
+        if b'\x00' not in first_kb:
+            return False
+
+        # Check if this might be UTF-16 before classifying as binary
+        for encoding in ('utf-16', 'utf-16-le', 'utf-16-be'):
+            try:
+                first_kb.decode(encoding)
+                return False  # Valid UTF-16 text, not binary
+            except (UnicodeDecodeError, ValueError):
+                continue
+
+        return True  # Contains null bytes and is not valid UTF-16
+
     def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None, compress: bool = False) -> Tuple[int, str, int, Path, List[Path], int]:
         """
         Creates a context pack for the target directories.
@@ -88,24 +119,19 @@ class PackerEngine:
         ranked_files = self.ranker.rank(all_files)
         
         # Phase 3 & 4: Stream Compress, Measure, Select, and Write
+        # Uses fast character-count heuristic for in-loop budget enforcement.
+        # Final exact token count is computed after all files are written.
         selected_files = []
         excluded_files = []
         
         header_text = f"# Context Pack: {pack_name}\n\n"
-        if self.tokenizer:
-            try:
-                current_tokens = len(self.tokenizer.encode(header_text, disallowed_special=()))
-            except ValueError:
-                current_tokens = len(header_text) / 3.5
-        else:
-            current_tokens = len(header_text) / 3.5
+        current_tokens = self._estimate_tokens(header_text)
             
         with os.fdopen(fd, "w", encoding="utf-8") as out_f:
             out_f.write(header_text)
             
             for path in ranked_files:
                 try:
-                    start_pos = out_f.tell()
                     file_size = path.stat().st_size
                     if file_size > self.max_file_size:
                         skipped_files.append(path)
@@ -119,34 +145,30 @@ class PackerEngine:
                     
                     is_py_compress = (compress and path.suffix.lower() == '.py')
                     
+                    # Flush before recording position for reliable rollback
+                    out_f.flush()
+                    start_pos = out_f.tell()
+                    
                     with open(path, "rb") as in_f:
                         first_kb = in_f.read(1024)
-                        if b'\x00' in first_kb:
+                        if self._is_binary_file(first_kb):
                             skipped_files.append(path)
                             continue
                         in_f.seek(0)
                         
-                        out_f.flush()
-                        start_pos = out_f.tell()
                         header_str = f"## File: `{rel_path}`\n```{ext}\n"
                         out_f.write(header_str)
                         
-                        file_tokens = 0
+                        file_tokens = self._estimate_tokens(header_str)
                         is_excluded = False
-                        
-                        if self.tokenizer:
-                            try:
-                                file_tokens += len(self.tokenizer.encode(header_str, disallowed_special=()))
-                            except ValueError:
-                                file_tokens += len(header_str) / 3.5
-                        else:
-                            file_tokens += len(header_str) / 3.5
                         
                         if is_py_compress:
                             try:
                                 raw_code = in_f.read().decode("utf-8")
                             except UnicodeDecodeError:
                                 skipped_files.append(path)
+                                # Defensive flush before rollback
+                                out_f.flush()
                                 out_f.seek(start_pos)
                                 out_f.truncate(start_pos)
                                 continue
@@ -154,16 +176,12 @@ class PackerEngine:
                             compressed = self.compressor.compress(path, raw_code)
                             body = compressed if compressed.endswith('\n') else compressed + '\n'
                             
-                            if self.tokenizer:
-                                try:
-                                    file_tokens += len(self.tokenizer.encode(body, disallowed_special=()))
-                                except ValueError:
-                                    file_tokens += len(body) / 3.5
-                            else:
-                                file_tokens += len(body) / 3.5
+                            file_tokens += self._estimate_tokens(body)
                                 
                             if max_tokens and current_tokens + file_tokens > max_tokens:
                                 excluded_files.append(path)
+                                # Defensive flush before rollback
+                                out_f.flush()
                                 out_f.seek(start_pos)
                                 out_f.truncate(start_pos)
                                 continue
@@ -174,37 +192,27 @@ class PackerEngine:
                             selected_files.append(path)
                             
                         else:
-                            decoder = codecs.getincrementaldecoder('utf-8')(errors='strict')
-                            try:
-                                while True:
-                                    chunk = in_f.read(4096)
-                                    text_chunk = decoder.decode(chunk, final=not bool(chunk))
-                                    if text_chunk:
-                                        if self.tokenizer:
-                                            try:
-                                                chunk_cost = len(self.tokenizer.encode(text_chunk, disallowed_special=()))
-                                            except ValueError:
-                                                chunk_cost = len(text_chunk) / 3.5
-                                        else:
-                                            chunk_cost = len(text_chunk) / 3.5
-                                            
-                                        file_tokens += chunk_cost
-                                        if max_tokens and current_tokens + file_tokens > max_tokens:
-                                            is_excluded = True
-                                            break
-                                        
-                                        out_f.write(text_chunk)
-                                        
-                                    if not chunk:
+                            # Use errors='replace' to preserve file content instead of
+                            # rejecting the entire file on a single non-UTF-8 byte.
+                            decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+                            while True:
+                                chunk = in_f.read(4096)
+                                text_chunk = decoder.decode(chunk, final=not bool(chunk))
+                                if text_chunk:
+                                    chunk_cost = self._estimate_tokens(text_chunk)
+                                    file_tokens += chunk_cost
+                                    if max_tokens and current_tokens + file_tokens > max_tokens:
+                                        is_excluded = True
                                         break
-                            except UnicodeDecodeError:
-                                skipped_files.append(path)
-                                out_f.seek(start_pos)
-                                out_f.truncate(start_pos)
-                                continue
+                                    
+                                    out_f.write(text_chunk)
+                                    
+                                if not chunk:
+                                    break
                                 
                             if is_excluded:
                                 excluded_files.append(path)
+                                # Defensive flush before rollback
                                 out_f.flush()
                                 out_f.truncate(start_pos)
                                 out_f.seek(start_pos)
@@ -216,6 +224,8 @@ class PackerEngine:
                             
                 except Exception as e:
                     # Roll back any partially written content to prevent stream corruption
+                    # Defensive flush before rollback
+                    out_f.flush()
                     out_f.seek(start_pos)
                     out_f.truncate(start_pos)
                     skipped_files.append(path)
@@ -232,9 +242,16 @@ class PackerEngine:
                         rel_path = path.name
                     out_f.write(f"- `{rel_path}`\n")
 
+        # Compute final exact token count from the completed output file
         if self.tokenizer:
-            token_estimate = int(current_tokens)
-            token_type = "Exact Tokens (cl100k_base)"
+            try:
+                with open(output_file, "r", encoding="utf-8") as f:
+                    final_content = f.read()
+                token_estimate = len(self.tokenizer.encode(final_content, disallowed_special=()))
+                token_type = "Exact Tokens (cl100k_base)"
+            except (ValueError, OSError):
+                token_estimate = int(current_tokens)
+                token_type = "Estimated Tokens (chars / 3.5)"
         else:
             token_estimate = int(current_tokens)
             token_type = "Estimated Tokens (chars / 3.5)"

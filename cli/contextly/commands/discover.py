@@ -19,7 +19,7 @@ def discover_cmd(
     except ValidationError as e:
         if output_format == "json":
             import json
-            console.print(json.dumps({"error": str(e)}, indent=2))
+            print(json.dumps({"error": str(e)}, indent=2))
         else:
             console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)
@@ -38,7 +38,7 @@ def discover_cmd(
             console.print(f"\n[bold red]Scanner Error:[/bold red] {e}")
         else:
             import json
-            console.print(json.dumps({"error": f"Scanner Error: {str(e)}"}, indent=2))
+            print(json.dumps({"error": f"Scanner Error: {str(e)}"}, indent=2))
         raise typer.Exit(code=1)
     except ContextlyError as e:
         if output_format != "json":
@@ -46,7 +46,7 @@ def discover_cmd(
             console.print(f"\n[bold red]Context-Ly Error:[/bold red] {e}")
         else:
             import json
-            console.print(json.dumps({"error": f"Context-Ly Error: {str(e)}"}, indent=2))
+            print(json.dumps({"error": f"Context-Ly Error: {str(e)}"}, indent=2))
         raise typer.Exit(code=1)
     except Exception as e:
         if output_format != "json":
@@ -54,7 +54,7 @@ def discover_cmd(
             console.print(f"\n[bold red]Error:[/bold red] {e}")
         else:
             import json
-            console.print(json.dumps({"error": str(e)}, indent=2))
+            print(json.dumps({"error": str(e)}, indent=2))
         raise typer.Exit(code=1)
         
     if output_format != "json":
@@ -82,7 +82,7 @@ def discover_cmd(
             console.print()
     else:
         import json
-        console.print(json.dumps([
+        print(json.dumps([
             {
                 "name": p.name,
                 "category": p.category,

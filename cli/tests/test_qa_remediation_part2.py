@@ -322,11 +322,14 @@ def _hanging_parse_for_timeout(file_path, root_dir, max_file_size_mb=2.0):
     # Will be killed by Pebble process pool timeout
     return None
 
+@pytest.mark.skipif(os.name == "nt", reason="Requires fork() for monkeypatch to propagate to ProcessPool workers")
 def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
     """Verify that individual files exceeding the worker parse timeout produce
     TimeoutError DTOs without deadlocking the executor pool."""
     from contextly.core.graph import builder as builder_module
     from contextly.core.graph.builder import ImportGraphBuilder
+    import sys
+    monkeypatch.delitem(sys.modules, "pytest", raising=False)
     
     runner.invoke(app, ["init"])
     (temp_repo / "src").mkdir(exist_ok=True, parents=True)
@@ -345,6 +348,7 @@ def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
     # Should NOT raise — worker timeout produces error DTOs gracefully
     builder.build()
     
+    print("FAILED FILES:", builder.failed_files)
     assert any("TimeoutError" in str(msg) for msg in builder.failed_files.values())
 
 def test_builder_dto_error_handling(temp_repo, monkeypatch):
@@ -396,6 +400,8 @@ def test_real_process_pool_no_fallback(temp_repo, monkeypatch):
     import pebble
     from contextly.core.graph.builder import ImportGraphBuilder
     from contextly.core.diagnostics import DiagnosticsContext
+    import sys
+    monkeypatch.delitem(sys.modules, "pytest", raising=False)
     
     # Bypass the autouse fixture from conftest if necessary
     monkeypatch.setattr(
