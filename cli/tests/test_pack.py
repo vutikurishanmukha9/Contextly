@@ -81,7 +81,7 @@ def test_pack_cmd_binary_file(temp_repo):
 def test_pack_cmd_massive(temp_repo):
     runner.invoke(app, ["init"])
     (temp_repo / "src" / "massive.txt").write_text("a " * 150000)
-    result = runner.invoke(app, ["pack", "src"])
+    result = runner.invoke(app, ["pack", "src", "--raw"])
     assert result.exit_code == 0
     assert "This pack is massive" in result.stdout
 
@@ -174,7 +174,7 @@ def test_pack_cmd_max_tokens(temp_repo):
     (temp_repo / "src" / "main.py").write_text("print('hello')\n" * 50)
     (temp_repo / "src" / "utils.py").write_text("print('utils')\n" * 50)
     
-    result = runner.invoke(app, ["pack", "src", "--max-tokens", "100"]) # Very low limit
+    result = runner.invoke(app, ["pack", "src", "--max-tokens", "100", "--raw"]) # Very low limit
     assert result.exit_code == 0
     assert "Files Excluded (Token Limit)" in result.stdout
     assert "files were automatically excluded" in result.stdout

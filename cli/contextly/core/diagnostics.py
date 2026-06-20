@@ -38,9 +38,18 @@ class DiagnosticsContext:
         with self._msg_lock:
             self._messages.append(DiagnosticMessage(component, message, "ERROR"))
 
+    def add_info(self, component: str, message: str) -> None:
+        with self._msg_lock:
+            self._messages.append(DiagnosticMessage(component, message, "INFO"))
+
     def has_errors(self) -> bool:
         with self._msg_lock:
             return any(m.severity == "ERROR" for m in self._messages)
+
+    def get_messages(self) -> List[DiagnosticMessage]:
+        """Returns a copy of all current diagnostic messages."""
+        with self._msg_lock:
+            return list(self._messages)
 
     def report(self) -> None:
         """Prints all collected diagnostics to the console."""
@@ -51,8 +60,10 @@ class DiagnosticsContext:
             for msg in self._messages:
                 if msg.severity == "ERROR":
                     console.print(f"[red][{msg.component}] ERROR:[/red] {msg.message}")
-                else:
+                elif msg.severity == "WARNING":
                     console.print(f"[yellow][{msg.component}] WARNING:[/yellow] {msg.message}")
+                else:
+                    console.print(f"[blue][{msg.component}] INFO:[/blue] {msg.message}")
 
     def clear(self) -> None:
         """Clears all diagnostics."""

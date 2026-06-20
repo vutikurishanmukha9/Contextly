@@ -35,7 +35,7 @@ def test_packer_engine_stream_rollback(tmp_path):
     bad_py.write_bytes(b"def \xff(): pass")
     
     # pack it
-    packer.pack([bad_py], "testpack", compress=True)
+    packer.pack([bad_py], "testpack", raw=False)
     
     # Verify it skipped the file
     pack_file = tmp_path / ".contextly" / "packs" / "testpack.contextpack.md"
@@ -52,7 +52,7 @@ def test_packer_engine_max_tokens_rollback(tmp_path):
     big_py.write_text("def f():\n" + "    pass\n" * 1000, "utf-8")
     
     # Set max_tokens very low
-    packer.pack([big_py], "testpack2", max_tokens=10, compress=True)
+    packer.pack([big_py], "testpack2", max_tokens=10, raw=False)
     
     # Verify it excluded the file contents
     pack_file = tmp_path / ".contextly" / "packs" / "testpack2.contextpack.md"

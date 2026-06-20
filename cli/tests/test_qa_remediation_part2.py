@@ -251,7 +251,7 @@ def test_process_pool_fallback_chain(temp_repo, monkeypatch):
     graph = builder.build()
     
     # Verify parsing succeeds via ThreadPoolExecutor fallback
-    assert len(graph.nodes) == 121  # 120 files + index.js
+    assert len(graph.nodes) == 241  # 120 files + 120 entities + index.js
 
 def test_security_critical_excludes(temp_repo):
     from contextly.utils.ignore import IgnoreEngine

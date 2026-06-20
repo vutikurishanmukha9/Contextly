@@ -72,6 +72,13 @@ class RepositoryCapability(BaseModel):
     node_ids: List[str] = Field(default_factory=list)
 
 class NodeType(str, Enum):
+    FILE = "FILE"
+    CLASS = "CLASS"
+    FUNCTION = "FUNCTION"
+    INTERFACE = "INTERFACE"
+    SCHEMA = "SCHEMA"
+    ENUM = "ENUM"
+    UNRESOLVED_EXTERNAL = "UNRESOLVED_EXTERNAL"
     COMPONENT = "COMPONENT"
     SERVICE = "SERVICE"
     STORE = "STORE"
@@ -93,12 +100,17 @@ class RelationshipType(str, Enum):
     CALLS = "CALLS"
     USES = "USES"
     EXTENDS = "EXTENDS"
+    IMPLEMENTS = "IMPLEMENTS"
+    CONTAINS = "CONTAINS"
+    DEPENDS_ON = "DEPENDS_ON"
+    RETURNS = "RETURNS"
 
 class Relationship(BaseModel):
     source_id: str
     target_id: str
     type: RelationshipType
     confidence: float = 1.0
+    resolution_method: str = "imported_symbol"
 
 class KnowledgeGraph(BaseModel):
     nodes: List[KnowledgeNode] = Field(default_factory=list)

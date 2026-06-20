@@ -274,4 +274,9 @@ class ImportGraphBuilder:
         
         self.assembler.build_relationships(all_dtos_for_relationships)
         
+        # Pass 3: Validate the Graph
+        from .validator import GraphValidator
+        validator = GraphValidator()
+        self.assembler.graph = validator.validate(self.assembler.graph)
+        
         return self.assembler.graph

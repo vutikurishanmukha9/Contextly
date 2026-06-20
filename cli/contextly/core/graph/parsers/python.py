@@ -3,8 +3,36 @@ import os
 import sys
 import contextlib
 from pathlib import Path
-from typing import List
-from .base import BaseASTParser, ParsedFileDTO
+from typing import List, Optional
+from .base import BaseASTParser, ParsedFileDTO, ExtractedEntity, EntityKind, EntityField, EntityMethod
+
+def _get_type_name(node: Optional[ast.AST]) -> Optional[str]:
+    if node is None:
+        return None
+    if isinstance(node, ast.Name):
+        return node.id
+    if hasattr(ast, 'unparse'):
+        try:
+            return ast.unparse(node)
+        except Exception:
+            return None
+    return None
+
+def _extract_called_entities(node: ast.AST) -> List[str]:
+    called = []
+    for child in ast.walk(node):
+        if isinstance(child, ast.Call):
+            if isinstance(child.func, ast.Name):
+                called.append(child.func.id)
+            elif isinstance(child.func, ast.Attribute):
+                if hasattr(ast, 'unparse'):
+                    try:
+                        called.append(ast.unparse(child.func))
+                    except Exception:
+                        called.append(child.func.attr)
+                else:
+                    called.append(child.func.attr)
+    return called
 
 @contextlib.contextmanager
 def scoped_recursion_limit(limit):
@@ -37,6 +65,7 @@ class PythonASTParser(BaseASTParser):
             file_dir = os.path.dirname(os.path.abspath(os.path.join(root_dir, file_path)))
             
             explicit_all = None
+            entities: List[ExtractedEntity] = []
             
             for node in ast.iter_child_nodes(tree):
                 if isinstance(node, ast.Assign):
@@ -61,6 +90,85 @@ class PythonASTParser(BaseASTParser):
                 elif isinstance(node, ast.AnnAssign):
                     if isinstance(node.target, ast.Name) and not node.target.id.startswith("_"):
                         exports.append(node.target.id)
+                        
+                # Extract Entities (Knowledge Graph V2)
+                if isinstance(node, ast.ClassDef):
+                    entity = ExtractedEntity(
+                        name=node.name,
+                        kind=EntityKind.CLASS,
+                        purpose=ast.get_docstring(node),
+                        called_entities=list(set(_extract_called_entities(node)))
+                    )
+                    for base in node.bases:
+                        if isinstance(base, ast.Name):
+                            entity.parent_classes.append(base.id)
+                        elif hasattr(ast, 'unparse'):
+                            try:
+                                entity.parent_classes.append(ast.unparse(base))
+                            except Exception:
+                                pass
+                                
+                    for dec in node.decorator_list:
+                        if isinstance(dec, ast.Name):
+                            entity.decorators.append(dec.id)
+                        elif isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name):
+                            entity.decorators.append(dec.func.id)
+                            
+                    for child in node.body:
+                        if isinstance(child, ast.AnnAssign):
+                            if isinstance(child.target, ast.Name):
+                                entity.fields.append(EntityField(
+                                    name=child.target.id,
+                                    type=_get_type_name(child.annotation)
+                                ))
+                        elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                            inputs = []
+                            for arg in child.args.args:
+                                inputs.append(EntityField(
+                                    name=arg.arg,
+                                    type=_get_type_name(arg.annotation)
+                                ))
+                            method_decs = []
+                            for dec in child.decorator_list:
+                                if isinstance(dec, ast.Name):
+                                    method_decs.append(dec.id)
+                                elif isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name):
+                                    method_decs.append(dec.func.id)
+                            
+                            method = EntityMethod(
+                                name=child.name,
+                                inputs=inputs,
+                                returns=_get_type_name(child.returns),
+                                decorators=method_decs,
+                                docstring=ast.get_docstring(child)
+                            )
+                            entity.methods.append(method)
+                    entities.append(entity)
+                    
+                elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    inputs = []
+                    for arg in node.args.args:
+                        inputs.append(EntityField(
+                            name=arg.arg,
+                            type=_get_type_name(arg.annotation)
+                        ))
+                    func_decs = []
+                    for dec in node.decorator_list:
+                        if isinstance(dec, ast.Name):
+                            func_decs.append(dec.id)
+                        elif isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name):
+                            func_decs.append(dec.func.id)
+                            
+                    entity = ExtractedEntity(
+                        name=node.name,
+                        kind=EntityKind.FUNCTION,
+                        purpose=ast.get_docstring(node),
+                        inputs=inputs,
+                        outputs=_get_type_name(node.returns),
+                        decorators=func_decs,
+                        called_entities=list(set(_extract_called_entities(node)))
+                    )
+                    entities.append(entity)
                         
             if explicit_all is not None:
                 exports = explicit_all
@@ -106,7 +214,8 @@ class PythonASTParser(BaseASTParser):
             return ParsedFileDTO(
                 file_path=file_path,
                 exports=list(set(exports)),
-                imports=list(set(imports))
+                imports=list(set(imports)),
+                entities=entities
             )
             
         except SyntaxError as e:

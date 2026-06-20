@@ -5,7 +5,7 @@ import re
 import contextlib
 from pathlib import Path
 from typing import List
-from .base import BaseASTParser, ParsedFileDTO
+from .base import BaseASTParser, ParsedFileDTO, ExtractedEntity, EntityKind, EntityField, EntityMethod
 
 @contextlib.contextmanager
 def scoped_recursion_limit(limit):
@@ -105,9 +105,22 @@ class TypeScriptASTParser(BaseASTParser):
             
             exports: List[str] = []
             imports: List[str] = []
+            entities: List[ExtractedEntity] = []
             
             file_dir = os.path.dirname(os.path.abspath(os.path.join(root_dir, file_path)))
             
+            def _extract_called_entities(n) -> List[str]:
+                called = []
+                def _walk(child_node):
+                    if child_node.type == 'call_expression':
+                        func_node = child_node.child_by_field_name('function')
+                        if func_node:
+                            called.append(content[func_node.start_byte:func_node.end_byte])
+                    for sub in child_node.children:
+                        _walk(sub)
+                _walk(n)
+                return called
+
             def traverse(node):
                 # Handle imports
                 if node.type == 'import_statement':
@@ -141,6 +154,79 @@ class TypeScriptASTParser(BaseASTParser):
                         elif child.type == 'default' or child.type == 'identifier':
                             exports.append('default')
                 
+                # Extract Entities
+                if node.type in ('class_declaration', 'interface_declaration', 'type_alias_declaration'):
+                    name_node = node.child_by_field_name('name')
+                    if name_node:
+                        name = content[name_node.start_byte:name_node.end_byte]
+                        kind = EntityKind.CLASS if node.type == 'class_declaration' else EntityKind.INTERFACE
+                        
+                        parent_classes = []
+                        for child in node.children:
+                            if child.type in ('class_heritage', 'heritage_clause', 'extends_clause', 'implements_clause'):
+                                def _get_types(hn):
+                                    for hc in hn.children:
+                                        if hc.type in ('identifier', 'type_identifier'):
+                                            parent_classes.append(content[hc.start_byte:hc.end_byte])
+                                        else:
+                                            _get_types(hc)
+                                _get_types(child)
+                                
+                        entity = ExtractedEntity(
+                            name=name, 
+                            kind=kind,
+                            called_entities=list(set(_extract_called_entities(node))),
+                            parent_classes=list(set(parent_classes))
+                        )
+                        
+                        body_node = node.child_by_field_name('body') or next((c for c in node.children if c.type == 'object_type'), None)
+                        if body_node:
+                            for member in body_node.children:
+                                if member.type in ('public_field_definition', 'property_signature'):
+                                    prop_name = member.child_by_field_name('name')
+                                    if prop_name:
+                                        entity.fields.append(EntityField(name=content[prop_name.start_byte:prop_name.end_byte]))
+                                elif member.type in ('method_definition', 'method_signature'):
+                                    meth_name = member.child_by_field_name('name')
+                                    if meth_name:
+                                        ret_type_node = member.child_by_field_name('return_type')
+                                        ret_type = content[ret_type_node.start_byte:ret_type_node.end_byte] if ret_type_node else None
+                                        method = EntityMethod(
+                                            name=content[meth_name.start_byte:meth_name.end_byte],
+                                            returns=ret_type
+                                        )
+                                        params = member.child_by_field_name('parameters')
+                                        if params:
+                                            for p in params.children:
+                                                if p.type in ('required_parameter', 'optional_parameter'):
+                                                    pname = p.child_by_field_name('pattern')
+                                                    if pname:
+                                                        method.inputs.append(EntityField(name=content[pname.start_byte:pname.end_byte]))
+                                        entity.methods.append(method)
+                        entities.append(entity)
+                        
+                elif node.type == 'function_declaration':
+                    name_node = node.child_by_field_name('name')
+                    if name_node:
+                        name = content[name_node.start_byte:name_node.end_byte]
+                        ret_type_node = node.child_by_field_name('return_type')
+                        ret_type = content[ret_type_node.start_byte:ret_type_node.end_byte] if ret_type_node else None
+                        
+                        entity = ExtractedEntity(
+                            name=name, 
+                            kind=EntityKind.FUNCTION,
+                            outputs=ret_type,
+                            called_entities=list(set(_extract_called_entities(node)))
+                        )
+                        params = node.child_by_field_name('parameters')
+                        if params:
+                            for p in params.children:
+                                if p.type in ('required_parameter', 'optional_parameter'):
+                                    pname = p.child_by_field_name('pattern')
+                                    if pname:
+                                        entity.inputs.append(EntityField(name=content[pname.start_byte:pname.end_byte]))
+                        entities.append(entity)
+                
                 # Traverse children
                 for child in node.children:
                     traverse(child)
@@ -150,7 +236,8 @@ class TypeScriptASTParser(BaseASTParser):
             return ParsedFileDTO(
                 file_path=file_path,
                 exports=list(set(exports)),
-                imports=list(set(imports))
+                imports=list(set(imports)),
+                entities=entities
             )
             
         except Exception as e:

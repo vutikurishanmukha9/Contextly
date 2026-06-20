@@ -16,7 +16,7 @@ def pack_cmd(
     name: str = typer.Option(None, "--name", "-n", help="Name of the context pack (defaults to directory name)"),
     profile: str = typer.Option(None, "--profile", "-p", help="Use a profile defined in .contextly/config.yaml"),
     max_tokens: int = typer.Option(None, "--max-tokens", help="Drop least relevant files to fit within this limit"),
-    compress: bool = typer.Option(False, "--compress", "-c", help="Compress AST representations to save tokens"),
+    raw: bool = typer.Option(False, "--raw", help="Output raw file contents instead of extracting structural knowledge"),
     no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)"),
     output_format: str = typer.Option("text", "--format", help="Output format ('text' or 'json')")
 ):
@@ -95,7 +95,7 @@ def pack_cmd(
         status_ctx.start()
         
     try:
-        token_estimate, token_type, file_count, output_file, skipped_files, excluded_count = engine.pack(target_paths, pack_name, max_tokens, compress)
+        token_estimate, token_type, file_count, output_file, skipped_files, excluded_count = engine.pack(target_paths, pack_name, max_tokens, raw)
     except Exception as e:
         if output_format != "json":
             status_ctx.stop()

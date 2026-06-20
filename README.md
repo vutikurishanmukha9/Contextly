@@ -204,6 +204,29 @@ Useful for sharing focused portions of a large codebase with an LLM.
 
 ---
 
+### `contextly stats`
+
+Generate an enterprise repository health report based on Graph Topology and Knowledge Extraction.
+
+```bash
+contextly stats
+```
+
+Or for automated CI/CD pipelines:
+```bash
+contextly stats --json
+```
+
+Provides a comprehensive diagnostic overview, including:
+
+* **Graph Topology**: Analyzed files, discovered entities, and total relationships.
+* **Resolution Quality**: Confidence breakdown of exact vs. fuzzy symbol matching.
+* **Architectural Hotspots**: Identifies the most connected entities and choke points.
+* **Diagnostics & Quality Gate**: Detects circular dependencies and potential orphan (dead) code.
+* **Repository Health Score**: Calculates an overall 0-100 metric for the codebase.
+
+---
+
 ### `contextly inspect`
 
 Analyze repository complexity and token consumption.

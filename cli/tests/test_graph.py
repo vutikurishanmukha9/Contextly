@@ -150,7 +150,7 @@ def test_graph_assembler_node_ids_are_deterministic():
     second = GraphAssembler().add_node(dto)
 
     assert first == second
-    assert first.startswith("node_")
+    assert first.startswith("file_")
 
 def test_import_graph_builder(tmp_path):
     (tmp_path / "src").mkdir()
@@ -160,7 +160,7 @@ def test_import_graph_builder(tmp_path):
     builder = ImportGraphBuilder(tmp_path)
     graph = builder.build()
     
-    assert len(graph.nodes) == 2
+    assert len(graph.nodes) == 3
     # Ensure relationships are correctly formed
     # Relationships count should be 1 (main.py -> utils.py)
     # Plus possibly 0 since sys is not a local node
@@ -243,23 +243,23 @@ def test_graph_assembler_node_type_segment_classification():
     from contextly.types.models import NodeType
     assembler = GraphAssembler()
     
-    # userService.py has "service" in path but it is a service file
+    # userService.py
     dto1 = ParsedFileDTO(file_path="src/components/userService.py", exports=["UserService"], imports=[])
     node_id1 = assembler.add_node(dto1)
     node1 = next(n for n in assembler.graph.nodes if n.id == node_id1)
-    assert node1.type == NodeType.SERVICE
+    assert node1.type == NodeType.FILE
     
-    # service_worker_bootstrap.py contains "service" but is a component/script
+    # service_worker_bootstrap.py
     dto2 = ParsedFileDTO(file_path="src/auth/service_worker_bootstrap.py", exports=["run"], imports=[])
     node_id2 = assembler.add_node(dto2)
     node2 = next(n for n in assembler.graph.nodes if n.id == node_id2)
-    assert node2.type == NodeType.COMPONENT
+    assert node2.type == NodeType.FILE
     
     # model inside a model folder
     dto3 = ParsedFileDTO(file_path="src/models/user.py", exports=["User"], imports=[])
     node_id3 = assembler.add_node(dto3)
     node3 = next(n for n in assembler.graph.nodes if n.id == node_id3)
-    assert node3.type == NodeType.MODEL
+    assert node3.type == NodeType.FILE
 
 
 def test_import_graph_builder_thread_safety(tmp_path):
@@ -270,7 +270,7 @@ def test_import_graph_builder_thread_safety(tmp_path):
     builder = ImportGraphBuilder(tmp_path)
     # Verify parsing handles files safely
     graph = builder.build()
-    assert len(graph.nodes) == 50
+    assert len(graph.nodes) == 100
 
 def test_python_ast_parser_explicit_all(tmp_path):
     parser = PythonASTParser()

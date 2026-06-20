@@ -5,14 +5,14 @@ from typing import Tuple, List, Optional
 
 from ...utils.ignore import IgnoreEngine
 from ...utils.exceptions import ContextlyError
-from .compression import CompressionEngine
 from .ranking import RankingEngine
+from ..graph.parsers.registry import ParserRegistry
+from .formatter import KnowledgeFormatter
 
 class PackerEngine:
     def __init__(self, root_dir: Path, no_default_excludes: bool = False):
         self.root_dir = root_dir
         self.ignorer = IgnoreEngine(root_dir, no_default_excludes=no_default_excludes)
-        self.compressor = CompressionEngine()
         self.ranker = RankingEngine(root_dir)
         try:
             import tiktoken
@@ -57,7 +57,7 @@ class PackerEngine:
 
         return True  # Contains null bytes and is not valid UTF-16
 
-    def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None, compress: bool = False) -> Tuple[int, str, int, Path, List[Path], int]:
+    def pack(self, target_paths: List[Path], pack_name: str, max_tokens: Optional[int] = None, raw: bool = False) -> Tuple[int, str, int, Path, List[Path], int]:
         """
         Creates a context pack for the target directories.
         Returns:
@@ -143,8 +143,6 @@ class PackerEngine:
                         rel_path = path.name
                     ext = path.suffix.replace('.', '')
                     
-                    is_py_compress = (compress and path.suffix.lower() == '.py')
-                    
                     # Flush before recording position for reliable rollback
                     out_f.flush()
                     start_pos = out_f.tell()
@@ -156,13 +154,10 @@ class PackerEngine:
                             continue
                         in_f.seek(0)
                         
-                        header_str = f"## File: `{rel_path}`\n```{ext}\n"
-                        out_f.write(header_str)
-                        
-                        file_tokens = self._estimate_tokens(header_str)
+                        parser = None if raw else ParserRegistry.get_parser(ext)
                         is_excluded = False
                         
-                        if is_py_compress:
+                        if parser:
                             try:
                                 raw_code = in_f.read().decode("utf-8")
                             except UnicodeDecodeError:
@@ -173,27 +168,62 @@ class PackerEngine:
                                 out_f.truncate(start_pos)
                                 continue
                                 
-                            compressed = self.compressor.compress(path, raw_code)
-                            body = compressed if compressed.endswith('\n') else compressed + '\n'
+                            parsed_dto = parser.parse(str(path), raw_code, str(self.root_dir))
+                            body = KnowledgeFormatter.format_file_knowledge(parsed_dto)
                             
-                            file_tokens += self._estimate_tokens(body)
+                            header_str = f"## File: `{rel_path}`\n```{ext}\n"
+                            footer_str = "\n```\n\n"
+                            
+                            file_tokens = self._estimate_tokens(header_str) + self._estimate_tokens(body) + self._estimate_tokens(footer_str)
                                 
                             if max_tokens and current_tokens + file_tokens > max_tokens:
                                 excluded_files.append(path)
-                                # Defensive flush before rollback
                                 out_f.flush()
                                 out_f.seek(start_pos)
                                 out_f.truncate(start_pos)
                                 continue
                                 
+                            out_f.write(header_str)
                             out_f.write(body)
-                            out_f.write(f"```\n\n")
+                            out_f.write(footer_str)
+                            current_tokens += file_tokens
+                            selected_files.append(path)
+                            
+                        elif not raw:
+                            try:
+                                raw_code = in_f.read().decode("utf-8")
+                            except UnicodeDecodeError:
+                                skipped_files.append(path)
+                                out_f.flush()
+                                out_f.seek(start_pos)
+                                out_f.truncate(start_pos)
+                                continue
+                                
+                            body = KnowledgeFormatter.format_metadata_fallback(str(path), raw_code)
+                            
+                            header_str = f"## File: `{rel_path}`\n"
+                            footer_str = "\n\n"
+                            
+                            file_tokens = self._estimate_tokens(header_str) + self._estimate_tokens(body) + self._estimate_tokens(footer_str)
+                            
+                            if max_tokens and current_tokens + file_tokens > max_tokens:
+                                excluded_files.append(path)
+                                out_f.flush()
+                                out_f.seek(start_pos)
+                                out_f.truncate(start_pos)
+                                continue
+                                
+                            out_f.write(header_str)
+                            out_f.write(body)
+                            out_f.write(footer_str)
                             current_tokens += file_tokens
                             selected_files.append(path)
                             
                         else:
-                            # Use errors='replace' to preserve file content instead of
-                            # rejecting the entire file on a single non-UTF-8 byte.
+                            header_str = f"## File: `{rel_path}`\n```{ext}\n"
+                            out_f.write(header_str)
+                            
+                            file_tokens = self._estimate_tokens(header_str)
                             decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
                             while True:
                                 chunk = in_f.read(4096)
@@ -212,7 +242,6 @@ class PackerEngine:
                                 
                             if is_excluded:
                                 excluded_files.append(path)
-                                # Defensive flush before rollback
                                 out_f.flush()
                                 out_f.truncate(start_pos)
                                 out_f.seek(start_pos)

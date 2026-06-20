@@ -31,7 +31,7 @@ def test_packer_engine_streaming(tmp_path):
             target_paths=[repo_dir],
             pack_name="test_pack",
             max_tokens=None,
-            compress=False
+            raw=True
         )
         
         out_file = repo_dir / ".contextly" / "packs" / "test_pack.contextpack.md"
@@ -60,7 +60,7 @@ def test_packer_engine_token_limit(tmp_path):
         target_paths=[repo_dir],
         pack_name="test_pack_2",
         max_tokens=1500, # f1 is ~1000 tokens, so f1+f2 > 1500
-        compress=False
+        raw=True
     )
     
     out_file = repo_dir / ".contextly" / "packs" / "test_pack_2.contextpack.md"
@@ -88,7 +88,7 @@ def test_packer_engine_toctou_exists(tmp_path):
         target_paths=[repo_dir],
         pack_name="test_pack",
         max_tokens=None,
-        compress=False
+        raw=True
     )
     
     assert (packs_dir / "test_pack_1.contextpack.md").exists()
