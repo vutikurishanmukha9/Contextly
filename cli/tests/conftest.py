@@ -58,6 +58,8 @@ def disable_process_pool(monkeypatch):
     """
     import concurrent.futures
     class SyncExecutor:
+        def __init__(self, *args, **kwargs):
+            pass
         def submit(self, fn, *args, **kwargs):
             class MockFuture(concurrent.futures.Future):
                 def __init__(self):

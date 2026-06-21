@@ -24,7 +24,7 @@ class PackerEngine:
 
         from ...utils.config import load_config_model
         self.config = load_config_model(root_dir)
-        self.max_file_size = self.config.packer.max_file_size_mb * 1024 * 1024
+        self.max_file_size = int(self.config.packer.max_file_size_mb * 1024 * 1024)
 
     def _estimate_tokens(self, text: str) -> float:
         """Fast character-count heuristic for in-loop token budget enforcement."""
@@ -52,6 +52,8 @@ class PackerEngine:
             try:
                 text = first_kb.decode(encoding, errors='ignore')
                 if not text:
+                    continue
+                if len(text) < len(first_kb) / 4:
                     continue
                 valid_chars = sum(1 for c in text if c.isprintable() or c.isspace())
                 if (valid_chars / len(text)) > 0.8:
