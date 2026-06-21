@@ -48,16 +48,14 @@ class PackerEngine:
             return False
 
         # Check if this might be UTF-16 before classifying as binary
+        even_kb = first_kb if len(first_kb) % 2 == 0 else first_kb[:-1]
         for encoding in ('utf-16', 'utf-16-le', 'utf-16-be'):
             try:
-                text = first_kb.decode(encoding, errors='ignore')
-                if not text:
-                    continue
-                if len(text) < len(first_kb) / 4:
-                    continue
-                valid_chars = sum(1 for c in text if c.isprintable() or c.isspace())
-                if (valid_chars / len(text)) > 0.8:
-                    return False  # Valid UTF-16 text, not binary
+                text = even_kb.decode(encoding, errors='strict')
+                if text:
+                    valid_chars = sum(1 for c in text if c.isprintable() or c.isspace())
+                    if (valid_chars / len(text)) > 0.3:
+                        return False  # Valid UTF-16 text, not binary
             except Exception:
                 continue
 

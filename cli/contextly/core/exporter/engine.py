@@ -66,7 +66,12 @@ class ExporterEngine:
                 out_f.write(intelligence_layer)
                 out_f.write(f'\n\n<context_pack name="{safe_pack_name}">\n')
                 
-                with open(pack_path, "r", encoding="utf-8") as in_f:
+                try:
+                    in_f = open(pack_path, "r", encoding="utf-8")
+                except (FileNotFoundError, PermissionError) as e:
+                    raise ContextlyError(f"Error reading files: {e}")
+                
+                with in_f:
                     overlap = ""
                     while True:
                         chunk = in_f.read(8 * 1024 * 1024)
@@ -86,7 +91,9 @@ class ExporterEngine:
                         out_f.write(pattern.sub('&lt;/context_pack&gt;', safe_part))
                         
                 out_f.write('\n</context_pack>\n')
-        except (FileNotFoundError, PermissionError) as e:
+        except ContextlyError:
+            raise
+        except Exception as e:
             raise ContextlyError(f"Error writing export file: {e}")
             
         clipboard_success = True
