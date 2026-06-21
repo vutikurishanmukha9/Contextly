@@ -166,7 +166,7 @@ function Landing() {
             </div>
           </div>
         </section>
-        
+
         <HowToUse />
       </main>
 
@@ -178,24 +178,27 @@ function Landing() {
 const COMMANDS = [
   {
     name: "init",
-    description: "Initializes Context-as-Code in the current directory. It creates a `.contextly` directory containing configuration files to tailor the engine's behavior to your project's specific needs.",
+    description:
+      "Initializes Context-as-Code in the current directory. It creates a `.contextly` directory containing configuration files to tailor the engine's behavior to your project's specific needs.",
     usage: "$ contextly init",
     output: `[OK] Initialized Contextly in .contextly/
 [OK] Created default config.yaml
-[OK] You are ready to analyze and pack!`
+[OK] You are ready to analyze and pack!`,
   },
   {
     name: "analyze",
-    description: "Automatically analyzes and maps the repository. It scans your codebase, parsing ASTs to build a comprehensive graph of your entities, functions, and classes.",
+    description:
+      "Automatically analyzes and maps the repository. It scans your codebase, parsing ASTs to build a comprehensive graph of your entities, functions, and classes.",
     usage: "$ contextly analyze",
     output: `[OK] Starting repository analysis...
 [OK] Parsed 179 files
 [OK] Extracted 1,302 entities and 2,976 edges
-[OK] Graph saved to .contextly/memory/graph.json`
+[OK] Graph saved to .contextly/memory/graph.json`,
   },
   {
     name: "discover",
-    description: "Statically analyzes the repository to discover conventions. It detects your build tools, frameworks, languages, and architectural patterns, generating a PROJECT_CONTEXT.md file.",
+    description:
+      "Statically analyzes the repository to discover conventions. It detects your build tools, frameworks, languages, and architectural patterns, generating a PROJECT_CONTEXT.md file.",
     usage: "$ contextly discover",
     output: `[OK] Pattern Discovery Complete:
 
@@ -208,11 +211,12 @@ Frontend Framework:
 Language:
   [OK] TypeScript (High Confidence) - Uses TypeScript for type-safe JavaScript.
 
-Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`
+Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`,
   },
   {
     name: "stats",
-    description: "Generates an enterprise repository health report. It gives you a detailed overview of graph topology, resolution quality, and architectural hotspots.",
+    description:
+      "Generates an enterprise repository health report. It gives you a detailed overview of graph topology, resolution quality, and architectural hotspots.",
     usage: "$ contextly stats",
     output: `+---------------------------------------+
 | Contextly Repository Health Report: . |
@@ -228,11 +232,12 @@ Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`
 • Most Connected:
   1. str                  (93 edges)
   2. runner.invoke        (92 edges)
-  3. PackerEngine         (80 edges)`
+  3. PackerEngine         (80 edges)`,
   },
   {
     name: "pack",
-    description: "Bundles a directory into an LLM-ready Context Pack. It combines the graph intelligence and compressed source code into a highly optimized Markdown file.",
+    description:
+      "Bundles a directory into an LLM-ready Context Pack. It combines the graph intelligence and compressed source code into a highly optimized Markdown file.",
     usage: "$ contextly pack",
     output: `[OK] Context Pack 'Contextly' created!
 
@@ -240,8 +245,8 @@ Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`
                      Source  '.'                                       
                Files Packed  194                                       
  Exact Tokens (cl100k_base)  16,873                                    
-            Output Location  .contextly\\packs\\Contextly.contextpack.md`
-  }
+            Output Location  .contextly\\packs\\Contextly.contextpack.md`,
+  },
 ];
 
 function HowToUse() {
@@ -253,7 +258,8 @@ function HowToUse() {
         <div className="mb-16 text-center">
           <h2 className="text-3xl font-bold tracking-tight text-white">How to use</h2>
           <p className="mt-4 text-white/60 max-w-2xl mx-auto text-lg">
-            Context-Ly provides a suite of tools to analyze, map, and package your repository for LLMs. Here is a detailed breakdown of every command.
+            Context-Ly provides a suite of tools to analyze, map, and package your repository for
+            LLMs. Here is a detailed breakdown of every command.
           </p>
         </div>
 
@@ -265,13 +271,15 @@ function HowToUse() {
                 key={cmd.name}
                 onClick={() => setActiveCommand(idx)}
                 className={`text-left px-5 py-4 rounded-xl border transition-all ${
-                  activeCommand === idx 
-                    ? "bg-white/10 border-white/20 text-white shadow-sm" 
+                  activeCommand === idx
+                    ? "bg-white/10 border-white/20 text-white shadow-sm"
                     : "bg-transparent border-transparent text-white/50 hover:bg-white/5 hover:text-white/80"
                 }`}
               >
                 <div className="font-mono text-sm font-semibold mb-1">contextly {cmd.name}</div>
-                <div className="text-xs line-clamp-2 leading-relaxed opacity-80">{cmd.description}</div>
+                <div className="text-xs line-clamp-2 leading-relaxed opacity-80">
+                  {cmd.description}
+                </div>
               </button>
             ))}
           </div>
@@ -285,7 +293,9 @@ function HowToUse() {
                   <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
                   <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
                 </div>
-                <div className="ml-4 text-xs font-mono text-white/40">contextly {COMMANDS[activeCommand].name}</div>
+                <div className="ml-4 text-xs font-mono text-white/40">
+                  contextly {COMMANDS[activeCommand].name}
+                </div>
               </div>
               <div className="p-6 font-mono text-sm overflow-x-auto text-white/80 leading-relaxed min-h-[320px]">
                 <div className="flex gap-4 mb-6">
