@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { Terminal, HardDrive, Cpu, Shield, ArrowRight } from "lucide-react";
@@ -69,12 +70,12 @@ function Landing() {
                 </svg>
               </button>
             </div>
-            <Link
-              to="/docs"
+            <a
+              href="#how-to-use"
               className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-black text-white font-medium text-sm hover:bg-black/80 transition-colors"
             >
-              Read Docs <ArrowRight className="w-4 h-4" />
-            </Link>
+              How it works <ArrowRight className="w-4 h-4" />
+            </a>
           </div>
         </section>
 
@@ -165,9 +166,144 @@ function Landing() {
             </div>
           </div>
         </section>
+        
+        <HowToUse />
       </main>
 
       <SiteFooter />
     </div>
+  );
+}
+
+const COMMANDS = [
+  {
+    name: "init",
+    description: "Initializes Context-as-Code in the current directory. It creates a `.contextly` directory containing configuration files to tailor the engine's behavior to your project's specific needs.",
+    usage: "$ contextly init",
+    output: `[OK] Initialized Contextly in .contextly/
+[OK] Created default config.yaml
+[OK] You are ready to analyze and pack!`
+  },
+  {
+    name: "analyze",
+    description: "Automatically analyzes and maps the repository. It scans your codebase, parsing ASTs to build a comprehensive graph of your entities, functions, and classes.",
+    usage: "$ contextly analyze",
+    output: `[OK] Starting repository analysis...
+[OK] Parsed 179 files
+[OK] Extracted 1,302 entities and 2,976 edges
+[OK] Graph saved to .contextly/memory/graph.json`
+  },
+  {
+    name: "discover",
+    description: "Statically analyzes the repository to discover conventions. It detects your build tools, frameworks, languages, and architectural patterns, generating a PROJECT_CONTEXT.md file.",
+    usage: "$ contextly discover",
+    output: `[OK] Pattern Discovery Complete:
+
+Build Tool:
+  [OK] Vite (High Confidence) - Uses Vite as the frontend build tool.
+
+Frontend Framework:
+  [OK] React (High Confidence) - Uses React for building user interfaces.
+
+Language:
+  [OK] TypeScript (High Confidence) - Uses TypeScript for type-safe JavaScript.
+
+Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`
+  },
+  {
+    name: "stats",
+    description: "Generates an enterprise repository health report. It gives you a detailed overview of graph topology, resolution quality, and architectural hotspots.",
+    usage: "$ contextly stats",
+    output: `+---------------------------------------+
+| Contextly Repository Health Report: . |
++---------------------------------------+
+
+[ Repository Health Score: 83.7/100 ]
+
+[ Graph Topology ]
+• Files Analyzed:       179
+• Entities Discovered:  1302
+
+[ Architectural Hotspots (Top 3) ]
+• Most Connected:
+  1. str                  (93 edges)
+  2. runner.invoke        (92 edges)
+  3. PackerEngine         (80 edges)`
+  },
+  {
+    name: "pack",
+    description: "Bundles a directory into an LLM-ready Context Pack. It combines the graph intelligence and compressed source code into a highly optimized Markdown file.",
+    usage: "$ contextly pack",
+    output: `[OK] Context Pack 'Contextly' created!
+
+                             Pack Summary                              
+                     Source  '.'                                       
+               Files Packed  194                                       
+ Exact Tokens (cl100k_base)  16,873                                    
+            Output Location  .contextly\\packs\\Contextly.contextpack.md`
+  }
+];
+
+function HowToUse() {
+  const [activeCommand, setActiveCommand] = useState(0);
+
+  return (
+    <section id="how-to-use" className="bg-[#0A0A0A] py-24 px-6 border-t border-white/10">
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-16 text-center">
+          <h2 className="text-3xl font-bold tracking-tight text-white">How to use</h2>
+          <p className="mt-4 text-white/60 max-w-2xl mx-auto text-lg">
+            Context-Ly provides a suite of tools to analyze, map, and package your repository for LLMs. Here is a detailed breakdown of every command.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-12 gap-8 items-start">
+          {/* Tabs */}
+          <div className="lg:col-span-4 flex flex-col gap-2">
+            {COMMANDS.map((cmd, idx) => (
+              <button
+                key={cmd.name}
+                onClick={() => setActiveCommand(idx)}
+                className={\`text-left px-5 py-4 rounded-xl border transition-all \${
+                  activeCommand === idx 
+                    ? "bg-white/10 border-white/20 text-white shadow-sm" 
+                    : "bg-transparent border-transparent text-white/50 hover:bg-white/5 hover:text-white/80"
+                }\`}
+              >
+                <div className="font-mono text-sm font-semibold mb-1">contextly {cmd.name}</div>
+                <div className="text-xs line-clamp-2 leading-relaxed opacity-80">{cmd.description}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Terminal View */}
+          <div className="lg:col-span-8">
+            <div className="rounded-2xl border border-white/10 bg-black overflow-hidden shadow-2xl relative">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/5">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
+                  <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
+                  <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
+                </div>
+                <div className="ml-4 text-xs font-mono text-white/40">contextly {COMMANDS[activeCommand].name}</div>
+              </div>
+              <div className="p-6 font-mono text-sm overflow-x-auto text-white/80 leading-relaxed min-h-[320px]">
+                <div className="flex gap-4 mb-6">
+                  <span className="text-green-400">~/project</span>
+                  <span className="text-white">{COMMANDS[activeCommand].usage}</span>
+                </div>
+                <pre className="text-white/70 whitespace-pre-wrap font-mono text-sm">
+                  {COMMANDS[activeCommand].output}
+                </pre>
+                <div className="mt-6 flex gap-4">
+                  <span className="text-green-400">~/project</span>
+                  <span className="text-white/50 animate-pulse">_</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

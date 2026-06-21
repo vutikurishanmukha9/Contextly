@@ -21,8 +21,7 @@ The CLI acts as a persistent **Context Memory Layer** for your repository, enabl
 
 ## Team Conventions
 
-### Explicit Rules (Memory)
-- [State Management] Uses Zustand for state management. [High confidence]
+### Inferred Conventions (Discovery)
 - [Styling] Uses TailwindCSS for styling. [High confidence]
 - [Data Validation] Uses Pydantic for data validation and parsing. [High confidence]
 - [Testing] Uses Pytest for unit testing. [High confidence]
@@ -31,13 +30,13 @@ The CLI acts as a persistent **Context Memory Layer** for your repository, enabl
 - [Frontend Framework] Uses React for building user interfaces. [High confidence]
 - [Build Tool] Uses Vite as the frontend build tool. [High confidence]
 - [Language] Uses TypeScript for type-safe JavaScript. [High confidence]
-- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Scanner/Plugin Architecture. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Generator Pattern. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Command Pattern. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Generator Pattern. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Scanner/Plugin Architecture. [Medium confidence]
 - [Architecture Hints] Found UI components directory structure. [Medium confidence]
 
 
@@ -61,7 +60,8 @@ Contextly/
 |   |   |   |-- inspect.py
 |   |   |   |-- learn.py
 |   |   |   |-- memory.py
-|   |   |   `-- pack.py
+|   |   |   |-- pack.py
+|   |   |   `-- stats.py
 |   |   |-- core/
 |   |   |   |-- analyzer/
 |   |   |   |   |-- __init__.py
@@ -82,7 +82,8 @@ Contextly/
 |   |   |   |   |   `-- ... (truncated)
 |   |   |   |   |-- assembler.py
 |   |   |   |   |-- builder.py
-|   |   |   |   `-- cluster.py
+|   |   |   |   |-- cluster.py
+|   |   |   |   `-- validator.py
 |   |   |   |-- initializer/
 |   |   |   |   |-- __init__.py
 |   |   |   |   `-- engine.py
@@ -95,10 +96,15 @@ Contextly/
 |   |   |   |-- memory/
 |   |   |   |   |-- __init__.py
 |   |   |   |   `-- engine.py
+|   |   |   |-- metrics/
+|   |   |   |   |-- __init__.py
+|   |   |   |   |-- base.py
+|   |   |   |   `-- providers.py
 |   |   |   |-- packer/
 |   |   |   |   |-- __init__.py
 |   |   |   |   |-- compression.py
 |   |   |   |   |-- engine.py
+|   |   |   |   |-- formatter.py
 |   |   |   |   `-- ranking.py
 |   |   |   |-- __init__.py
 |   |   |   `-- diagnostics.py
@@ -148,22 +154,33 @@ Contextly/
 |   |   |-- test_fs.py
 |   |   |-- test_generators.py
 |   |   |-- test_graph.py
+|   |   |-- test_graph_extended.py
 |   |   |-- test_init.py
 |   |   |-- test_inspect.py
 |   |   |-- test_learn.py
+|   |   |-- test_main_coverage.py
 |   |   |-- test_memory.py
 |   |   |-- test_pack.py
+|   |   |-- test_packer_streaming.py
+|   |   |-- test_python_parser_exhaustive.py
+|   |   |-- test_qa_coverage.py
+|   |   |-- test_qa_coverage_builder.py
+|   |   |-- test_qa_coverage_memory.py
+|   |   |-- test_qa_coverage_utils.py
 |   |   |-- test_qa_remediation_part2.py
+|   |   |-- test_qa_remediation_part4.py
 |   |   |-- test_ranking.py
 |   |   |-- test_scanner_base.py
 |   |   |-- test_scanner_dependencies.py
 |   |   |-- test_scanner_framework.py
 |   |   |-- test_scanner_language.py
-|   |   `-- test_scanner_patterns.py
+|   |   |-- test_scanner_patterns.py
+|   |   |-- test_stats_cmd.py
+|   |   `-- test_typescript_parser_exhaustive.py
 |   |-- CHANGELOG.md
-|   |-- missing.txt
 |   |-- pyproject.toml
-|   `-- README.md
+|   |-- README.md
+|   `-- uv.lock
 |-- frontend/
 |   |-- .tanstack/
 |   |   `-- tmp/
@@ -226,8 +243,10 @@ Contextly/
 |   |   |   `-- use-mobile.tsx
 |   |   |-- routes/
 |   |   |   |-- __root.tsx
+|   |   |   |-- docs.tsx
 |   |   |   |-- index.tsx
 |   |   |   `-- README.md
+|   |   |-- App.test.tsx
 |   |   |-- main.tsx
 |   |   |-- router.tsx
 |   |   |-- routeTree.gen.ts
@@ -246,7 +265,8 @@ Contextly/
 |-- .gitignore
 |-- LICENSE
 |-- PROJECT_CONTEXT.md
-`-- README.md
+|-- README.md
+`-- SECURITY.md
 ````
 
 ## Stack Identity
@@ -259,5 +279,5 @@ Contextly/
 ```
 
 ## Dependency Weight
-- **NPM Packages**: 69
-- **Python Packages**: 12
+- **NPM Packages**: 71
+- **Python Packages**: 15
