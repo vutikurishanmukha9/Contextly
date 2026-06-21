@@ -74,18 +74,31 @@ class AnalyzerEngine:
         Computes a SHA-256 hash using file metadata (path, size, mtime) to 
         minimize TOCTOU race conditions and drastically improve performance.
         """
-        hash_obj = hashlib.sha256()
-        for f in all_files:
+        import concurrent.futures
+        
+        def _get_metadata(f: str) -> str:
             try:
                 abs_path = self.root_dir / f
                 stat = abs_path.stat()
-                metadata = f"{f}|{stat.st_size}|{stat.st_mtime}"
-                hash_obj.update(metadata.encode("utf-8"))
+                return f"{f}|{stat.st_size}|{stat.st_mtime}"
             except OSError as e:
                 DiagnosticsContext().add_warning(
                     "AnalyzerEngine",
                     f"Cannot hash metadata for {f}: {type(e).__name__} - {e}"
                 )
+                return ""
+                
+        metadata_list = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
+            # Map retains the original order of all_files for deterministic hashing
+            for metadata in executor.map(_get_metadata, all_files):
+                if metadata:
+                    metadata_list.append(metadata)
+                    
+        hash_obj = hashlib.sha256()
+        for metadata in metadata_list:
+            hash_obj.update(metadata.encode("utf-8"))
+            
         return hash_obj.hexdigest()
 
     def _write_outputs(self, repo_knowledge: RepositoryKnowledge, intelligence: RepositoryIntelligence, model: str) -> None:

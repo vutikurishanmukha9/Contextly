@@ -37,7 +37,21 @@ def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) ->
             return None
 
         if b'\x00' in raw_bytes[:1024]:
-            return None # Silently skip binaries
+            is_valid_utf16 = False
+            first_kb = raw_bytes[:1024]
+            for encoding in ('utf-16', 'utf-16-le', 'utf-16-be'):
+                try:
+                    text = first_kb.decode(encoding, errors='ignore')
+                    if text:
+                        valid_chars = sum(1 for c in text if c.isprintable() or c.isspace())
+                        if (valid_chars / len(text)) > 0.8:
+                            is_valid_utf16 = True
+                            break
+                except Exception:
+                    continue
+                    
+            if not is_valid_utf16:
+                return None # Silently skip binaries
 
         try:
             content = raw_bytes.decode("utf-8")
@@ -143,7 +157,11 @@ class ImportGraphBuilder:
                     import sys
                     if sys.modules.get("pytest") is not None:
                         # Avoid multiprocessing/pebble inside pytest on Windows to prevent deadlocks
-                        pool_class = concurrent.futures.ThreadPoolExecutor
+                        try:
+                            from pebble import ThreadPool
+                            pool_class = ThreadPool
+                        except ImportError:
+                            pool_class = concurrent.futures.ThreadPoolExecutor
                     else:
                         from pebble import ProcessPool
                         from concurrent.futures import TimeoutError as FuturesTimeoutError
@@ -154,7 +172,11 @@ class ImportGraphBuilder:
                 except ImportError:
                     pool_class = concurrent.futures.ProcessPoolExecutor
             else:
-                pool_class = concurrent.futures.ThreadPoolExecutor
+                try:
+                    from pebble import ThreadPool
+                    pool_class = ThreadPool
+                except ImportError:
+                    pool_class = concurrent.futures.ThreadPoolExecutor
                 from concurrent.futures import TimeoutError as FuturesTimeoutError
                     
             with pool_class(**kwargs) as executor:
@@ -167,7 +189,7 @@ class ImportGraphBuilder:
                 def submit_next():
                     try:
                         fp = next(target_iter)
-                        if is_process_pool and pool_class.__name__ == "ProcessPool":
+                        if hasattr(executor, "schedule"):
                             future = executor.schedule(_parse_file, args=(fp, root_str, self.max_file_size_mb), timeout=_WORKER_PARSE_TIMEOUT_SECONDS)
                         else:
                             future = executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)

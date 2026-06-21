@@ -48,36 +48,54 @@ class ExporterEngine:
         try:
             with open(project_context_path, "r", encoding="utf-8") as f:
                 intelligence_layer = f.read()
-                
-            with open(pack_path, "r", encoding="utf-8") as f:
-                pack_layer = f.read()
         except (FileNotFoundError, PermissionError) as e:
             raise ContextlyError(f"Error reading files: {e}")
             
         safe_pack_name = html.escape(safe_file_pack_name)
-        # Escape closing tags to protect downstream XML parsing boundaries
-        safe_pack_layer = pack_layer.replace("</context_pack>", "&lt;/context_pack&gt;")
-        fused_content = f"""{intelligence_layer}
-
-<context_pack name="{safe_pack_name}">
-{safe_pack_layer}
-</context_pack>
-"""
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_id = uuid.uuid4().hex[:4]
         export_filename = f"export_{safe_file_pack_name}_{timestamp}_{unique_id}.md"
         export_path = export_dir / export_filename
         
+        import re
+        pattern = re.compile(r'</\s*context_pack\s*>', flags=re.IGNORECASE)
+        
         try:
-            with open(export_path, "w", encoding="utf-8") as f:
-                f.write(fused_content)
+            with open(export_path, "w", encoding="utf-8") as out_f:
+                out_f.write(intelligence_layer)
+                out_f.write(f'\n\n<context_pack name="{safe_pack_name}">\n')
+                
+                with open(pack_path, "r", encoding="utf-8") as in_f:
+                    overlap = ""
+                    while True:
+                        chunk = in_f.read(8 * 1024 * 1024)
+                        if not chunk:
+                            if overlap:
+                                out_f.write(pattern.sub('&lt;/context_pack&gt;', overlap))
+                            break
+                        
+                        buffer = overlap + chunk
+                        if len(buffer) > 128:
+                            safe_part = buffer[:-128]
+                            overlap = buffer[-128:]
+                        else:
+                            safe_part = ""
+                            overlap = buffer
+                            
+                        out_f.write(pattern.sub('&lt;/context_pack&gt;', safe_part))
+                        
+                out_f.write('\n</context_pack>\n')
         except (FileNotFoundError, PermissionError) as e:
             raise ContextlyError(f"Error writing export file: {e}")
             
         clipboard_success = True
         try:
-            pyperclip.copy(fused_content)
+            if export_path.stat().st_size < 10 * 1024 * 1024:
+                with open(export_path, "r", encoding="utf-8") as f:
+                    pyperclip.copy(f.read())
+            else:
+                clipboard_success = False
         except Exception:
             clipboard_success = False
             

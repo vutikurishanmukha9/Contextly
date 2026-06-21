@@ -50,9 +50,13 @@ class PackerEngine:
         # Check if this might be UTF-16 before classifying as binary
         for encoding in ('utf-16', 'utf-16-le', 'utf-16-be'):
             try:
-                first_kb.decode(encoding)
-                return False  # Valid UTF-16 text, not binary
-            except (UnicodeDecodeError, ValueError):
+                text = first_kb.decode(encoding, errors='ignore')
+                if not text:
+                    continue
+                valid_chars = sum(1 for c in text if c.isprintable() or c.isspace())
+                if (valid_chars / len(text)) > 0.8:
+                    return False  # Valid UTF-16 text, not binary
+            except Exception:
                 continue
 
         return True  # Contains null bytes and is not valid UTF-16
@@ -95,7 +99,7 @@ class PackerEngine:
         for target_path in target_paths:
             try:
                 target_path = target_path.resolve()
-                if not str(target_path).startswith(str(self.root_dir.resolve())):
+                if not target_path.is_relative_to(self.root_dir.resolve()):
                     from ...core.diagnostics import DiagnosticsContext
                     DiagnosticsContext().add_warning("PackerEngine", f"Path traversal attempt blocked: {target_path}")
                     continue
@@ -107,7 +111,7 @@ class PackerEngine:
                     
                 for root, dirs, files in os.walk(target_path):
                     root_path = Path(root).resolve()
-                    if not str(root_path).startswith(str(self.root_dir.resolve())):
+                    if not root_path.is_relative_to(self.root_dir.resolve()):
                         from ...core.diagnostics import DiagnosticsContext
                         DiagnosticsContext().add_warning("PackerEngine", f"Path traversal attempt blocked: {root_path}")
                         continue
@@ -168,7 +172,16 @@ class PackerEngine:
                         
                         if parser:
                             try:
-                                raw_code = in_f.read().decode("utf-8")
+                                raw_bytes = in_f.read(self.max_file_size + 1)
+                                if len(raw_bytes) > self.max_file_size:
+                                    skipped_files.append(path)
+                                    from ...core.diagnostics import DiagnosticsContext
+                                    DiagnosticsContext().add_warning("PackerEngine", f"File grew beyond max size during read (TOCTOU prevention): {path.name}")
+                                    out_f.flush()
+                                    out_f.seek(start_pos)
+                                    out_f.truncate(start_pos)
+                                    continue
+                                raw_code = raw_bytes.decode("utf-8")
                             except UnicodeDecodeError:
                                 skipped_files.append(path)
                                 # Defensive flush before rollback
@@ -200,7 +213,14 @@ class PackerEngine:
                             
                         elif not raw:
                             try:
-                                raw_code = in_f.read().decode("utf-8")
+                                raw_bytes = in_f.read(self.max_file_size + 1)
+                                if len(raw_bytes) > self.max_file_size:
+                                    skipped_files.append(path)
+                                    out_f.flush()
+                                    out_f.seek(start_pos)
+                                    out_f.truncate(start_pos)
+                                    continue
+                                raw_code = raw_bytes.decode("utf-8")
                             except UnicodeDecodeError:
                                 skipped_files.append(path)
                                 out_f.flush()

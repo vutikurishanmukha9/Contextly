@@ -59,7 +59,7 @@ except ImportError:
         tomllib = None
 
 from ..utils.walker import RepoWalker
-from ..utils.constants import is_skippable
+from ..utils.constants import is_skippable, ALWAYS_SKIP_DIRS, is_security_critical_dir
 
 class DependencyScanner(BaseScanner):
     @property
@@ -88,9 +88,17 @@ class DependencyScanner(BaseScanner):
                 config = load_config_model(root_dir)
                 scanners_depth = config.depth_limits.scanners
                 
+                def dir_skip_predicate(path: Path) -> bool:
+                    name = path.name.lower()
+                    if is_security_critical_dir(name):
+                        return True
+                    if name in ALWAYS_SKIP_DIRS:
+                        return True
+                    return False
+
                 # We intentionally use unlimited depth (None) for manifest discovery to support 
                 # deep monorepo structures, bypassing the general scanner depth limits.
-                walker = RepoWalker(root_dir, max_depth=None, skip_predicate=is_skippable)
+                walker = RepoWalker(root_dir, max_depth=None, skip_predicate=is_skippable, dir_skip_predicate=dir_skip_predicate)
 
                 for dirpath, dirnames, filenames in walker.walk():
                     current = Path(dirpath)
@@ -166,7 +174,7 @@ class DependencyScanner(BaseScanner):
                     if stripped.startswith("-r ") or stripped.startswith("-c "):
                         ref_file = stripped.split(" ", 1)[1].strip()
                         ref_path = (filepath.parent / ref_file).resolve(strict=False)
-                        if ref_path.exists():
+                        if ref_path.exists() and ref_path.is_relative_to(root_dir.resolve()):
                             self._parse_requirements_txt(ref_path, root_dir, python_set, strict, _visited)
                         continue
                         
