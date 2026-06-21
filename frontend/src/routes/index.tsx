@@ -1,8 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { Terminal, HardDrive, Cpu, Shield, ArrowRight } from "lucide-react";
+import { Terminal, HardDrive, Cpu, Shield, ArrowRight, FileCode, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -178,8 +178,14 @@ function Landing() {
 const COMMANDS = [
   {
     name: "init",
-    description:
-      "Initializes Context-as-Code in the current directory. It creates a `.contextly` directory containing configuration files to tailor the engine's behavior to your project's specific needs.",
+    shortDesc: "Initializes Context-as-Code in the current directory.",
+    fullDesc:
+      "Sets up the foundation for Context-Ly by creating the necessary configuration and memory directories in your project root.",
+    generates: {
+      file: ".contextly/config.yaml",
+      content:
+        "A customizable YAML configuration file that defines ignore patterns, include rules, and engine settings specific to your repository.",
+    },
     usage: "$ contextly init",
     output: `[OK] Initialized Contextly in .contextly/
 [OK] Created default config.yaml
@@ -187,8 +193,14 @@ const COMMANDS = [
   },
   {
     name: "analyze",
-    description:
-      "Automatically analyzes and maps the repository. It scans your codebase, parsing ASTs to build a comprehensive graph of your entities, functions, and classes.",
+    shortDesc: "Scans and maps the entire repository.",
+    fullDesc:
+      "Performs a deep AST-level parse of your entire codebase to extract all classes, functions, and their intricate dependencies.",
+    generates: {
+      file: ".contextly/memory/graph.json",
+      content:
+        "A structured JSON graph of your codebase's architecture, tracking how every entity relates to one another.",
+    },
     usage: "$ contextly analyze",
     output: `[OK] Starting repository analysis...
 [OK] Parsed 179 files
@@ -197,8 +209,14 @@ const COMMANDS = [
   },
   {
     name: "discover",
-    description:
-      "Statically analyzes the repository to discover conventions. It detects your build tools, frameworks, languages, and architectural patterns, generating a PROJECT_CONTEXT.md file.",
+    shortDesc: "Statically analyzes the repository to discover conventions.",
+    fullDesc:
+      "Automatically infers your tech stack, frameworks, and architectural design patterns without you having to write a single line of documentation.",
+    generates: {
+      file: "PROJECT_CONTEXT.md",
+      content:
+        "A high-level markdown intelligence briefing detailing your project's primary languages, build tools, state management, and architectural topology.",
+    },
     usage: "$ contextly discover",
     output: `[OK] Pattern Discovery Complete:
 
@@ -215,8 +233,10 @@ Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`,
   },
   {
     name: "stats",
-    description:
-      "Generates an enterprise repository health report. It gives you a detailed overview of graph topology, resolution quality, and architectural hotspots.",
+    shortDesc: "Generates an enterprise repository health report.",
+    fullDesc:
+      "Provides a deep dive into your repository's complexity, identifying your most depended-upon files, orphaned code, and structural hotspots.",
+    generates: null,
     usage: "$ contextly stats",
     output: `+---------------------------------------+
 | Contextly Repository Health Report: . |
@@ -236,8 +256,14 @@ Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`,
   },
   {
     name: "pack",
-    description:
-      "Bundles a directory into an LLM-ready Context Pack. It combines the graph intelligence and compressed source code into a highly optimized Markdown file.",
+    shortDesc: "Bundles a directory into an LLM-ready Context Pack.",
+    fullDesc:
+      "The core engine command. It fuses the graph intelligence, unwritten rules, and AST-compressed source code into a single, highly optimized token-efficient payload.",
+    generates: {
+      file: ".contextly/packs/<name>.contextpack.md",
+      content:
+        "A massive, perfectly formatted markdown file containing your structured codebase, ready to be attached to ChatGPT, Claude, or any LLM.",
+    },
     usage: "$ contextly pack",
     output: `[OK] Context Pack 'Contextly' created!
 
@@ -278,14 +304,42 @@ function HowToUse() {
               >
                 <div className="font-mono text-sm font-semibold mb-1">contextly {cmd.name}</div>
                 <div className="text-xs line-clamp-2 leading-relaxed opacity-80">
-                  {cmd.description}
+                  {cmd.shortDesc}
                 </div>
               </button>
             ))}
           </div>
 
-          {/* Terminal View */}
-          <div className="lg:col-span-8">
+          {/* Details & Terminal View */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-xl font-bold text-white mb-2">
+                contextly {COMMANDS[activeCommand].name}
+              </h3>
+              <p className="text-white/70 leading-relaxed mb-6">
+                {COMMANDS[activeCommand].fullDesc}
+              </p>
+
+              {COMMANDS[activeCommand].generates && (
+                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5 mb-6 shadow-inner">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileCode className="w-4 h-4 text-[#27C93F]" />
+                    <span className="text-sm font-semibold tracking-wide text-white uppercase opacity-90">
+                      Generated Artifact
+                    </span>
+                  </div>
+                  <div className="pl-6 border-l border-white/10 ml-2">
+                    <div className="font-mono text-sm text-[#27C93F] mb-2 bg-[#27C93F]/10 inline-block px-2 py-0.5 rounded">
+                      {COMMANDS[activeCommand].generates.file}
+                    </div>
+                    <p className="text-sm text-white/60 leading-relaxed">
+                      {COMMANDS[activeCommand].generates.content}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="rounded-2xl border border-white/10 bg-black overflow-hidden shadow-2xl relative">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/5">
                 <div className="flex gap-1.5">
@@ -293,11 +347,9 @@ function HowToUse() {
                   <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
                   <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
                 </div>
-                <div className="ml-4 text-xs font-mono text-white/40">
-                  contextly {COMMANDS[activeCommand].name}
-                </div>
+                <div className="ml-4 text-xs font-mono text-white/40">Terminal Output</div>
               </div>
-              <div className="p-6 font-mono text-sm overflow-x-auto text-white/80 leading-relaxed min-h-[320px]">
+              <div className="p-6 font-mono text-sm overflow-x-auto text-white/80 leading-relaxed min-h-[280px]">
                 <div className="flex gap-4 mb-6">
                   <span className="text-green-400">~/project</span>
                   <span className="text-white">{COMMANDS[activeCommand].usage}</span>
