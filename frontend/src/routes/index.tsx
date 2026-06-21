@@ -264,11 +264,11 @@ function HowToUse() {
               <button
                 key={cmd.name}
                 onClick={() => setActiveCommand(idx)}
-                className={\`text-left px-5 py-4 rounded-xl border transition-all \${
+                className={`text-left px-5 py-4 rounded-xl border transition-all ${
                   activeCommand === idx 
                     ? "bg-white/10 border-white/20 text-white shadow-sm" 
                     : "bg-transparent border-transparent text-white/50 hover:bg-white/5 hover:text-white/80"
-                }\`}
+                }`}
               >
                 <div className="font-mono text-sm font-semibold mb-1">contextly {cmd.name}</div>
                 <div className="text-xs line-clamp-2 leading-relaxed opacity-80">{cmd.description}</div>
