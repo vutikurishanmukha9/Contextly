@@ -39,13 +39,18 @@ def _parse_file(file_path: str, root_dir: str, max_file_size_mb: float = 2.0) ->
         if b'\x00' in raw_bytes[:1024]:
             is_valid_utf16 = False
             first_kb = raw_bytes[:1024]
+            import codecs
+            has_bom = first_kb.startswith(codecs.BOM_UTF16_LE) or first_kb.startswith(codecs.BOM_UTF16_BE)
             even_kb = first_kb if len(first_kb) % 2 == 0 else first_kb[:-1]
             for encoding in ('utf-16', 'utf-16-le', 'utf-16-be'):
                 try:
                     text = even_kb.decode(encoding, errors='strict')
                     if text:
-                        valid_chars = sum(1 for c in text if c.isprintable() or c.isspace())
-                        if (valid_chars / len(text)) > 0.3:
+                        if has_bom:
+                            is_valid_utf16 = True
+                            break
+                        ascii_chars = sum(1 for c in text if ord(c) < 128 and (c.isprintable() or c.isspace()))
+                        if (ascii_chars / len(text)) > 0.3:
                             is_valid_utf16 = True
                             break
                 except Exception:
