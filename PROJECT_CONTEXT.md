@@ -30,14 +30,16 @@ The CLI acts as a persistent **Context Memory Layer** for your repository, enabl
 - [Frontend Framework] Uses React for building user interfaces. [High confidence]
 - [Build Tool] Uses Vite as the frontend build tool. [High confidence]
 - [Language] Uses TypeScript for type-safe JavaScript. [High confidence]
-- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Generator Pattern. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Command Pattern. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Command Pattern. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Generator Pattern. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Scanner/Plugin Architecture. [Medium confidence]
 - [Architecture Hints] Found UI components directory structure. [Medium confidence]
+- [Advanced Architecture] Detected Command Query Responsibility Segregation (CQRS) node structures. [Medium confidence]
+- [Advanced Architecture] Detected Dependency Injection containers, providers, or injectors. [Medium confidence]
 
 
 ## Architecture Map
@@ -56,12 +58,14 @@ Contextly/
 |   |   |   |-- discover.py
 |   |   |   |-- explain.py
 |   |   |   |-- export.py
+|   |   |   |-- impact.py
 |   |   |   |-- init.py
 |   |   |   |-- inspect.py
 |   |   |   |-- learn.py
 |   |   |   |-- memory.py
 |   |   |   |-- pack.py
-|   |   |   `-- stats.py
+|   |   |   |-- stats.py
+|   |   |   `-- summary.py
 |   |   |-- core/
 |   |   |   |-- analyzer/
 |   |   |   |   |-- __init__.py
@@ -84,6 +88,8 @@ Contextly/
 |   |   |   |   |-- builder.py
 |   |   |   |   |-- cluster.py
 |   |   |   |   `-- validator.py
+|   |   |   |-- impact/
+|   |   |   |   `-- engine.py
 |   |   |   |-- initializer/
 |   |   |   |   |-- __init__.py
 |   |   |   |   `-- engine.py
@@ -105,7 +111,8 @@ Contextly/
 |   |   |   |   |-- compression.py
 |   |   |   |   |-- engine.py
 |   |   |   |   |-- formatter.py
-|   |   |   |   `-- ranking.py
+|   |   |   |   |-- ranking.py
+|   |   |   |   `-- relevance.py
 |   |   |   |-- __init__.py
 |   |   |   `-- diagnostics.py
 |   |   |-- generators/
@@ -169,6 +176,8 @@ Contextly/
 |   |   |-- test_qa_coverage_utils.py
 |   |   |-- test_qa_remediation_part2.py
 |   |   |-- test_qa_remediation_part4.py
+|   |   |-- test_qa_remediation_part5.py
+|   |   |-- test_qa_remediation_part6.py
 |   |   |-- test_ranking.py
 |   |   |-- test_scanner_base.py
 |   |   |-- test_scanner_dependencies.py
@@ -243,7 +252,6 @@ Contextly/
 |   |   |   `-- use-mobile.tsx
 |   |   |-- routes/
 |   |   |   |-- __root.tsx
-|   |   |   |-- docs.tsx
 |   |   |   |-- index.tsx
 |   |   |   `-- README.md
 |   |   |-- App.test.tsx
@@ -262,6 +270,7 @@ Contextly/
 |   |-- package.json
 |   |-- tsconfig.json
 |   `-- vite.config.ts
+|-- .contextlyignore
 |-- .gitignore
 |-- LICENSE
 |-- PROJECT_CONTEXT.md

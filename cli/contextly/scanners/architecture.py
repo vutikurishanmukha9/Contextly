@@ -16,7 +16,7 @@ class ArchitectureScanner(BaseScanner):
     def name(self) -> str:
         return "Architecture Scanner"
 
-    def scan(self, root_dir: Path, file_paths: Optional[List[str]] = None, **kwargs) -> ArchitectureKnowledge:
+    def scan(self, root_dir: Path, file_paths: Optional[List[str]] = None, ast_graph=None, domains=None, **kwargs) -> ArchitectureKnowledge:
         try:
             engine = DiscoveryEngine(root_dir)
             
@@ -35,6 +35,26 @@ class ArchitectureScanner(BaseScanner):
                 source_name="ArchitectureScanner",
                 file_paths=file_paths
             )
+
+            # Advanced Domain-based Detection
+            if domains and len(domains) > 1:
+                significant_domains = [d.name for d in domains if len(d.node_ids) > 3 and d.name != "root"]
+                
+                if len(significant_domains) > 2:
+                    candidates.insert(0, Discovery(
+                        name="Modular Architecture",
+                        confidence=0.9,
+                        evidence=[f"Detected {len(significant_domains)} significant structural domains via AST clustering ({', '.join(significant_domains[:3])})."],
+                        generated_by="ArchitectureScanner"
+                    ))
+                    
+                if any("api" in d.name.lower() for d in domains) and any("core" in d.name.lower() for d in domains):
+                    candidates.insert(0, Discovery(
+                        name="Clean Architecture",
+                        confidence=0.85,
+                        evidence=["Detected distinct 'api' and 'core' layer boundaries."],
+                        generated_by="ArchitectureScanner"
+                    ))
 
             # Fallback handling
             if not candidates:

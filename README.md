@@ -12,6 +12,8 @@ The CLI acts as a persistent **Context Memory Layer** for your repository, enabl
 
 * **Offline Context Generation**: Context-Ly operates entirely offline, keeping your code secure and saving LLM tokens.
 * **Architecture Visualization & Domain Clustering**: Automatically segments code into coherent architectural domains (`core`, `shared`, etc.).
+* **Advanced Behavioral Detection**: Deeply inspects the AST graph to identify sophisticated behavioral patterns like Command Query Responsibility Segregation (CQRS) and Dependency Injection (DI).
+* **Deep Architectural Boundaries**: Detects modular and clean architectures by tracking cross-domain references and boundaries, going far beyond basic folder structures.
 * **Automatic Framework & Dependency Detection**: Discovers project stack, languages, and dependencies instantly.
 * **Team Convention Discovery**: Statically analyzes the repository to learn unwritten coding conventions and state management preferences.
 * **Persistent Context Storage**: Stores project memory locally (`.contextly/config.yaml`), allowing "Context-as-Code" via version control.

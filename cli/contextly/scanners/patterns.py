@@ -10,7 +10,7 @@ class PatternScanner(BaseScanner):
     def name(self) -> str:
         return "Pattern Discovery Engine"
 
-    def scan(self, root_dir: Path, dependencies: DependencyScanResult = None, file_paths: Optional[List[str]] = None, **kwargs) -> PatternScanResult:
+    def scan(self, root_dir: Path, dependencies: DependencyScanResult = None, file_paths: Optional[List[str]] = None, ast_graph=None, **kwargs) -> PatternScanResult:
         try:
             result = PatternScanResult()
 
@@ -105,6 +105,44 @@ class PatternScanner(BaseScanner):
 
             if components_found:
                 result.patterns.append(Pattern(name="Component-Based UI", category="Architecture Hints", confidence=0.8, description="Found UI components directory structure."))
+
+            # 3. Deep AST Pattern Discovery
+            if ast_graph:
+                has_commands = False
+                has_queries = False
+                has_handlers = False
+                has_di = False
+                
+                for node in ast_graph.nodes:
+                    name_lower = node.name.lower()
+                    
+                    # CQRS Check
+                    if name_lower.endswith("command"):
+                        has_commands = True
+                    elif name_lower.endswith("query"):
+                        has_queries = True
+                    elif name_lower.endswith("handler"):
+                        has_handlers = True
+                        
+                    # DI Check
+                    if ("injector" in name_lower or "container" in name_lower or name_lower.endswith("provider")) and node.type in ("CLASS", "INTERFACE"):
+                        has_di = True
+                
+                if (has_commands or has_queries) and has_handlers:
+                    result.patterns.append(Pattern(
+                        name="CQRS", 
+                        category="Advanced Architecture", 
+                        confidence=0.85, 
+                        description="Detected Command Query Responsibility Segregation (CQRS) node structures."
+                    ))
+                    
+                if has_di:
+                    result.patterns.append(Pattern(
+                        name="Dependency Injection", 
+                        category="Advanced Architecture", 
+                        confidence=0.8, 
+                        description="Detected Dependency Injection containers, providers, or injectors."
+                    ))
 
             return result
         except Exception as e:

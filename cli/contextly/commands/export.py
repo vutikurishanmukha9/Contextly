@@ -8,7 +8,8 @@ from ..utils.validation import require_contextly_initialized
 from ..utils.exceptions import ValidationError, ContextlyError
 
 def export_cmd(
-    pack_name: str = typer.Argument(..., help="The name of the context pack to export (e.g., 'frontend')")
+    pack_name: str = typer.Argument(..., help="The name of the context pack to export (e.g., 'frontend')"),
+    env: bool = typer.Option(False, "--env", help="Output as an environment variable export script for terminal injection")
 ):
     """Fuses intelligence and context packs, copying the result to your clipboard."""
     root_dir = find_project_root(Path.cwd())
@@ -27,6 +28,19 @@ def export_cmd(
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)
         
+    if env:
+        try:
+            content = export_path.read_text(encoding="utf-8")
+            import shlex
+            import builtins
+            # Print plain string to stdout without Rich formatting for eval
+            builtins.print(f"export CONTEXTLY_PACK={shlex.quote(content)}")
+        except Exception as e:
+            import sys
+            builtins.print(f"echo 'Error generating env payload: {e}'", file=sys.stderr)
+            raise typer.Exit(code=1)
+        return
+
     if clipboard_success:
         clipboard_status = "[green]Successfully copied to clipboard![/green]\n[yellow]Notice: Proprietary source code has been copied to your OS clipboard. Clear it when finished if on a shared/synced device.[/yellow]"
     else:

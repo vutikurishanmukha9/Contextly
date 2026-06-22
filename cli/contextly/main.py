@@ -5,7 +5,8 @@ from pathlib import Path
 # Import commands (we will create these modules next)
 from contextly.commands import (
     init, analyze, discover, learn, memory,
-    pack, export, inspect, explain, stats
+    pack, export, inspect, explain, stats,
+    impact, summary
 )
 from contextly.utils.io import save_command_result
 from contextly.utils.fs import find_project_root
@@ -44,6 +45,8 @@ app.command(name="export", help="Fuse intelligence and context packs into the cl
 app.command(name="inspect", help="Deep dive into repository complexity and structure")(inspect.inspect_cmd)
 app.command(name="explain", help="Explain repository concepts and structure")(explain.explain_cmd)
 app.command(name="stats", help="Generate an enterprise repository health report")(stats.stats_cmd)
+app.command(name="impact", help="Analyze the blast radius of modifying a target file")(impact.impact_cmd)
+app.command(name="summary", help="Generate a human-readable repository summary")(summary.summary_cmd)
 
 def main():
     try:

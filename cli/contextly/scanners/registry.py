@@ -32,7 +32,7 @@ class ScannerRegistry:
         cls.register('capabilities', CapabilityDetector)
 
     @classmethod
-    def execute_pipeline(cls, root_dir, file_paths) -> Dict[str, Any]:
+    def execute_pipeline(cls, root_dir, file_paths, ast_graph=None, domains=None) -> Dict[str, Any]:
         """
         Executes all registered scanners in order, passing accumulated results
         forward to satisfy scanner dependencies.
@@ -42,7 +42,11 @@ class ScannerRegistry:
             scanner = cls._registry[key]()
             
             # Dynamically build kwargs based on what scanners expect
-            kwargs = {'file_paths': file_paths}
+            kwargs = {
+                'file_paths': file_paths,
+                'ast_graph': ast_graph,
+                'domains': domains
+            }
             
             if key == 'frameworks':
                 kwargs['deps'] = results.get('dependencies')

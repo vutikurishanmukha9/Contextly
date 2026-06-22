@@ -5,7 +5,7 @@ class IgnoreEngine:
     """Centralized ignore logic for Context-Ly"""
     
     def __init__(self, root_dir: Path, no_default_excludes: bool = False):
-        self.root_dir = root_dir
+        self.root_dir = root_dir.resolve()
         self.no_default_excludes = no_default_excludes
         
         from .constants import ALWAYS_SKIP_DIRS
@@ -71,7 +71,7 @@ class IgnoreEngine:
 
         # Convert path to a relative POSIX string for matching (pathspec requires POSIX style)
         try:
-            rel_path = path.relative_to(self.root_dir)
+            rel_path = path.resolve().relative_to(self.root_dir)
         except ValueError:
             # If path is not relative to root_dir, don't scan it
             return True

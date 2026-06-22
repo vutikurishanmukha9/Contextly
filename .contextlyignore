@@ -1,0 +1,29 @@
+# Context-Ly Ignore File
+# Add directories and file patterns to exclude from context packing.
+
+# Dependencies
+node_modules/
+venv/
+env/
+.venv/
+__pycache__/
+
+# Build and Dist
+dist/
+build/
+out/
+.next/
+
+# IDEs
+.idea/
+.vscode/
+
+# Media and Binaries
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.pdf
+*.zip
+*.tar.gz

@@ -75,18 +75,28 @@ def test_packer_token_ratio_fallback(temp_repo):
 def test_no_default_excludes(temp_repo):
     runner.invoke(app, ["init"])
     
-    # Create file inside an ignored folder like "dist"
+    # Create file inside an ignored folder like "custom_dist"
+    dist_dir = temp_repo / "custom_dist"
+    dist_dir.mkdir(exist_ok=True)
+    build_file = dist_dir / "bundle.js"
+    build_file.write_text("console.log('bundle')")
+    
+    # 1. By default, custom_dist is NOT skipped, wait, if we want to test default_ignores, we should use a default ignore dir!
+    # Wait, if we use 'custom_dist', it won't be in default ignores!
+    # Let's use 'dist', but we must REMOVE it from .contextlyignore first so it only triggers the default_ignores logic.
+    
     dist_dir = temp_repo / "dist"
     dist_dir.mkdir(exist_ok=True)
     build_file = dist_dir / "bundle.js"
     build_file.write_text("console.log('bundle')")
     
+    # Remove .contextlyignore to test pure code-level defaults
+    (temp_repo / ".contextlyignore").unlink(missing_ok=True)
+    
     # 1. By default, dist should be skipped
     engine_default = PackerEngine(temp_repo, no_default_excludes=False)
     _, _, file_count, _, _, _ = engine_default.pack([temp_repo], "test_default")
-    # Verify that dist/bundle.js is not packed (file_count is 1 because of index.js, or 2 if pack includes others)
-    # Let's verify bundle.js is not in the selected list of files
-    assert not any("bundle.js" in str(p) for p in engine_default.ignorer.default_ignores)
+    assert not any("bundle.js" in str(p) for p in engine_default.ignorer.default_ignores) # wait, default_ignores has 'dist'. 
     
     # 2. With no_default_excludes=True, dist/bundle.js should be scanned/packed
     engine_override = PackerEngine(temp_repo, no_default_excludes=True)
@@ -99,6 +109,7 @@ def test_cli_no_default_excludes(temp_repo):
     dist_dir.mkdir(exist_ok=True)
     build_file = dist_dir / "bundle.js"
     build_file.write_text("console.log('bundle')")
+    (temp_repo / ".contextlyignore").unlink(missing_ok=True)
     
     # Pack command with --no-default-excludes
     result = runner.invoke(app, ["pack", ".", "--name", "test_pack", "--no-default-excludes"])
@@ -116,6 +127,7 @@ def test_analyzer_no_default_excludes(temp_repo):
     dist_dir.mkdir(exist_ok=True)
     build_file = dist_dir / "bundle.js"
     build_file.write_text("console.log('bundle')")
+    (temp_repo / ".contextlyignore").unlink(missing_ok=True)
     
     engine = AnalyzerEngine(temp_repo, no_default_excludes=True)
     intel = engine.analyze()

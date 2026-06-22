@@ -139,8 +139,18 @@ class AnalyzerEngine:
         # 2. Compute deterministic repository hash
         repository_hash = self._compute_hash(all_files)
         
+        # 2.5 Build AST graph and cluster into domains
+        from ...utils.console import console
+        console.print("[dim]Building architecture graph for deep analysis...[/dim]")
+        graph_builder = ImportGraphBuilder(self.root_dir, max_file_size_mb=self.config.packer.max_file_size_mb)
+        ast_graph = graph_builder.build(file_paths=all_files)
+        
+        from contextly.core.graph.cluster import DomainClusterer
+        clusterer = DomainClusterer()
+        domains = clusterer.cluster(ast_graph)
+
         # 3. Run scanner pipeline
-        scan_results = ScannerRegistry.execute_pipeline(self.root_dir, all_files)
+        scan_results = ScannerRegistry.execute_pipeline(self.root_dir, all_files, ast_graph=ast_graph, domains=domains)
         
         lang_data = scan_results.get('language') or LanguageScanResult(primary="Unknown")
         dep_data = scan_results.get('dependencies') or DependencyScanResult()
@@ -152,18 +162,8 @@ class AnalyzerEngine:
         cap_data = scan_results.get('capabilities') or []
         
         # 4. Load team memory
-        # 4. Load team memory
         memory_engine = MemoryEngine(self.root_dir)
         memory_data = memory_engine.load_memory()
-        
-        # 5. Build AST graph and cluster into domains
-        graph_builder = ImportGraphBuilder(self.root_dir, max_file_size_mb=self.config.packer.max_file_size_mb)
-        ast_graph = graph_builder.build(file_paths=all_files)
-        
-        # 6. Cluster the graph into Domains
-        from contextly.core.graph.cluster import DomainClusterer
-        clusterer = DomainClusterer()
-        domains = clusterer.cluster(ast_graph)
         
         # 6. Assemble intelligence object
         intelligence = RepositoryIntelligence(

@@ -61,6 +61,40 @@ class InitEngine:
             with open(config_path, "w", encoding="utf-8") as f:
                 yaml.dump(config, f, default_flow_style=False, sort_keys=False)
                 
+            ignore_path = self.root_dir / ".contextlyignore"
+            if not ignore_path.exists():
+                with open(ignore_path, "w", encoding="utf-8") as f:
+                    f.write("""# Context-Ly Ignore File
+# Add directories and file patterns to exclude from context packing.
+
+# Dependencies
+node_modules/
+venv/
+env/
+.venv/
+__pycache__/
+
+# Build and Dist
+dist/
+build/
+out/
+.next/
+
+# IDEs
+.idea/
+.vscode/
+
+# Media and Binaries
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.pdf
+*.zip
+*.tar.gz
+""")
+                
             return True
         except (OSError, PermissionError) as e:
             raise ContextlyError(f"Failed to initialize Contextly: {str(e)}")
