@@ -84,11 +84,13 @@ def test_packer_engine_toctou_exists(tmp_path):
     engine = PackerEngine(repo_dir)
     engine.ranker.rank_files = lambda paths: [txt_file]
     
-    engine.pack(
+    token_est, token_type, file_count, out_path, skipped, excluded = engine.pack(
         target_paths=[repo_dir],
         pack_name="test_pack",
         max_tokens=None,
         raw=True
     )
     
-    assert (packs_dir / "test_pack_1.contextpack.md").exists()
+    assert out_path.exists()
+    assert out_path.name != "test_pack.contextpack.md"
+    assert out_path.name.startswith("test_pack_")
