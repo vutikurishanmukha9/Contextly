@@ -6,6 +6,7 @@ from typing import Optional
 
 from contextly.core.explainer.engine import ExplainerEngine
 from contextly.utils.fs import find_project_root
+from contextly.utils.io import save_command_result
 import pyperclip
 
 console = Console()
@@ -27,12 +28,17 @@ def explain_cmd(
     try:
         prompt = engine.explain(domain)
         try:
-            pyperclip.copy(prompt)
-            console.print("[yellow]Notice: Proprietary source architecture has been copied to your OS clipboard. Clear it when finished if on a shared/synced device.[/yellow]")
-            console.print(f"[bold green][OK][/bold green] [bold]Copied context payload for domain '{domain}' to clipboard![/bold]")
-            console.print("Paste this into your AI tool to provide structural context without wasting tokens on file scanning.")
+            out_file = save_command_result("explain", [domain], prompt, root_dir)
+            console.print(f"[bold green][OK][/bold green] [bold]Context payload saved to: {out_file}[/bold]")
+            
+            try:
+                pyperclip.copy(prompt)
+                console.print("[yellow]Notice: Proprietary source architecture has also been copied to your OS clipboard. Clear it when finished if on a shared/synced device.[/yellow]")
+            except Exception as e:
+                console.print(f"[yellow]Warning: Could not copy to clipboard. ({e})[/yellow]")
+                
         except Exception as e:
-            console.print(f"[yellow]Warning: Could not copy to clipboard. ({e})[/yellow]")
+            console.print(f"[red]Error saving result: {e}[/red]")
             console.print("Here is the context payload you can copy manually:")
             console.print("="*40)
             console.print(prompt)

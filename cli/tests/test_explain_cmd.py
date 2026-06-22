@@ -24,7 +24,8 @@ def test_explain_command_success(monkeypatch, tmp_path):
     
     result = runner.invoke(app, ["explain", "auth", "--path", str(tmp_path)])
     assert result.exit_code == 0
-    assert "Copied context payload for domain 'auth' to clipboard!" in result.stdout
+    assert "Context payload saved to:" in result.stdout
+    assert "Notice: Proprietary source architecture has also been copied" in result.stdout
     assert "Payload for auth" in mock_clipboard[0]
     
     # Test missing domain

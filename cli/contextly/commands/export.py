@@ -3,6 +3,7 @@ from pathlib import Path
 from ..utils.console import console
 from ..core.exporter.engine import ExporterEngine
 from ..utils.fs import find_project_root
+from ..utils.io import save_command_result
 from ..utils.validation import require_contextly_initialized
 from ..utils.exceptions import ValidationError, ContextlyError
 
@@ -31,10 +32,21 @@ def export_cmd(
     else:
         clipboard_status = "[yellow]Could not copy to clipboard. The export file was saved successfully.[/yellow]"
         
-    console.print(f"\n[bold green][OK][/bold green] Export Generation Complete!")
-    console.print(f"  - [cyan]Intelligence:[/cyan] PROJECT_CONTEXT.md")
-    console.print(f"  - [cyan]Context Pack:[/cyan] {pack_name}")
-    console.print(f"  - [cyan]Local Export:[/cyan] {export_path.relative_to(root_dir)}")
+    try:
+        content = export_path.read_text(encoding="utf-8")
+        out_file = save_command_result("export", [pack_name], content, root_dir)
+        console.print(f"\n[bold green][OK][/bold green] Export Generation Complete!")
+        console.print(f"  - [cyan]Intelligence:[/cyan] PROJECT_CONTEXT.md")
+        console.print(f"  - [cyan]Context Pack:[/cyan] {pack_name}")
+        console.print(f"  - [cyan]Local Export:[/cyan] {export_path.relative_to(root_dir)}")
+        console.print(f"  - [cyan]Unified Result:[/cyan] {out_file.relative_to(root_dir)}")
+    except Exception as e:
+        console.print(f"\n[bold green][OK][/bold green] Export Generation Complete!")
+        console.print(f"  - [cyan]Intelligence:[/cyan] PROJECT_CONTEXT.md")
+        console.print(f"  - [cyan]Context Pack:[/cyan] {pack_name}")
+        console.print(f"  - [cyan]Local Export:[/cyan] {export_path.relative_to(root_dir)}")
+        console.print(f"[red]Warning: Could not save unified result file: {e}[/red]")
+        
     console.print(f"\n{clipboard_status}")
     if clipboard_success:
         console.print("\nYou can now paste the contents directly into Claude or ChatGPT.")

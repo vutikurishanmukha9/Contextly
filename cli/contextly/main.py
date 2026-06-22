@@ -1,8 +1,15 @@
+import sys
 import typer
-from rich.console import Console
+from pathlib import Path
 
 # Import commands (we will create these modules next)
-from .commands import init, analyze, inspect, pack, discover, memory, learn, export, explain, stats
+from contextly.commands import (
+    init, analyze, discover, learn, memory,
+    pack, export, inspect, explain, stats
+)
+from contextly.utils.io import save_command_result
+from contextly.utils.fs import find_project_root
+from contextly.utils.console import console
 
 app = typer.Typer(
     name="contextly",
@@ -38,14 +45,11 @@ app.command(name="inspect", help="Deep dive into repository complexity and struc
 app.command(name="explain", help="Explain repository concepts and structure")(explain.explain_cmd)
 app.command(name="stats", help="Generate an enterprise repository health report")(stats.stats_cmd)
 
-console = Console()
-
 def main():
     try:
         app()
     except Exception as e:
         from .utils.exceptions import ConfigurationError
-        import sys
         
         if isinstance(e, ConfigurationError):
             console.print(f"[bold red]Fatal Error:[/bold red] {e}")
@@ -60,7 +64,6 @@ def main():
         # internal paths and dependency versions to stdout/CI logs.
         import traceback
         import os
-        from pathlib import Path
         from datetime import datetime
         
         if sys.platform == "win32":
@@ -97,6 +100,27 @@ def main():
         
         console.print("[yellow]Please report this issue to the Contextly maintainers.[/yellow]")
         sys.exit(1)
-
+    finally:
+        # Save command terminal transcript for commands that don't output a payload
+        try:
+            if len(sys.argv) > 1:
+                cmd = sys.argv[1]
+                args = sys.argv[2:]
+                
+                # Exclude commands that manually save their own large payloads
+                if cmd not in ("explain", "export", "--help", "-h", "--version", "-v"):
+                    text = console.export_text(clear=False)
+                    if text.strip():
+                        try:
+                            # Might be outside a repo, fallback to cwd if so
+                            root_dir = find_project_root(Path.cwd())
+                        except Exception:
+                            root_dir = Path.cwd()
+                            
+                        save_command_result(cmd, args, text, root_dir)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+        
 if __name__ == "__main__":
     main()
