@@ -34,14 +34,7 @@ def _extract_called_entities(node: ast.AST) -> List[str]:
                     called.append(child.func.attr)
     return called
 
-@contextlib.contextmanager
-def scoped_recursion_limit(limit):
-    old_limit = sys.getrecursionlimit()
-    sys.setrecursionlimit(limit)
-    try:
-        yield
-    finally:
-        sys.setrecursionlimit(old_limit)
+
 
 class PythonASTParser(BaseASTParser):
     """
@@ -55,8 +48,7 @@ class PythonASTParser(BaseASTParser):
             if len(content) > 500 * 1024:
                 return ParsedFileDTO(file_path=file_path, exports=[], imports=[], error="File exceeds 500KB AST parse limit")
                 
-            with scoped_recursion_limit(1500):
-                tree = ast.parse(content, filename=file_path)
+            tree = ast.parse(content, filename=file_path)
             
             exports: List[str] = []
             imports: List[str] = []

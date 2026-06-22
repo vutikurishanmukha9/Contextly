@@ -111,7 +111,7 @@ class DiscoveryEngine:
             if total_score > 0:
                 confidence = min(1.0, total_score)
                 # Keep top 5 evidence to avoid giant JSON files
-                limited_evidence = sorted(list(state['evidence']))[:5]
+                limited_evidence = sorted(list(state['evidence']), key=lambda x: str(x))[:5]
                 
                 if discovery_class == RepositoryCapability:
                     results.append(RepositoryCapability(

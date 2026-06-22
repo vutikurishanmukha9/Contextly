@@ -77,25 +77,23 @@ class PackerEngine:
         safe_pack_name = Path(pack_name).name
         base_name = safe_pack_name
         output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
-        counter = 1
-        while True:
-            try:
-                fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-                break
-            except FileExistsError:
-                if counter > 10000:
-                    raise ContextlyError(f"Failed to generate a unique pack name for '{base_name}' after 10000 attempts.")
-                safe_pack_name = f"{base_name}_{counter}"
-                output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
-                counter += 1
         
-        # Pre-validate access
+        # Pre-validate access BEFORE opening the file descriptor to prevent FD leaks
         for target_path in target_paths:
             try:
                 if target_path.is_dir():
                     next(target_path.iterdir(), None)
             except (PermissionError, OSError) as e:
                 raise ContextlyError(f"Cannot access target directory {target_path}: {e}")
+
+        # Safely open file descriptor with efficient UUID fallback on collision
+        try:
+            fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            import uuid
+            safe_pack_name = f"{base_name}_{uuid.uuid4().hex[:8]}"
+            output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
+            fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
                 
         # Phase 1: Collect all files
         all_files_set = set()

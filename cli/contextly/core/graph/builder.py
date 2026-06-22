@@ -154,6 +154,8 @@ class ImportGraphBuilder:
             """
             dtos = []
             optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
+            if os.environ.get("CI"):
+                optimal_workers = min(optimal_workers, 2)
             batch_size = optimal_workers * 32
             
             kwargs = {"max_workers": optimal_workers}

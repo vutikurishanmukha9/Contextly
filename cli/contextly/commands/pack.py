@@ -82,7 +82,8 @@ def pack_cmd(
     except ValidationError as e:
         if output_format == "json":
             import json
-            print(json.dumps({"error": str(e)}, indent=2))
+            import sys
+            sys.stderr.write(json.dumps({"error": str(e)}, indent=2) + '\n')
         else:
             console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
@@ -101,7 +102,8 @@ def pack_cmd(
             status_ctx.stop()
         if output_format == "json":
             import json
-            print(json.dumps({"error": str(e)}, indent=2))
+            import sys
+            sys.stderr.write(json.dumps({"error": str(e)}, indent=2) + '\n')
         else:
             console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)

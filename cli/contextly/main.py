@@ -63,16 +63,27 @@ def main():
         from pathlib import Path
         from datetime import datetime
         
-        log_dir = Path.home() / ".contextly" / "logs"
+        if sys.platform == "win32":
+            base_dir = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+        else:
+            base_dir = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+            
+        log_dir = base_dir / "contextly" / "logs"
+        
         try:
             log_dir.mkdir(parents=True, exist_ok=True)
-            os.chmod(log_dir, 0o700)
+            if sys.platform != "win32":
+                os.chmod(log_dir, 0o700)
             
             crash_log = log_dir / "crash.log"
             if not crash_log.exists():
-                crash_log.touch(mode=0o600)
+                if sys.platform != "win32":
+                    crash_log.touch(mode=0o600)
+                else:
+                    crash_log.touch()
             else:
-                os.chmod(crash_log, 0o600)
+                if sys.platform != "win32":
+                    os.chmod(crash_log, 0o600)
                 
             with open(crash_log, "a", encoding="utf-8") as lf:
                 lf.write(f"\n--- {datetime.now().isoformat()} ---\n")
