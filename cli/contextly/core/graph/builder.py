@@ -167,7 +167,11 @@ class ImportGraphBuilder:
                         for _ in range(optimal_workers * 2):
                             try:
                                 fp = next(file_iterator)
-                                future_to_fp[executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)] = fp
+                                if hasattr(executor, 'schedule'):
+                                    fut = executor.schedule(_parse_file, args=(fp, root_str, self.max_file_size_mb), timeout=_WORKER_PARSE_TIMEOUT_SECONDS)
+                                else:
+                                    fut = executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)
+                                future_to_fp[fut] = fp
                             except StopIteration:
                                 break
                                 
@@ -196,7 +200,11 @@ class ImportGraphBuilder:
                                 # Feed the next file instantly
                                 try:
                                     next_fp = next(file_iterator)
-                                    future_to_fp[executor.submit(_parse_file, next_fp, root_str, self.max_file_size_mb)] = next_fp
+                                    if hasattr(executor, 'schedule'):
+                                        fut = executor.schedule(_parse_file, args=(next_fp, root_str, self.max_file_size_mb), timeout=_WORKER_PARSE_TIMEOUT_SECONDS)
+                                    else:
+                                        fut = executor.submit(_parse_file, next_fp, root_str, self.max_file_size_mb)
+                                    future_to_fp[fut] = next_fp
                                 except StopIteration:
                                     pass
                 except Exception as e:
