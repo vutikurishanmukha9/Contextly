@@ -1,12 +1,10 @@
 # Context-Ly CLI
 
-**Context-Ly CLI** is an open-source Context Intelligence Engine designed to help developers generate high-quality, token-efficient context for Large Language Models (LLMs).
+Context-Ly CLI is a proprietary Context Intelligence Engine designed to help developers generate high-quality, token-efficient context for Large Language Models (LLMs).
 
 Rather than manually explaining your project to an AI assistant in every session, Context-Ly analyzes your repository, discovers conventions, learns team rules, and generates structured context files that help AI tools understand your codebase more effectively.
 
-The CLI acts as a persistent **Context Memory Layer** for your repository, enabling consistent AI interactions across development workflows.
-
----
+The CLI acts as a persistent Context Memory Layer for your repository, enabling consistent AI interactions across development workflows.
 
 ## Features
 
@@ -18,8 +16,6 @@ The CLI acts as a persistent **Context Memory Layer** for your repository, enabl
 * LLM-ready Context Pack generation
 * Repository complexity and token usage inspection
 * Context-as-Code workflow with version-controlled project memory
-
----
 
 ## Installation
 
@@ -35,16 +31,12 @@ Verify the installation:
 contextly --help
 ```
 
----
-
 ## Prerequisites
 
 * Python 3.9 or later
 * A local Git repository or project directory to analyze
 
 No external services or API keys are required for the core functionality.
-
----
 
 ## Quick Start
 
@@ -70,8 +62,6 @@ This command automatically:
 
 The generated file can be used directly with AI coding assistants and LLMs.
 
----
-
 ## Commands
 
 ### `contextly init`
@@ -90,8 +80,6 @@ Creates:
 ├── memory/
 └── packs/
 ```
-
----
 
 ### `contextly analyze`
 
@@ -115,8 +103,6 @@ Output:
 PROJECT_CONTEXT.md
 ```
 
----
-
 ### `contextly discover`
 
 Run the Pattern Discovery Engine.
@@ -134,8 +120,6 @@ Discovers repository conventions such as:
 * Framework-specific conventions
 
 The command provides insight into patterns already present within the codebase.
-
----
 
 ### `contextly learn --auto`
 
@@ -159,8 +143,6 @@ Approved conventions are stored in:
 
 This creates a persistent memory layer that can be committed to source control and shared across teams.
 
----
-
 ### `contextly memory`
 
 Inspect all stored project memory and conventions.
@@ -170,8 +152,6 @@ contextly memory
 ```
 
 Displays all saved rules, conventions, and architectural preferences currently remembered by Context-Ly.
-
----
 
 ### `contextly pack <directory>`
 
@@ -195,8 +175,6 @@ Output location:
 
 Useful for sharing focused portions of a large codebase with an LLM.
 
----
-
 ### `contextly inspect`
 
 Analyze repository complexity and token consumption.
@@ -214,8 +192,6 @@ Provides visibility into:
 
 This helps identify areas that may negatively impact AI context quality.
 
----
-
 ### `contextly export <pack_name>`
 
 Fuses your memory rules and the specified context pack into a single, comprehensive Context Payload.
@@ -225,8 +201,6 @@ contextly export cli
 ```
 
 The output is instantly copied to your clipboard, ready to be pasted directly into an LLM.
-
----
 
 ### `contextly explain <domain>`
 
@@ -238,16 +212,12 @@ contextly explain core
 
 It copies a JSON payload to your clipboard, allowing the LLM to understand the architecture without wasting tokens scanning raw files.
 
----
-
 ### Understanding Context-Ly Ignore Philosophies
 
 Context-Ly utilizes two distinct "ignore" policies depending on the operation:
 
-1. **Packing & Inspection (`contextly pack`, `contextly inspect`)**: These commands **respect** your `.gitignore` and `.contextlyignore` files. This ensures that generated packs and token counts omit irrelevant files (like `node_modules`, compiled binaries, etc.), producing concise, token-efficient context for the LLM.
-2. **Discovery & Intelligence (`contextly discover`, `contextly learn`)**: The Pattern Discovery Engine **ignores** your `.gitignore`. It uses a minimal, hardcoded skip-list (only completely toxic directories like `.git` or `.venv`). This allows Context-Ly to correctly discover architectural patterns and package dependencies in valid directories (like a `frontend/` folder) that you might have legitimately added to `.gitignore` to keep your root repository clean.
-
----
+1. **Packing & Inspection (`contextly pack`, `contextly inspect`)**: These commands respect your `.gitignore` and `.contextlyignore` files. This ensures that generated packs and token counts omit irrelevant files (like `node_modules`, compiled binaries, etc.), producing concise, token-efficient context for the LLM.
+2. **Discovery & Intelligence (`contextly discover`, `contextly learn`)**: The Pattern Discovery Engine ignores your `.gitignore`. It uses a minimal, hardcoded skip-list (only completely toxic directories like `.git` or `.venv`). This allows Context-Ly to correctly discover architectural patterns and package dependencies in valid directories (like a `frontend/` folder) that you might have legitimately added to `.gitignore` to keep your root repository clean.
 
 ## Example Workflow
 
@@ -270,8 +240,6 @@ PROJECT_CONTEXT.md
 
 Your repository now has a persistent memory layer and an AI-ready context file generated from both repository analysis and learned team conventions.
 
----
-
 ## Why Context-Ly?
 
 Modern AI coding tools are powerful, but they often lack project-specific context.
@@ -280,15 +248,11 @@ Context-Ly bridges that gap by transforming repository knowledge, team conventio
 
 The goal is simple:
 
-**Build context once. Use it everywhere.**
-
----
+Build context once. Use it everywhere.
 
 ## Changelog
 
-For all release notes and version history, please see the [CHANGELOG.md](https://github.com/vutikurishanmukha9/Contextly/blob/main/cli/CHANGELOG.md).
-
----
+For all release notes and version history, please see the CHANGELOG.md.
 
 ## Contributing
 
@@ -296,10 +260,8 @@ Contributions, issues, and feature requests are welcome.
 
 If you discover a bug, have an idea for improving repository intelligence, or want to contribute new scanners and analysis capabilities, please open an issue or submit a pull request.
 
----
-
 ## License
 
-This project is open source and distributed under the terms of its license.
+This project is proprietary and distributed under the Contextly End-User License Agreement (EULA).
 
 See the LICENSE file for details.

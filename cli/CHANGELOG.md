@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [1.0.8] - 2026-06-23
+
+#### Added
+- **Security Constraints**: Hardened parsers by implementing a 500KB file size limit for dependency manifests and `tsconfig.json` to prevent local denial of service via memory exhaustion (CWE-400).
+- **Proprietary License**: Transitioned the project from open-source MIT to the proprietary Contextly End-User License Agreement (EULA).
+
+#### Fixed
+- **Frontend Security & UX Improvements**: Implemented various fixes across security, reliability, accessibility, architecture, and observability, including improved error boundaries, keyboard accessibility, and clipboard safety.
+
 ### [1.0.7] - 2026-06-20
 
 #### Added

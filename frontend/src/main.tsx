@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
+import { Toaster } from "sonner";
 import { getRouter } from "./router";
 
 const router = getRouter();
@@ -21,7 +22,9 @@ class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+    // TODO: Dispatch to observability platform like Sentry or Datadog
+    window.dispatchEvent(new CustomEvent("apm-error", { detail: { error, errorInfo } }));
+    console.error("Uncaught error logged to APM mechanism.");
   }
 
   render() {
@@ -31,16 +34,18 @@ class ErrorBoundary extends Component<
           <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-6 max-w-md">
             <h1 className="mb-2 text-xl font-semibold text-red-500">Something went wrong</h1>
             <p className="text-sm text-muted-foreground mb-4">
-              The application encountered an unexpected error.
+              The application encountered an unexpected error. Please contact support if the issue
+              persists.
             </p>
-            <pre className="text-xs text-red-400 overflow-auto max-h-32 p-2 bg-black/20 rounded">
-              {this.state.error?.message}
-            </pre>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.reload();
+              }}
               className="mt-4 rounded bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-600 transition-colors"
             >
-              Reload application
+              Clear Cache & Reload
             </button>
           </div>
         </div>
@@ -57,6 +62,7 @@ if (!rootElement.innerHTML) {
     <StrictMode>
       <ErrorBoundary>
         <RouterProvider router={router} />
+        <Toaster richColors position="top-center" />
       </ErrorBoundary>
     </StrictMode>,
   );
