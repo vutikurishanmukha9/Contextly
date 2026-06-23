@@ -16,19 +16,20 @@ def test_main_terminal_transcript_saving(tmp_path):
         exports_dir = tmp_path / ".contextly" / "exports"
         assert exports_dir.exists()
 
-def test_main_crash_fallback(tmp_path):
+def test_main_crash_fallback(tmp_path, monkeypatch):
+    import tempfile
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
     # Test the fallback logging in main.py
     with patch("contextly.main.app", side_effect=Exception("mock crash")), \
          patch("sys.argv", ["contextly"]), \
-         patch("logging.handlers.RotatingFileHandler", side_effect=OSError("mock rotating error")), \
-         patch("tempfile.gettempdir", return_value=str(tmp_path)):
+         patch("logging.handlers.RotatingFileHandler", side_effect=OSError("mock rotating error")):
         try:
             main()
         except SystemExit:
             pass
             
-        fallback_log = tmp_path / "contextly_crash.log"
-        assert fallback_log.exists()
+        logs = list(tmp_path.glob("contextly_crash_*.log"))
+        assert len(logs) > 0
 
 def test_main_crash_ultimate_fallback(tmp_path):
     with patch("contextly.main.app", side_effect=Exception("mock crash")), \

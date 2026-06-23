@@ -141,11 +141,12 @@ def test_builder_sequential_fallback_error(tmp_path, monkeypatch):
     
     def mock_pool(*args, **kwargs):
         raise RuntimeError("force fallback")
-        
+
     def mock_parse_file(*args, **kwargs):
         raise Exception("sequential error")
-        
-    monkeypatch.setattr(concurrent.futures, "ProcessPoolExecutor", mock_pool)
+
+    import pebble
+    monkeypatch.setattr(pebble, "ProcessPool", mock_pool)
     monkeypatch.setattr("contextly.core.graph.builder._parse_file", mock_parse_file)
     
     builder.build(["test.js"])

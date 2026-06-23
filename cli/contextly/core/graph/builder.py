@@ -138,7 +138,7 @@ class ImportGraphBuilder:
         root_str = str(self.root_dir)
         
         import tempfile
-        import pickle
+        import json
         import os
         from ..diagnostics import DiagnosticsContext
         diagnostics = DiagnosticsContext()
@@ -151,8 +151,12 @@ class ImportGraphBuilder:
         os.close(fd)
         
         try:
-            with open(temp_path, "wb") as dto_store:
-                pool_class = concurrent.futures.ProcessPoolExecutor
+            with open(temp_path, "w", encoding="utf-8") as dto_store:
+                try:
+                    import pebble
+                    pool_class = pebble.ProcessPool
+                except ImportError:
+                    pool_class = concurrent.futures.ProcessPoolExecutor
                 
                 try:
                     with pool_class(max_workers=optimal_workers) as executor:
@@ -185,7 +189,7 @@ class ImportGraphBuilder:
                                             self.failed_files[dto.file_path] = dto.error
                                         else:
                                             self.assembler.add_node(dto)
-                                            pickle.dump(dto, dto_store)
+                                            dto_store.write(dto.model_dump_json() + "\n")
                                 except Exception as e:
                                     self.failed_files[fp] = f"ConcurrencyError: {str(e)}"
                                     
@@ -202,7 +206,7 @@ class ImportGraphBuilder:
                             dto = _parse_file(file_path, root_str, self.max_file_size_mb)
                             if dto and not dto.error:
                                 self.assembler.add_node(dto)
-                                pickle.dump(dto, dto_store)
+                                dto_store.write(dto.model_dump_json() + "\n")
                             elif dto and dto.error:
                                 self.failed_files[dto.file_path] = dto.error
                         except Exception as seq_err:
@@ -217,12 +221,10 @@ class ImportGraphBuilder:
 
             # Pass 2: Re-read DTOs incrementally to build relationships
             def dto_generator():
-                with open(temp_path, "rb") as f:
-                    while True:
-                        try:
-                            yield pickle.load(f)
-                        except EOFError:
-                            break
+                with open(temp_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip():
+                            yield ParsedFileDTO.model_validate_json(line)
                             
             self.assembler.build_relationships(dto_generator())
             

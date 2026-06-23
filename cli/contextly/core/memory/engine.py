@@ -33,14 +33,8 @@ class MemoryEngine:
         import os, time
         lock_file = self.memory_dir / "rules.lock"
         
-        # Stale lock breaking heuristic
-        if lock_file.exists():
-            try:
-                if time.time() - lock_file.stat().st_mtime > 30:
-                    lock_file.unlink()
-                    console.print("[yellow]Warning: Broke stale memory lock.[/yellow]")
-            except OSError:
-                pass
+        # REL-002: Removed stale lock breaking heuristic to prevent lock race conditions and DB corruption.
+        # filelock automatically manages timeouts natively.
                 
         try:
             with FileLock(lock_file, timeout=5):

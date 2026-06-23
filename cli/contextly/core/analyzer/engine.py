@@ -89,7 +89,8 @@ class AnalyzerEngine:
                 return ""
                 
         metadata_list = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
+        optimal_workers = min(32, (os.cpu_count() or 1) * 4)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
             # Map retains the original order of all_files for deterministic hashing
             for metadata in executor.map(_get_metadata, all_files):
                 if metadata:

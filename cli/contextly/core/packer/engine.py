@@ -401,18 +401,15 @@ class PackerEngine:
                         rel_path = path.name
                     out_f.write(f"- `{rel_path}`\n".encode("utf-8"))
 
-        # Safely atomic rename
+        # SEC-002: Safely atomic rename without TOCTOU race
         try:
-            if output_file.exists():
-                output_file.unlink()
-        except OSError:
-            pass
-            
-        try:
-            shutil.move(str(temp_path), str(output_file))
+            os.replace(temp_path, output_file)
         except OSError as e:
             if temp_path.exists():
-                temp_path.unlink()
+                try:
+                    temp_path.unlink()
+                except OSError:
+                    pass
             raise ContextlyError(f"Failed to write context pack to {output_file}: {e}")
 
         # Compute final exact token count from the completed output file

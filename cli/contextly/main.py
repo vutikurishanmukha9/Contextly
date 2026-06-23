@@ -110,11 +110,11 @@ def main():
         except OSError:
             try:
                 import tempfile
-                fallback_log = Path(tempfile.gettempdir()) / "contextly_crash.log"
-                with open(fallback_log, "a", encoding="utf-8") as lf:
+                with tempfile.NamedTemporaryFile(mode="a", prefix="contextly_crash_", suffix=".log", delete=False, encoding="utf-8") as lf:
                     lf.write(f"\n--- {datetime.now().isoformat()} ---\n")
                     traceback.print_exc(file=lf)
-                console.print(f"\n[dim]Full crash details written to temp log: {fallback_log}[/dim]")
+                    fallback_log_path = lf.name
+                console.print(f"\n[dim]Full crash details written to temp log: {fallback_log_path}[/dim]")
             except OSError:
                 # If we can't even write to temp, fall back to showing the traceback
                 console.print("\n[dim]--- Traceback ---[/dim]")
@@ -132,7 +132,26 @@ def main():
         try:
             if len(sys.argv) > 1:
                 cmd = sys.argv[1]
-                args = sys.argv[2:]
+                raw_args = sys.argv[2:]
+                
+                # SEC-003: Sanitize arguments
+                sanitized_args = []
+                skip_next = False
+                sensitive_flags = {"--api-key", "--token", "--password", "-p", "--secret"}
+                for arg in raw_args:
+                    if skip_next:
+                        sanitized_args.append("********")
+                        skip_next = False
+                        continue
+                    if arg in sensitive_flags:
+                        sanitized_args.append(arg)
+                        skip_next = True
+                    elif any(arg.startswith(f"{flag}=") for flag in sensitive_flags):
+                        flag = arg.split("=")[0]
+                        sanitized_args.append(f"{flag}=********")
+                    else:
+                        sanitized_args.append(arg)
+                args = sanitized_args
                 
                 # Exclude commands that manually save their own large payloads
                 if cmd not in ("explain", "export", "pack", "--help", "-h", "--version", "-v"):
