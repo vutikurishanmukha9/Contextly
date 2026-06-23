@@ -11,6 +11,8 @@ from ..utils.console import console
 _URL_PREFIXES = ("git+", "http://", "https://", "svn+", "hg+")
 _SKIP_LINE_PREFIXES = ("-e", "-r", "-c", "-f", "--")
 
+MAX_MANIFEST_SIZE = 500 * 1024  # 500KB limit for manifest files
+
 
 def _extract_dep_name(raw: str) -> Optional[str]:
     """
@@ -130,6 +132,12 @@ class DependencyScanner(BaseScanner):
 
     def _parse_package_json(self, filepath: Path, root_dir: Path, npm_set: set[str], strict: bool = False):
         try:
+            if filepath.stat().st_size > MAX_MANIFEST_SIZE:
+                if strict:
+                    raise ScannerError(f"File {filepath.name} exceeds {MAX_MANIFEST_SIZE} bytes")
+                console.print(f"[yellow]Warning:[/yellow] Skipping {filepath.name}: File exceeds size limit.")
+                return
+                
             with open(filepath, 'r', encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
@@ -168,6 +176,12 @@ class DependencyScanner(BaseScanner):
             pass
             
         try:
+            if filepath.stat().st_size > MAX_MANIFEST_SIZE:
+                if strict:
+                    raise ScannerError(f"File {filepath.name} exceeds {MAX_MANIFEST_SIZE} bytes")
+                console.print(f"[yellow]Warning:[/yellow] Skipping {filepath.name}: File exceeds size limit.")
+                return
+                
             with open(filepath, 'r', encoding="utf-8") as f:
                 for line in f:
                     stripped = line.strip()
@@ -199,6 +213,12 @@ class DependencyScanner(BaseScanner):
 
     def _parse_pyproject_toml(self, filepath: Path, root_dir: Path, python_set: set[str], strict: bool = False):
         try:
+            if filepath.stat().st_size > MAX_MANIFEST_SIZE:
+                if strict:
+                    raise ScannerError(f"File {filepath.name} exceeds {MAX_MANIFEST_SIZE} bytes")
+                console.print(f"[yellow]Warning:[/yellow] Skipping {filepath.name}: File exceeds size limit.")
+                return
+                
             with open(filepath, 'rb') as f:
                 if tomllib is not None:
                     data = tomllib.load(f)
@@ -250,6 +270,12 @@ class DependencyScanner(BaseScanner):
 
     def _parse_pipfile(self, filepath: Path, root_dir: Path, python_set: set[str], strict: bool = False):
         try:
+            if filepath.stat().st_size > MAX_MANIFEST_SIZE:
+                if strict:
+                    raise ScannerError(f"File {filepath.name} exceeds {MAX_MANIFEST_SIZE} bytes")
+                console.print(f"[yellow]Warning:[/yellow] Skipping {filepath.name}: File exceeds size limit.")
+                return
+                
             with open(filepath, 'r', encoding="utf-8") as f:
                 in_packages = False
                 for line in f:

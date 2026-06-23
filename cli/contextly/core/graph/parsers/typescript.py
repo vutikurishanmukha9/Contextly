@@ -53,7 +53,13 @@ class TypeScriptASTParser(BaseASTParser):
             for root, dirs, files in os.walk(root_dir):
                 if "tsconfig.json" in files:
                     try:
-                        with open(os.path.join(root, "tsconfig.json"), "r", encoding="utf-8") as f:
+                        filepath = os.path.join(root, "tsconfig.json")
+                        if os.path.getsize(filepath) > 500 * 1024:
+                            from ...core.diagnostics import DiagnosticsContext
+                            DiagnosticsContext().add_warning("TypeScriptParser", f"Skipping {filepath}: File exceeds 500KB size limit.")
+                            continue
+                            
+                        with open(filepath, "r", encoding="utf-8") as f:
                             content = f.read()
                             try:
                                 data = json.loads(content)
