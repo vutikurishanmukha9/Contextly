@@ -29,6 +29,7 @@ def test_builder_process_chunk_fallback_pool_initialized(tmp_path):
     
     mock_pool_instance = MagicMock()
     mock_pool_instance.submit.side_effect = Exception("Pool schedule failed after init")
+    mock_pool_instance.schedule.side_effect = Exception("Pool schedule failed after init")
     
     mock_pool_context = MagicMock()
     mock_pool_context.__enter__.return_value = mock_pool_instance
