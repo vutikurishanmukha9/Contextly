@@ -1,6 +1,21 @@
 import os
 import tempfile
+import time
 from pathlib import Path
+
+def _cleanup_stale_parts(parent_dir: Path) -> None:
+    """Removes orphaned .part files older than 24 hours."""
+    now = time.time()
+    try:
+        for p in parent_dir.glob(".tmp-*.part"):
+            if p.is_file():
+                try:
+                    if now - p.stat().st_mtime > 86400: # 24 hours
+                        p.unlink()
+                except OSError:
+                    pass
+    except OSError:
+        pass
 
 def atomic_write(filepath: Path, content: str, encoding: str = "utf-8") -> None:
     """
@@ -10,6 +25,8 @@ def atomic_write(filepath: Path, content: str, encoding: str = "utf-8") -> None:
     filepath = Path(filepath)
     parent_dir = filepath.parent
     parent_dir.mkdir(parents=True, exist_ok=True)
+    
+    _cleanup_stale_parts(parent_dir)
 
     # Use a temporary file in the exact same directory to ensure they are on the same filesystem
     # This guarantees that os.replace is an atomic operation.
@@ -21,6 +38,17 @@ def atomic_write(filepath: Path, content: str, encoding: str = "utf-8") -> None:
             os.fsync(f.fileno()) # Force write to disk
             
         os.replace(temp_path, filepath)
+        
+        # Fsync the parent directory to ensure the rename is journaled (POSIX only)
+        if os.name == 'posix':
+            try:
+                fd_dir = os.open(str(parent_dir), os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0))
+                try:
+                    os.fsync(fd_dir)
+                finally:
+                    os.close(fd_dir)
+            except OSError:
+                pass
     except Exception:
         # Cleanup temp file on failure
         try:

@@ -41,8 +41,9 @@ class RepoWalker:
             # Prune directories matching the dir skip predicate
             if self.dir_skip_predicate:
                 dirs[:] = [d for d in dirs if not self.dir_skip_predicate(root_path / d)]
-            elif self.skip_predicate:
+            if self.skip_predicate:
                 dirs[:] = [d for d in dirs if not self.skip_predicate(root_path / d)]
+                files[:] = [f for f in files if not self.skip_predicate(root_path / f)]
                 
             # Prune directories if we've reached max_depth
             # If max_depth is 0, we clear dirs at depth 0 (root only).

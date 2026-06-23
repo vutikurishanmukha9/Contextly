@@ -31,8 +31,10 @@ class ImpactEngine:
         target_path_lower = target_path.lower().replace('\\', '/')
         
         for node in self.graph.nodes:
-            if node.path and node.path.lower().replace('\\', '/').endswith(target_path_lower):
-                start_nodes.append(node.id)
+            if node.path:
+                normalized_node_path = node.path.lower().replace('\\', '/')
+                if normalized_node_path == target_path_lower or normalized_node_path.endswith('/' + target_path_lower):
+                    start_nodes.append(node.id)
                 
         if not start_nodes:
             raise ContextlyError(f"Target file not found in graph: {target_path}")
@@ -56,6 +58,13 @@ class ImpactEngine:
                 else:
                     depths[current_id] = min(depths[current_id], depth)
                     
+            if len(visited) > 2000:
+                # Halt the traversal early if the blast radius exceeds this threshold
+                # to prevent memory exhaustion and CPU saturation on massively connected hub nodes.
+                import sys
+                print("WARNING: Blast radius traversal exceeded 2000 nodes. Halting early as this is a core hub dependency.", file=sys.stderr)
+                break
+                
             if depth >= 5: # Limit blast radius depth to prevent whole-repo explosion
                 continue
                 

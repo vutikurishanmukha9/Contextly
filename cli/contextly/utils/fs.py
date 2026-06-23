@@ -9,7 +9,7 @@ def find_project_root(start_path: Path) -> Path:
     try:
         current = start_path.resolve()
     except Exception:
-        return start_path
+        current = start_path.absolute()
 
     seen = set()
     try:
