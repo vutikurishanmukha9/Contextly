@@ -43,8 +43,8 @@ class ClaudeGenerator(BaseGenerator):
         ET.SubElement(stack_identity, "backend_tooling").text = back_str
         
         dependency_weight = ET.SubElement(root, "dependency_weight")
-        ET.SubElement(dependency_weight, "npm_packages").text = str(len(self.intelligence.dependencies.npm))
-        ET.SubElement(dependency_weight, "python_packages").text = str(len(self.intelligence.dependencies.python))
+        ET.SubElement(dependency_weight, "npm_packages").text = str(len(self.intelligence.dependencies.npm or []))
+        ET.SubElement(dependency_weight, "python_packages").text = str(len(self.intelligence.dependencies.python or []))
         
         if hasattr(ET, "indent"):
             ET.indent(root, space="  ", level=0)

@@ -24,6 +24,10 @@ class GeneratorRegistry:
     @classmethod
     def get_generator(cls, model_name: str, root_dir: Path, intelligence: RepositoryIntelligence) -> BaseGenerator:
         model = model_name.lower()
+        if model not in cls._registry:
+            from ..core.diagnostics import DiagnosticsContext
+            DiagnosticsContext().add_warning(f"Unknown model '{model_name}', defaulting to chatgpt format")
+            
         # Fallback to chatgpt if model is not registered
         generator_class = cls._registry.get(model, cls._registry.get('chatgpt'))
         if not generator_class:

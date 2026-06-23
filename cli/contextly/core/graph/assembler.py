@@ -30,6 +30,8 @@ class GraphAssembler:
         self._fqn_to_node_id: Dict[str, str] = {}
         # Simple name to list of FQNs (for fuzzy matching when exact isn't possible)
         self._name_to_fqns: Dict[str, List[str]] = {}
+        # Suffix matching cache to avoid O(N) ends-with searches
+        self._suffix_to_fqn: Dict[str, str] = {}
         
         # Track unresolved nodes we create to avoid duplicates
         self._unresolved_nodes: Dict[str, str] = {}
@@ -120,6 +122,14 @@ class GraphAssembler:
             if entity.name not in self._name_to_fqns:
                 self._name_to_fqns[entity.name] = []
             self._name_to_fqns[entity.name].append(fqn)
+            
+            # Cache all dotted suffixes for fast resolution
+            parts = fqn.split('.')
+            if len(parts) > 1:
+                for i in range(1, len(parts)):
+                    suffix = '.'.join(parts[i:])
+                    if suffix not in self._suffix_to_fqn:
+                        self._suffix_to_fqn[suffix] = fqn
             
         return file_node_id
 
@@ -223,20 +233,15 @@ class GraphAssembler:
                 
         # 3. Handle dot-separated attributes (e.g. sqlalchemy.create_engine)
         if "." in target_name:
-            base_name = target_name.split(".")[0]
-            if base_name in self._name_to_fqns:
-                # E.g. we found `models` and target is `models.User`
-                # Let's see if the full string matches anything
-                for fqn in self._fqn_to_node_id.keys():
-                    if fqn.endswith(target_name):
-                        self.graph.relationships.append(Relationship(
-                            source_id=source_id,
-                            target_id=self._fqn_to_node_id[fqn],
-                            type=rel_type,
-                            confidence=0.6,
-                            resolution_method="fuzzy_suffix_match"
-                        ))
-                        return
+            if target_name in self._suffix_to_fqn:
+                self.graph.relationships.append(Relationship(
+                    source_id=source_id,
+                    target_id=self._fqn_to_node_id[self._suffix_to_fqn[target_name]],
+                    type=rel_type,
+                    confidence=0.6,
+                    resolution_method="fuzzy_suffix_match"
+                ))
+                return
 
         # 4. Unresolved Fallback
         unresolved_id = self._get_or_create_unresolved(target_name)

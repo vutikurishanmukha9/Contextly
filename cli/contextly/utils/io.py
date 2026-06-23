@@ -34,7 +34,7 @@ import re
 def sanitize_filename(name: str) -> str:
     """Replaces invalid filename characters with underscores and removes trailing dots/spaces."""
     name = re.sub(r'[\\/*?:"<>|]', '_', name)
-    return name.rstrip('. ')
+    return name.rstrip('. ')[:100]
 
 def save_command_result(command_name: str, args: list[str], content: str, root_dir: Path) -> Path:
     """

@@ -8,6 +8,7 @@ from rich.columns import Columns
 from ..utils.console import console
 from ..utils.fs import find_project_root
 from ..utils.validation import require_contextly_initialized
+from ..utils.exceptions import ValidationError, ContextlyError
 from ..core.graph.builder import ImportGraphBuilder
 from ..core.graph.validator import GraphValidator
 import collections
@@ -18,7 +19,7 @@ def summary_cmd():
     
     try:
         require_contextly_initialized(root_dir)
-    except Exception as e:
+    except (ValidationError, ContextlyError) as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
         
@@ -30,7 +31,7 @@ def summary_cmd():
         graph = builder.build()
         validator = GraphValidator()
         graph = validator.validate(graph)
-    except Exception as e:
+    except (ValidationError, ContextlyError) as e:
         status_ctx.stop()
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)

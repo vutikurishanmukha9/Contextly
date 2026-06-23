@@ -133,176 +133,104 @@ class ImportGraphBuilder:
         # 2. Concurrently parse files into DTOs
         # Using ProcessPoolExecutor to bypass Python's GIL bottlenecks for CPU-heavy AST parsing.
         
-        # We process target_files in chunks to avoid OOM in large repos
-        from itertools import islice
-        def chunk_iterable(iterable, size):
-            it = iter(iterable)
-            while True:
-                c = list(islice(it, size))
-                if not c:
-                    break
-                yield c
-
+        # We process target_files dynamically to avoid OOM in large repos and prevent worker stalls
         use_pool = True
         root_str = str(self.root_dir)
         
-        # Initialize assembler once for the whole build
-        
-        def _process_chunk(chunk_files, is_process_pool, pool_name, on_init=None):
-            """
-            Processes a chunk of files through pebble.ProcessPool or concurrent.futures.ThreadPoolExecutor.
-            """
-            dtos = []
-            optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
-            if os.environ.get("CI"):
-                optimal_workers = min(optimal_workers, 2)
-            batch_size = optimal_workers * 32
-            
-            kwargs = {"max_workers": optimal_workers}
-            
-            if is_process_pool:
-                try:
-                    import sys
-                    if sys.modules.get("pytest") is not None:
-                        # Avoid multiprocessing/pebble inside pytest on Windows to prevent deadlocks
-                        try:
-                            from pebble import ThreadPool
-                            pool_class = ThreadPool
-                        except ImportError:
-                            pool_class = concurrent.futures.ThreadPoolExecutor
-                    else:
-                        from pebble import ProcessPool
-                        from concurrent.futures import TimeoutError as FuturesTimeoutError
-                        pool_class = ProcessPool
-                        kwargs["max_tasks"] = 10
-                        import multiprocessing
-                        kwargs["context"] = multiprocessing.get_context("spawn")
-                except ImportError:
-                    pool_class = concurrent.futures.ProcessPoolExecutor
-            else:
-                try:
-                    from pebble import ThreadPool
-                    pool_class = ThreadPool
-                except ImportError:
-                    pool_class = concurrent.futures.ThreadPoolExecutor
-                from concurrent.futures import TimeoutError as FuturesTimeoutError
-                    
-            with pool_class(**kwargs) as executor:
-                if on_init:
-                    on_init()
-                in_flight = set()
-                target_iter = iter(chunk_files)
-                future_to_file = {}
-                
-                def submit_next():
-                    try:
-                        fp = next(target_iter)
-                        if hasattr(executor, "schedule"):
-                            future = executor.schedule(_parse_file, args=(fp, root_str, self.max_file_size_mb), timeout=_WORKER_PARSE_TIMEOUT_SECONDS)
-                        else:
-                            future = executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)
-                        in_flight.add(future)
-                        future_to_file[future] = fp
-                        return True
-                    except StopIteration:
-                        return False
-                        
-                for _ in range(batch_size):
-                    submit_next()
-                    
-                while in_flight:
-                    done, _ = concurrent.futures.wait(
-                        in_flight,
-                        timeout=5,
-                        return_when=concurrent.futures.FIRST_COMPLETED
-                    )
-                    
-                    if not done:
-                        continue
-
-                    for future in done:
-                        in_flight.discard(future)
-                        file_path = future_to_file.pop(future, "unknown")
-                        try:
-                            dto = future.result()
-                            if dto:
-                                if dto.error:
-                                    diagnostics.add_warning("ImportGraphBuilder", f"Failed to parse {dto.file_path}: {dto.error}")
-                                    self.failed_files[dto.file_path] = dto.error
-                                else:
-                                    dtos.append(dto)
-                        except Exception as e:
-                            # Catch TimeoutError (either pebble.ProcessExpired, concurrent.futures.TimeoutError, etc.)
-                            if type(e).__name__ in ('TimeoutError', 'ProcessExpired'):
-                                self.failed_files[file_path] = f"TimeoutError: AST parsing exceeded deadline"
-                                diagnostics.add_warning("ImportGraphBuilder", f"Timeout parsing {file_path}")
-                            else:
-                                self.failed_files[file_path] = f"ConcurrencyError: {str(e)}"
-                            
-                        submit_next()
-            return dtos
-
+        import tempfile
+        import pickle
+        import os
         from ..diagnostics import DiagnosticsContext
         diagnostics = DiagnosticsContext()
         
-        all_dtos_for_relationships = []
-        
-        # Process in chunks of 500 files at a time
-        for chunk in chunk_iterable(target_files, 500):
-            chunk_dtos = []
-            if use_pool:
-                pool_initialized = False
-                def set_initialized():
-                    nonlocal pool_initialized
-                    pool_initialized = True
-                    
-                try:
-                    chunk_dtos = _process_chunk(chunk, True, "ProcessPool", set_initialized)
-                except Exception as e:
-                    if pool_initialized:
-                        diagnostics.add_error("ImportGraphBuilder", f"ProcessPool execution error (no retry): {str(e)}")
-                        use_pool = False
-                    else:
-                        try:
-                            chunk_dtos = _process_chunk(chunk, False, "ThreadPool", set_initialized)
-                        except Exception as thread_err:
-                            diagnostics.add_error("ImportGraphBuilder", f"ThreadPool fallback error: {str(thread_err)}")
-                            use_pool = False
+        optimal_workers = min(max(1, (os.cpu_count() or 4) - 1), 8)
+        if os.environ.get("CI"):
+            optimal_workers = min(optimal_workers, 2)
             
-            # Sequential fallback for this chunk if pool failed
-            if not use_pool:
-                for file_path in chunk:
-                    try:
-                        dto = _parse_file(file_path, root_str, self.max_file_size_mb)
-                        if dto:
-                            if dto.error:
-                                console.print(f"[yellow]Warning:[/yellow] Failed to parse {dto.file_path}: {dto.error}")
-                                self.failed_files[dto.file_path] = dto.error
-                            else:
-                                chunk_dtos.append(dto)
-                        else:
-                            self.failed_files[file_path] = "Empty parser output"
-                    except Exception as e:
-                        self.failed_files[file_path] = f"SequentialError: {str(e)}"
-                        
-            # Immediately add nodes to assembler to free up memory from the full DTO tree
-            for dto in chunk_dtos:
-                self.assembler.add_node(dto)
-                # Keep lightweight DTO structure for building relationships later
-                all_dtos_for_relationships.append(dto)
-
-        if self.failed_files:
-            console.print(
-                f"[yellow]Warning:[/yellow] AST parsing was partial. "
-                f"Failed to parse {len(self.failed_files)} files out of {len(target_files)}. "
-                f"The resulting graph will be incomplete."
-            )
-
-        # 3. Assemble the Graph deterministically
-        # Sort DTOs by path to ensure stable IDs and predictable relationships.
-        all_dtos_for_relationships.sort(key=lambda x: x.file_path)
+        fd, temp_path = tempfile.mkstemp(suffix=".contextly.ast")
+        os.close(fd)
         
-        self.assembler.build_relationships(all_dtos_for_relationships)
+        try:
+            with open(temp_path, "wb") as dto_store:
+                pool_class = concurrent.futures.ProcessPoolExecutor
+                
+                try:
+                    with pool_class(max_workers=optimal_workers) as executor:
+                        future_to_fp = {}
+                        file_iterator = iter(target_files)
+                        
+                        # Pre-fill the queue to keep workers busy
+                        for _ in range(optimal_workers * 2):
+                            try:
+                                fp = next(file_iterator)
+                                future_to_fp[executor.submit(_parse_file, fp, root_str, self.max_file_size_mb)] = fp
+                            except StopIteration:
+                                break
+                                
+                        while future_to_fp:
+                            done, _ = concurrent.futures.wait(
+                                future_to_fp.keys(), return_when=concurrent.futures.FIRST_COMPLETED, timeout=120
+                            )
+                            
+                            if not done:
+                                diagnostics.add_error("ImportGraphBuilder", "File parsing exceeded global 120s timeout")
+                                break
+                                
+                            for future in done:
+                                fp = future_to_fp.pop(future)
+                                try:
+                                    dto = future.result()
+                                    if dto:
+                                        if dto.error:
+                                            self.failed_files[dto.file_path] = dto.error
+                                        else:
+                                            self.assembler.add_node(dto)
+                                            pickle.dump(dto, dto_store)
+                                except Exception as e:
+                                    self.failed_files[fp] = f"ConcurrencyError: {str(e)}"
+                                    
+                                # Feed the next file instantly
+                                try:
+                                    next_fp = next(file_iterator)
+                                    future_to_fp[executor.submit(_parse_file, next_fp, root_str, self.max_file_size_mb)] = next_fp
+                                except StopIteration:
+                                    pass
+                except Exception as e:
+                    diagnostics.add_warning("ImportGraphBuilder", f"ProcessPool fallback to sequential due to: {str(e)}")
+                    for file_path in target_files:
+                        try:
+                            dto = _parse_file(file_path, root_str, self.max_file_size_mb)
+                            if dto and not dto.error:
+                                self.assembler.add_node(dto)
+                                pickle.dump(dto, dto_store)
+                            elif dto and dto.error:
+                                self.failed_files[dto.file_path] = dto.error
+                        except Exception as seq_err:
+                            self.failed_files[file_path] = f"SequentialError: {str(seq_err)}"
+
+            if self.failed_files:
+                console.print(
+                    f"[yellow]Warning:[/yellow] AST parsing was partial. "
+                    f"Failed to parse {len(self.failed_files)} files out of {len(target_files)}. "
+                    f"The resulting graph will be incomplete."
+                )
+
+            # Pass 2: Re-read DTOs incrementally to build relationships
+            def dto_generator():
+                with open(temp_path, "rb") as f:
+                    while True:
+                        try:
+                            yield pickle.load(f)
+                        except EOFError:
+                            break
+                            
+            self.assembler.build_relationships(dto_generator())
+            
+        finally:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
         
         # Pass 3: Validate the Graph
         from .validator import GraphValidator

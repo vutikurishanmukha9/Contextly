@@ -15,4 +15,4 @@ Security is a priority for Context-Ly, especially given its role in parsing and 
 
 Please do **not** report security vulnerabilities via public GitHub issues.
 
-Instead, please email the security contact at **security@contextly.dev** (placeholder) or open a private security advisory through GitHub. We will acknowledge your report within 48 hours and provide a timeline for resolution.
+Instead, please email the security contact at **security@contextly.io** or open a private security advisory through GitHub. We will acknowledge your report within 48 hours and provide a timeline for resolution.

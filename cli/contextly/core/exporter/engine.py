@@ -98,10 +98,12 @@ class ExporterEngine:
             
         clipboard_success = True
         try:
-            if export_path.stat().st_size < 10 * 1024 * 1024:
+            if export_path.stat().st_size <= 4 * 1024 * 1024:
                 with open(export_path, "r", encoding="utf-8") as f:
                     pyperclip.copy(f.read())
             else:
+                from ...core.diagnostics import DiagnosticsContext
+                DiagnosticsContext().add_warning("ExporterEngine", "Export exceeds 4MB clipboard limit, skipping clipboard copy.")
                 clipboard_success = False
         except Exception:
             clipboard_success = False

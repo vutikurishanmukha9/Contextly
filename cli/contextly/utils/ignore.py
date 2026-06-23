@@ -1,11 +1,13 @@
 from pathlib import Path
 import pathspec
+import functools
 
 class IgnoreEngine:
     """Centralized ignore logic for Context-Ly"""
     
     def __init__(self, root_dir: Path, no_default_excludes: bool = False):
-        self.root_dir = root_dir.resolve()
+        self.root_dir = root_dir.absolute()
+        self.root_dir_resolved = root_dir.resolve()
         self.no_default_excludes = no_default_excludes
         
         from .constants import ALWAYS_SKIP_DIRS
@@ -52,6 +54,7 @@ class IgnoreEngine:
         # Use the modern 'gitignore' identifier to fix deprecation warnings
         return pathspec.PathSpec.from_lines('gitignore', patterns)
         
+    @functools.lru_cache(maxsize=10240)
     def is_ignored(self, path: Path) -> bool:
         """
         Checks if a file or directory path is ignored.
@@ -71,7 +74,14 @@ class IgnoreEngine:
 
         # Convert path to a relative POSIX string for matching (pathspec requires POSIX style)
         try:
-            rel_path = path.resolve().relative_to(self.root_dir)
+            if path.is_absolute():
+                try:
+                    rel_path = path.relative_to(self.root_dir)
+                except ValueError:
+                    # Fallback for paths that differ in symlinks/casing
+                    rel_path = path.resolve().relative_to(self.root_dir_resolved)
+            else:
+                rel_path = path
         except ValueError:
             # If path is not relative to root_dir, don't scan it
             return True

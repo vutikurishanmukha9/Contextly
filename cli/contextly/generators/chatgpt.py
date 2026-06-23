@@ -7,8 +7,8 @@ class ChatGPTGenerator(BaseGenerator):
         readme = self._get_readme_content()
         tree = self._generate_tree()
         
-        npm_count = len(self.intelligence.dependencies.npm)
-        py_count = len(self.intelligence.dependencies.python)
+        npm_count = len(self.intelligence.dependencies.npm or [])
+        py_count = len(self.intelligence.dependencies.python or [])
 
         has_memory = bool(self.intelligence.memory.rules)
         has_patterns = bool(self.intelligence.patterns.patterns)

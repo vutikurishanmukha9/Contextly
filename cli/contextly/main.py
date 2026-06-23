@@ -90,20 +90,44 @@ def main():
             else:
                 if sys.platform != "win32":
                     os.chmod(crash_log, 0o600)
+                    
+            import logging
+            from logging.handlers import RotatingFileHandler
+            logger = logging.getLogger("contextly_crash")
+            logger.setLevel(logging.ERROR)
+            logger.propagate = False
+            for h in logger.handlers[:]:
+                logger.removeHandler(h)
                 
-            with open(crash_log, "a", encoding="utf-8") as lf:
-                lf.write(f"\n--- {datetime.now().isoformat()} ---\n")
-                traceback.print_exc(file=lf)
+            handler = RotatingFileHandler(str(crash_log), maxBytes=100*1024, backupCount=2, encoding="utf-8")
+            handler.setFormatter(logging.Formatter("\n--- %(asctime)s ---\n%(message)s"))
+            logger.addHandler(handler)
+            
+            logger.error(traceback.format_exc())
+            handler.flush()
+            handler.close()
             console.print(f"\n[dim]Full crash details written to: {crash_log}[/dim]")
         except OSError:
-            # If we can't write the log file, fall back to showing the traceback
-            console.print("\n[dim]--- Traceback ---[/dim]")
-            traceback.print_exc()
-            console.print("[dim]-------------------[/dim]\n")
+            try:
+                import tempfile
+                fallback_log = Path(tempfile.gettempdir()) / "contextly_crash.log"
+                with open(fallback_log, "a", encoding="utf-8") as lf:
+                    lf.write(f"\n--- {datetime.now().isoformat()} ---\n")
+                    traceback.print_exc(file=lf)
+                console.print(f"\n[dim]Full crash details written to temp log: {fallback_log}[/dim]")
+            except OSError:
+                # If we can't even write to temp, fall back to showing the traceback
+                console.print("\n[dim]--- Traceback ---[/dim]")
+                traceback.print_exc()
+                console.print("[dim]-------------------[/dim]\n")
         
         console.print("[yellow]Please report this issue to the Contextly maintainers.[/yellow]")
         sys.exit(1)
     finally:
+        # Centralize Diagnostic Reporting
+        from contextly.core.diagnostics import DiagnosticsContext
+        DiagnosticsContext().report()
+        
         # Save command terminal transcript for commands that don't output a payload
         try:
             if len(sys.argv) > 1:
@@ -111,14 +135,23 @@ def main():
                 args = sys.argv[2:]
                 
                 # Exclude commands that manually save their own large payloads
-                if cmd not in ("explain", "export", "--help", "-h", "--version", "-v"):
+                if cmd not in ("explain", "export", "pack", "--help", "-h", "--version", "-v"):
                     text = console.export_text(clear=False)
                     if text.strip():
+                        if len(text) > 50000:
+                            text = text[:50000] + "\n...[Truncated: Exceeded 50KB limit]..."
                         try:
                             # Might be outside a repo, fallback to cwd if so
                             root_dir = find_project_root(Path.cwd())
                         except Exception:
                             root_dir = Path.cwd()
+                            
+                        # Ensure secure permissions for exports
+                        exports_dir = root_dir / ".contextly" / "exports"
+                        exports_dir.mkdir(parents=True, exist_ok=True)
+                        if sys.platform != "win32":
+                            import os
+                            os.chmod(exports_dir, 0o700)
                             
                         save_command_result(cmd, args, text, root_dir)
         except Exception as e:

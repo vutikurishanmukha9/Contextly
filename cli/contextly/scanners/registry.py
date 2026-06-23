@@ -17,7 +17,7 @@ class ScannerRegistry:
 
     @classmethod
     def register(cls, key: str, scanner_class: Type[BaseScanner]) -> None:
-        if key not in cls._registry:
+        if key not in cls._order:
             cls._order.append(key)
         cls._registry[key] = scanner_class
 

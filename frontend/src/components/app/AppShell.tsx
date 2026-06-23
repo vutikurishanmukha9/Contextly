@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Logo } from "@/components/site/Logo";
-import { LayoutDashboard, Search, Bell } from "lucide-react";
+import { LayoutDashboard, Search, Bell, Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 const nav = [{ to: "/", label: "Dashboard", icon: LayoutDashboard }];
@@ -18,12 +19,25 @@ export function AppShell({
   children: ReactNode;
   user?: { name: string; plan: string };
 }) {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
   return (
     <div className="flex min-h-screen w-full bg-background">
-      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-border bg-surface md:flex">
-        <div className="flex h-16 items-center px-5 border-b border-border">
+      {/* Mobile Backdrop */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[248px] shrink-0 flex-col border-r border-border bg-surface transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="flex h-16 items-center justify-between px-5 border-b border-border">
           <Logo />
+          <button className="md:hidden text-muted-foreground p-1 hover:bg-muted rounded-md" onClick={() => setIsMobileOpen(false)}>
+            <X className="h-4 w-4" />
+          </button>
         </div>
         <nav className="flex-1 px-3 py-4">
           <div className="px-2 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -63,8 +77,14 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-6 backdrop-blur">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 md:px-6 backdrop-blur">
           <div className="flex flex-1 items-center gap-3">
+            <button 
+              className="md:hidden p-2 text-muted-foreground hover:bg-muted rounded-md"
+              onClick={() => setIsMobileOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
             <div className="hidden items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 md:flex md:w-[320px]">
               <Search className="h-3.5 w-3.5 text-muted-foreground" />
               <input

@@ -173,9 +173,15 @@ class DependencyScanner(BaseScanner):
                     stripped = line.strip()
                     if stripped.startswith("-r ") or stripped.startswith("-c "):
                         ref_file = stripped.split(" ", 1)[1].strip()
-                        ref_path = (filepath.parent / ref_file).resolve(strict=False)
-                        if ref_path.exists() and ref_path.is_relative_to(root_dir.resolve()):
-                            self._parse_requirements_txt(ref_path, root_dir, python_set, strict, _visited)
+                        ref_path = (filepath.parent / ref_file)
+                        if ref_path.exists():
+                            from ..utils.paths import safe_resolve
+                            from ..utils.exceptions import ValidationError
+                            try:
+                                safe_ref = safe_resolve(ref_path, root_dir)
+                                self._parse_requirements_txt(safe_ref, root_dir, python_set, strict, _visited)
+                            except ValidationError:
+                                pass
                         continue
                         
                     dep = _extract_dep_name(line)

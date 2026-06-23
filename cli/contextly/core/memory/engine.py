@@ -30,7 +30,18 @@ class MemoryEngine:
     def _lock(self):
         """Cross-platform atomic locking using filelock."""
         from filelock import FileLock, Timeout
+        import os, time
         lock_file = self.memory_dir / "rules.lock"
+        
+        # Stale lock breaking heuristic
+        if lock_file.exists():
+            try:
+                if time.time() - lock_file.stat().st_mtime > 30:
+                    lock_file.unlink()
+                    console.print("[yellow]Warning: Broke stale memory lock.[/yellow]")
+            except OSError:
+                pass
+                
         try:
             with FileLock(lock_file, timeout=5):
                 yield
@@ -40,6 +51,9 @@ class MemoryEngine:
     def _save_memory(self, memory: ProjectMemory):
         """Serializes the ProjectMemory model to YAML and writes it atomically."""
         try:
+            import shutil
+            if self.memory_file.exists():
+                shutil.copy2(self.memory_file, self.memory_file.with_suffix('.yaml.bak'))
             from ...utils.io import atomic_write
             data = memory.model_dump()
             yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)

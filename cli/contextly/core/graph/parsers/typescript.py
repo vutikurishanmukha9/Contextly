@@ -55,12 +55,20 @@ class TypeScriptASTParser(BaseASTParser):
                     try:
                         with open(os.path.join(root, "tsconfig.json"), "r", encoding="utf-8") as f:
                             content = f.read()
-                            # Strip comments securely without destroying JSON strings
-                            safe_regex = r'("(?:\\.|[^"\\])*")|//.*?(?=\n|$)|/\*.*?\*/'
-                            content = re.sub(safe_regex, lambda m: m.group(1) if m.group(1) else '', content, flags=re.S)
-                            # Remove trailing commas
-                            content = re.sub(r',\s*([\]}])', r'\1', content)
-                            data = json.loads(content)
+                            try:
+                                data = json.loads(content)
+                            except json.JSONDecodeError:
+                                # Strip comments securely without destroying JSON strings
+                                safe_regex = r'("(?:\\.|[^"\\])*")|//.*?(?=\n|$)|/\*.*?\*/'
+                                content = re.sub(safe_regex, lambda m: m.group(1) if m.group(1) else '', content, flags=re.S)
+                                # Remove trailing commas
+                                content = re.sub(r',\s*([\]}])', r'\1', content)
+                                try:
+                                    data = json.loads(content)
+                                except json.JSONDecodeError:
+                                    from ...core.diagnostics import DiagnosticsContext
+                                    DiagnosticsContext().add_warning("TypeScriptParser", f"Failed to parse {os.path.join(root, 'tsconfig.json')}. JSONC not supported or invalid syntax.")
+                                    data = {}
                             paths = data.get("compilerOptions", {}).get("paths", {})
                             
                             for alias, targets in paths.items():
@@ -111,31 +119,32 @@ class TypeScriptASTParser(BaseASTParser):
             
             def _extract_called_entities(n) -> List[str]:
                 called = []
-                def _walk(child_node):
+                stack = [n]
+                while stack:
+                    child_node = stack.pop()
                     if child_node.type == 'call_expression':
                         func_node = child_node.child_by_field_name('function')
                         if func_node:
                             called.append(content[func_node.start_byte:func_node.end_byte])
-                    for sub in child_node.children:
-                        _walk(sub)
-                _walk(n)
+                    stack.extend(reversed(child_node.children))
                 return called
 
-            def traverse(node):
+            # Main Iterative AST Traversal
+            stack = [tree.root_node]
+            while stack:
+                node = stack.pop()
+                
                 # Handle imports
                 if node.type == 'import_statement':
-                    # Find the string module name
                     for child in node.children:
                         if child.type == 'string':
-                            # Remove quotes
                             module = content[child.start_byte+1:child.end_byte-1]
                             self._resolve_import(module, file_dir, root_dir, imports)
                             
-                # Handle exports (export const X, export function Y, export class Z)
+                # Handle exports
                 elif node.type == 'export_statement':
                     for child in node.children:
                         if child.type == 'lexical_declaration' or child.type == 'variable_declaration':
-                            # export const x = 1;
                             for decl in child.children:
                                 if decl.type == 'variable_declarator':
                                     name_node = decl.child_by_field_name('name')
@@ -164,14 +173,15 @@ class TypeScriptASTParser(BaseASTParser):
                         parent_classes = []
                         for child in node.children:
                             if child.type in ('class_heritage', 'heritage_clause', 'extends_clause', 'implements_clause'):
-                                def _get_types(hn):
-                                    for hc in hn.children:
+                                type_stack = [child]
+                                while type_stack:
+                                    curr = type_stack.pop()
+                                    for hc in reversed(curr.children):
                                         if hc.type in ('identifier', 'type_identifier'):
                                             parent_classes.append(content[hc.start_byte:hc.end_byte])
                                         else:
-                                            _get_types(hc)
-                                _get_types(child)
-                                
+                                            type_stack.append(hc)
+                                            
                         entity = ExtractedEntity(
                             name=name, 
                             kind=kind,
@@ -227,11 +237,8 @@ class TypeScriptASTParser(BaseASTParser):
                                         entity.inputs.append(EntityField(name=content[pname.start_byte:pname.end_byte]))
                         entities.append(entity)
                 
-                # Traverse children
-                for child in node.children:
-                    traverse(child)
-                    
-            traverse(tree.root_node)
+                # Push children to stack (reversed to maintain DFS order)
+                stack.extend(reversed(node.children))
             
             return ParsedFileDTO(
                 file_path=file_path,

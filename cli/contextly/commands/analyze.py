@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from rich.table import Table
 import typer
@@ -30,19 +31,11 @@ def analyze_cmd(
             raise ValidationError(f"Target is not a valid directory: {target}")
     except ValidationError as e:
         if output_format == "json":
-            import json
             console.print(json.dumps({"error": str(e)}, indent=2))
         else:
             console.print(f"\n[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
         
-    class DummyContext:
-        def __enter__(self): return self
-        def __exit__(self, *args): pass
-        def start(self): pass
-        def stop(self): pass
-    status_ctx = DummyContext()
-    
     try:
         engine = AnalyzerEngine(root_dir, no_default_excludes=no_default_excludes)
         
@@ -52,21 +45,18 @@ def analyze_cmd(
         if output_format != "json":
             console.print(f"\n[bold red]Scanner Error:[/bold red] {e}")
         else:
-            import json
             print(json.dumps({"error": f"Scanner Error: {str(e)}"}, indent=2))
         raise typer.Exit(1)
     except ContextlyError as e:
         if output_format != "json":
             console.print(f"\n[bold red]Context-Ly Error:[/bold red] {e}")
         else:
-            import json
             print(json.dumps({"error": f"Context-Ly Error: {str(e)}"}, indent=2))
         raise typer.Exit(1)
     except Exception as e:
         if output_format != "json":
             console.print(f"\n[bold red]Unexpected Error:[/bold red] {e}")
         else:
-            import json
             print(json.dumps({"error": f"Unexpected Error: {str(e)}"}, indent=2))
         raise typer.Exit(1)
         
@@ -93,7 +83,6 @@ def analyze_cmd(
         console.print()
         console.print(f"[dim]Generated advanced PROJECT_CONTEXT.md ({model.lower()} format) in current directory.[/dim]")
     else:
-        import json
         console.print(json.dumps({
             "language": intelligence.language.primary,
             "frameworks": {

@@ -39,6 +39,7 @@ venv.bak/
 
 # Frontend
 # frontend/
+frontend/.tanstack/
 
 # Coverage / Testing
 .coverage

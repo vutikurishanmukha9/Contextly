@@ -84,25 +84,38 @@ class GraphValidator:
         
     def _find_cycles(self, adj: Dict[str, List[str]], cycle_type: str, severity: str):
         visited = set()
-        path = set()
         
-        def dfs(node_id):
-            visited.add(node_id)
-            path.add(node_id)
+        for start_node in list(adj.keys()):
+            if start_node in visited:
+                continue
+                
+            stack = [(start_node, False)]
+            path = set()
             
-            for neighbor in adj.get(node_id, []):
-                if neighbor not in visited:
-                    dfs(neighbor)
-                elif neighbor in path:
-                    msg = f"Circular dependency ({cycle_type}) involving node {node_id}"
-                    if severity == "WARNING":
-                        self.diagnostics.add_warning("GraphValidator", msg)
-                    elif severity == "INFO":
-                        self.diagnostics.add_info("GraphValidator", msg)
-                    else:
-                        self.diagnostics.add_error("GraphValidator", msg)
-            path.remove(node_id)
-            
-        for n in list(adj.keys()):
-            if n not in visited:
-                dfs(n)
+            while stack:
+                node_id, is_backtracking = stack.pop()
+                
+                if is_backtracking:
+                    path.remove(node_id)
+                    continue
+                    
+                if node_id in visited:
+                    continue
+                    
+                visited.add(node_id)
+                path.add(node_id)
+                
+                # Push the backtrack marker
+                stack.append((node_id, True))
+                
+                for neighbor in adj.get(node_id, []):
+                    if neighbor not in visited:
+                        stack.append((neighbor, False))
+                    elif neighbor in path:
+                        msg = f"Circular dependency ({cycle_type}) involving node {node_id}"
+                        if severity == "WARNING":
+                            self.diagnostics.add_warning("GraphValidator", msg)
+                        elif severity == "INFO":
+                            self.diagnostics.add_info("GraphValidator", msg)
+                        else:
+                            self.diagnostics.add_error("GraphValidator", msg)

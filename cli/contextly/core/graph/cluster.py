@@ -66,23 +66,31 @@ class DomainClusterer:
         structural_nodes = set(node_to_domain.keys())
 
         # Pass 2: Graph Propagation (Assign isolated/utility nodes based on who uses them)
-        changed = True
-        iterations = 0
-        while changed and iterations < 100:
-            changed = False
-            iterations += 1
-            for node in graph.nodes:
-                if node.id in structural_nodes:
+        import collections
+        
+        # Build outgoing edges for BFS propagation
+        outgoing_edges: Dict[str, Set[str]] = {node.id: set() for node in graph.nodes}
+        for rel in graph.relationships:
+            if rel.type == RelationshipType.IMPORTS:
+                outgoing_edges[rel.source_id].add(rel.target_id)
+                
+        queue = collections.deque(structural_nodes)
+        
+        while queue:
+            caller_id = queue.popleft()
+            
+            for callee_id in outgoing_edges.get(caller_id, set()):
+                if callee_id in structural_nodes:
                     continue
                 
-                # Look at who imports this node
-                callers = incoming_edges.get(node.id, set())
+                # Look at who imports this callee node
+                callers = incoming_edges.get(callee_id, set())
                 caller_domains = set()
-                for caller_id in callers:
-                    if caller_id in node_to_domain:
-                        caller_domains.add(node_to_domain[caller_id])
+                for cid in callers:
+                    if cid in node_to_domain:
+                        caller_domains.add(node_to_domain[cid])
                         
-                current_domain = node_to_domain.get(node.id)
+                current_domain = node_to_domain.get(callee_id)
                 new_domain = current_domain
                 
                 if len(caller_domains) == 1:
@@ -92,12 +100,9 @@ class DomainClusterer:
                     domain_types["shared"] = DomainType.SHARED
                     
                 if new_domain != current_domain:
-                    node_to_domain[node.id] = new_domain
-                    changed = True
-
-        if iterations == 100:
-            from contextly.core.diagnostics import DiagnosticsContext
-            DiagnosticsContext().add_warning("DomainClusterer", "Graph propagation reached 100 iterations. Cyclic dependencies detected.")
+                    node_to_domain[callee_id] = new_domain
+                    # Enqueue callee to propagate its new domain to its own callees
+                    queue.append(callee_id)
 
         # Pass 3: Fallback for orphans
         for node in graph.nodes:

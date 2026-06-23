@@ -1,10 +1,13 @@
 import os
 import codecs
+import tempfile
+import shutil
 from pathlib import Path
 from typing import Tuple, List, Optional
 
 from ...utils.ignore import IgnoreEngine
-from ...utils.exceptions import ContextlyError
+from ...utils.exceptions import ContextlyError, ValidationError
+from ...utils.paths import safe_resolve
 from .ranking import RankingEngine
 from ..graph.parsers.registry import ParserRegistry
 from .formatter import KnowledgeFormatter
@@ -22,7 +25,10 @@ class PackerEngine:
         except ImportError:
             self.tokenizer = None
             from ...core.diagnostics import DiagnosticsContext
-            DiagnosticsContext().add_warning("PackerEngine", "tiktoken not installed. Using character-count heuristic for token estimates, which may be inaccurate.")
+            self.token_multiplier = float(os.environ.get("CONTEXTLY_TOKEN_MULTIPLIER", "3.5"))
+            DiagnosticsContext().add_warning("PackerEngine", f"tiktoken not installed. Using character-count heuristic (/{self.token_multiplier}) for token estimates, which may be inaccurate.")
+        else:
+            self.token_multiplier = 3.5
 
         from ...utils.config import load_config_model
         self.config = load_config_model(root_dir)
@@ -30,7 +36,7 @@ class PackerEngine:
 
     def _estimate_tokens(self, text: str) -> float:
         """Fast character-count heuristic for in-loop token budget enforcement."""
-        return len(text) / 3.5
+        return len(text) / self.token_multiplier
 
     def _exact_token_count(self, text: str) -> int:
         """Exact token count using tiktoken. Falls back to heuristic if unavailable."""
@@ -38,8 +44,8 @@ class PackerEngine:
             try:
                 return len(self.tokenizer.encode(text, disallowed_special=()))
             except ValueError:
-                return int(len(text) / 3.5)
-        return int(len(text) / 3.5)
+                return int(len(text) / self.token_multiplier)
+        return int(len(text) / self.token_multiplier)
 
     def _is_binary_file(self, first_kb: bytes) -> bool:
         """
@@ -80,7 +86,15 @@ class PackerEngine:
         base_name = safe_pack_name
         output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
         
-        # Pre-validate access BEFORE opening the file descriptor to prevent FD leaks
+        # Determine final file name with UUID fallback to prevent overwriting
+        try:
+            target_fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            os.close(target_fd)
+        except FileExistsError:
+            import uuid
+            safe_pack_name = f"{base_name}_{uuid.uuid4().hex[:8]}"
+            output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
+            
         for target_path in target_paths:
             try:
                 if target_path.is_dir():
@@ -88,22 +102,14 @@ class PackerEngine:
             except (PermissionError, OSError) as e:
                 raise ContextlyError(f"Cannot access target directory {target_path}: {e}")
 
-        # Safely open file descriptor with efficient UUID fallback on collision
-        try:
-            fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-        except FileExistsError:
-            import uuid
-            safe_pack_name = f"{base_name}_{uuid.uuid4().hex[:8]}"
-            output_file = packs_dir / f"{safe_pack_name}.contextpack.md"
-            fd = os.open(output_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-                
         # Phase 1: Collect all files
         all_files_set = set()
         skipped_files = []
         for target_path in target_paths:
             try:
-                target_path = target_path.resolve()
-                if not target_path.is_relative_to(self.root_dir.resolve()):
+                try:
+                    target_path = safe_resolve(target_path, self.root_dir)
+                except ValidationError:
                     from ...core.diagnostics import DiagnosticsContext
                     DiagnosticsContext().add_warning("PackerEngine", f"Path traversal attempt blocked: {target_path}")
                     continue
@@ -114,8 +120,10 @@ class PackerEngine:
                     continue
                     
                 for root, dirs, files in os.walk(target_path):
-                    root_path = Path(root).resolve()
-                    if not root_path.is_relative_to(self.root_dir.resolve()):
+                    root_path = Path(root)
+                    try:
+                        root_path = safe_resolve(root_path, self.root_dir)
+                    except ValidationError:
                         from ...core.diagnostics import DiagnosticsContext
                         DiagnosticsContext().add_warning("PackerEngine", f"Path traversal attempt blocked: {root_path}")
                         continue
@@ -135,7 +143,7 @@ class PackerEngine:
         
         if not force and not max_tokens:
             total_size = sum(f.stat().st_size for f in all_files)
-            estimated_tokens = int(total_size / 3.5)
+            estimated_tokens = int(total_size / self.token_multiplier)
             if estimated_tokens > 100000:
                 raise ContextlyError(f"Estimated context size (~{estimated_tokens:,} tokens) is very large and may exceed LLM context windows.\nUse --force to generate anyway, or use --max-tokens to limit the size.")
         
@@ -190,7 +198,7 @@ class PackerEngine:
         
         # Pre-filter by budget using heuristic to maintain cross-domain representation
         if max_tokens:
-            budget_chars = max_tokens * 3.5
+            budget_chars = max_tokens * self.token_multiplier
             current_chars = len(header_text)
             selected_paths = []
             for p in ranked_files:
@@ -222,6 +230,10 @@ class PackerEngine:
             except ValueError:
                 domain_groups["root"].append(path)
             
+        # Write to a temporary file and atomically rename on Windows
+        fd, temp_path_str = tempfile.mkstemp(dir=packs_dir, suffix=".tmp")
+        temp_path = Path(temp_path_str)
+        
         with os.fdopen(fd, "wb") as out_f:
             out_f.write(header_text.encode("utf-8"))
             
@@ -389,6 +401,20 @@ class PackerEngine:
                         rel_path = path.name
                     out_f.write(f"- `{rel_path}`\n".encode("utf-8"))
 
+        # Safely atomic rename
+        try:
+            if output_file.exists():
+                output_file.unlink()
+        except OSError:
+            pass
+            
+        try:
+            shutil.move(str(temp_path), str(output_file))
+        except OSError as e:
+            if temp_path.exists():
+                temp_path.unlink()
+            raise ContextlyError(f"Failed to write context pack to {output_file}: {e}")
+
         # Compute final exact token count from the completed output file
         if self.tokenizer:
             try:
@@ -398,9 +424,10 @@ class PackerEngine:
                 token_type = "Exact Tokens (cl100k_base)"
             except (ValueError, OSError):
                 token_estimate = int(current_tokens)
-                token_type = "Estimated Tokens (chars / 3.5)"
+                token_type = f"Estimated Tokens (chars / {self.token_multiplier})"
         else:
             token_estimate = int(current_tokens)
-            token_type = "Estimated Tokens (chars / 3.5)"
+            token_type = f"Estimated Tokens (chars / {self.token_multiplier})"
             
         return token_estimate, token_type, len(selected_files), output_file, skipped_files, len(excluded_files)
+

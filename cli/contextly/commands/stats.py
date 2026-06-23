@@ -32,6 +32,16 @@ def stats_cmd(
     diagnostics = DiagnosticsContext()
     diagnostics.clear()
 
+    from contextly.utils.validation import require_directory_exists
+    try:
+        require_directory_exists(Path(path))
+    except Exception as e:
+        if as_json:
+            typer.echo(json.dumps([{"provider": "System", "metric": "error", "value": str(e), "severity": "CRITICAL", "metadata": {}}]))
+        else:
+            console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
     if not as_json:
         console.print("[dim]Analyzing repository health...[/dim]")
 
