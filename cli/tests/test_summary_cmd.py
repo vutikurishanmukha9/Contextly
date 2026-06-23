@@ -10,17 +10,17 @@ def runner():
 from contextly.utils.exceptions import ValidationError
 
 @patch("contextly.commands.summary.require_contextly_initialized")
-def test_summary_no_db(mock_req, runner, tmp_path):
+def test_summary_no_db(mock_req, runner, tmp_path, monkeypatch):
     mock_req.side_effect = ValidationError("No active context memory found")
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(app, ["summary"])
-        assert result.exit_code == 1
-        assert "No active context memory found" in result.output
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["summary"])
+    assert result.exit_code == 1
+    assert "No active context memory found" in result.output
 
 @patch("contextly.commands.summary.require_contextly_initialized")
 @patch("contextly.commands.summary.ImportGraphBuilder")
 @patch("contextly.commands.summary.GraphValidator")
-def test_summary_success(mock_validator, mock_builder, mock_req, runner, tmp_path):
+def test_summary_success(mock_validator, mock_builder, mock_req, runner, tmp_path, monkeypatch):
     # Mock ImportGraphBuilder methods
     mock_instance = mock_builder.return_value
     
@@ -45,8 +45,8 @@ def test_summary_success(mock_validator, mock_builder, mock_req, runner, tmp_pat
     mock_instance.build.return_value = mock_graph
     mock_validator.return_value.validate.return_value = mock_graph
 
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(app, ["summary"])
-        assert result.exit_code == 0
-        assert "Repository Summary" in result.output
-        assert "Total Files" in result.output
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["summary"])
+    assert result.exit_code == 0
+    assert "Repository Summary" in result.output
+    assert "Total Files" in result.output

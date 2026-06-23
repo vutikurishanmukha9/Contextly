@@ -26,16 +26,21 @@ export function AppShell({
     <div className="flex min-h-screen w-full bg-background">
       {/* Mobile Backdrop */}
       {isMobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[248px] shrink-0 flex-col border-r border-border bg-surface transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[248px] shrink-0 flex-col border-r border-border bg-surface transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
         <div className="flex h-16 items-center justify-between px-5 border-b border-border">
           <Logo />
-          <button className="md:hidden text-muted-foreground p-1 hover:bg-muted rounded-md" onClick={() => setIsMobileOpen(false)}>
+          <button
+            className="md:hidden text-muted-foreground p-1 hover:bg-muted rounded-md"
+            onClick={() => setIsMobileOpen(false)}
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -79,7 +84,7 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 md:px-6 backdrop-blur">
           <div className="flex flex-1 items-center gap-3">
-            <button 
+            <button
               className="md:hidden p-2 text-muted-foreground hover:bg-muted rounded-md"
               onClick={() => setIsMobileOpen(true)}
             >

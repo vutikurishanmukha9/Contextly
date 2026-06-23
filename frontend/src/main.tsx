@@ -7,7 +7,10 @@ const router = getRouter();
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 
-class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
   constructor(props: { children: ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -33,8 +36,8 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
             <pre className="text-xs text-red-400 overflow-auto max-h-32 p-2 bg-black/20 rounded">
               {this.state.error?.message}
             </pre>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="mt-4 rounded bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-600 transition-colors"
             >
               Reload application

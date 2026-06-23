@@ -362,7 +362,8 @@ def test_builder_timeout_deadlock_detection(temp_repo, monkeypatch):
     builder.build()
     
     print("FAILED FILES:", builder.failed_files)
-    assert any("TimeoutError" in str(msg) for msg in builder.failed_files.values())
+    assert len(builder.failed_files) > 0
+    assert any("Simulated timeout" in str(msg) for msg in builder.failed_files.values())
 
 def test_builder_dto_error_handling(temp_repo, monkeypatch):
     from contextly.core.graph import builder as builder_module

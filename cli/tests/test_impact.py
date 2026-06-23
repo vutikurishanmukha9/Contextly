@@ -55,22 +55,22 @@ def test_impact_engine_advanced(tmp_path):
     assert any(f.id == "src/c.py" for f in result["MEDIUM"]["files"])
 
 @patch("contextly.commands.impact.require_contextly_initialized")
-def test_impact_command_no_db(mock_req, runner, tmp_path):
+def test_impact_command_no_db(mock_req, runner, tmp_path, monkeypatch):
     mock_req.side_effect = Exception("No active context memory found")
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        # Create dummy file
-        (tmp_path / "src").mkdir()
-        (tmp_path / "src" / "file.py").write_text("pass")
-        
-        result = runner.invoke(app, ["impact", "src/file.py"])
-        assert result.exit_code == 1
-        assert "No active context memory found" in result.output
+    monkeypatch.chdir(tmp_path)
+    # Create dummy file
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "file.py").write_text("pass")
+    
+    result = runner.invoke(app, ["impact", "src/file.py"])
+    assert result.exit_code == 1
+    assert "No active context memory found" in result.output
 
 @patch("contextly.commands.impact.require_contextly_initialized")
 @patch("contextly.commands.impact.ImportGraphBuilder")
 @patch("contextly.commands.impact.GraphValidator")
 @patch("contextly.commands.impact.ImpactEngine")
-def test_impact_command_success(mock_impact, mock_validator, mock_builder, mock_req, runner, tmp_path):
+def test_impact_command_success(mock_impact, mock_validator, mock_builder, mock_req, runner, tmp_path, monkeypatch):
     # Setup graph builder mocks
     mock_graph = MagicMock()
     mock_builder.return_value.build.return_value = mock_graph
@@ -83,12 +83,12 @@ def test_impact_command_success(mock_impact, mock_validator, mock_builder, mock_
         "LOW": {"files": [], "entities": []}
     }
     
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        # Setup fake file
-        (tmp_path / "src").mkdir()
-        file_path = tmp_path / "src" / "b.py"
-        file_path.write_text("pass")
-        
-        result = runner.invoke(app, ["impact", "src/b.py"])
-        assert result.exit_code == 0
-        assert "Change Impact Analysis (Blast Radius)" in result.output
+    monkeypatch.chdir(tmp_path)
+    # Setup fake file
+    (tmp_path / "src").mkdir()
+    file_path = tmp_path / "src" / "b.py"
+    file_path.write_text("pass")
+    
+    result = runner.invoke(app, ["impact", "src/b.py"])
+    assert result.exit_code == 0
+    assert "Change Impact Analysis (Blast Radius)" in result.output
