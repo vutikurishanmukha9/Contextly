@@ -3,25 +3,27 @@
 ## README Excerpt
 # Context-Ly CLI
 
-**Context-Ly CLI** is an open-source Context Intelligence Engine designed to help developers generate high-quality, token-efficient context for Large Language Models (LLMs).
+Context-Ly CLI is a proprietary Context Intelligence Engine designed to help developers generate high-quality, token-efficient context for Large Language Models (LLMs).
 
 Rather than manually explaining your project to an AI assistant in every session, Context-Ly analyzes your repository, discovers conventions, learns team rules, and generates structured context files that help AI tools understand your codebase more effectively.
 
-The CLI acts as a persistent **Context Memory Layer** for your repository, enabling consistent AI interactions across development workflows.
-
----
+The CLI acts as a persistent Context Memory Layer for your repository, enabling consistent AI interactions across development workflows.
 
 ## Features
 
-* **Offline Context Generation**: Context-Ly operates entirely offline, keeping your code secure and saving LLM tokens.
-* **Architecture Visualization & Domain Clustering**: Automatically segments code into coherent architectural domains (`core`, `shared`, etc.).
-* **Automatic Framework & Dependency Detection**: Discovers project stack, languages, and dependencies instantly.
-* **Te...
+* Repository analysis and context generation
+* Automatic framework and dependency detection
+* Architecture visualization through project structure analysis
+* Team convention discovery and memory management
+* Persistent project-specific context storage
+* LLM-ready Context Pack generation
+* Repository complexity and token usage inspection
+* Context-as-Code workflow with version-controlled project ...
 [truncated]
 
 ## Team Conventions
 
-### Inferred Conventions (Discovery)
+### Explicit Rules (Memory)
 - [Styling] Uses TailwindCSS for styling. [High confidence]
 - [Data Validation] Uses Pydantic for data validation and parsing. [High confidence]
 - [Testing] Uses Pytest for unit testing. [High confidence]
@@ -31,15 +33,13 @@ The CLI acts as a persistent **Context Memory Layer** for your repository, enabl
 - [Build Tool] Uses Vite as the frontend build tool. [High confidence]
 - [Language] Uses TypeScript for type-safe JavaScript. [High confidence]
 - [Architecture Hints] Found directory structure indicating Generator Pattern. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Command Pattern. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Scanner/Plugin Architecture. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Command Pattern. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
 - [Architecture Hints] Found UI components directory structure. [Medium confidence]
-- [Advanced Architecture] Detected Command Query Responsibility Segregation (CQRS) node structures. [Medium confidence]
-- [Advanced Architecture] Detected Dependency Injection containers, providers, or injectors. [Medium confidence]
 
 
 ## Architecture Map
@@ -143,6 +143,7 @@ Contextly/
 |   |   |   |-- fs.py
 |   |   |   |-- ignore.py
 |   |   |   |-- io.py
+|   |   |   |-- paths.py
 |   |   |   |-- validation.py
 |   |   |   `-- walker.py
 |   |   |-- __init__.py
@@ -154,20 +155,31 @@ Contextly/
 |   |   |-- test_cluster.py
 |   |   |-- test_compression.py
 |   |   |-- test_core.py
+|   |   |-- test_coverage_gap.py
+|   |   |-- test_coverage_gap2.py
+|   |   |-- test_coverage_gap_3.py
+|   |   |-- test_coverage_gap_4.py
+|   |   |-- test_coverage_gap_5.py
+|   |   |-- test_coverage_main.py
 |   |   |-- test_discover.py
 |   |   |-- test_explain_cmd.py
 |   |   |-- test_explainer.py
 |   |   |-- test_export.py
+|   |   |-- test_formatter.py
 |   |   |-- test_fs.py
+|   |   |-- test_fs_paths.py
 |   |   |-- test_generators.py
 |   |   |-- test_graph.py
 |   |   |-- test_graph_extended.py
+|   |   |-- test_impact.py
+|   |   |-- test_impact_export_coverage.py
 |   |   |-- test_init.py
 |   |   |-- test_inspect.py
 |   |   |-- test_learn.py
 |   |   |-- test_main_coverage.py
 |   |   |-- test_memory.py
 |   |   |-- test_pack.py
+|   |   |-- test_packer_engine_edge_cases.py
 |   |   |-- test_packer_streaming.py
 |   |   |-- test_python_parser_exhaustive.py
 |   |   |-- test_qa_coverage.py
@@ -179,20 +191,21 @@ Contextly/
 |   |   |-- test_qa_remediation_part5.py
 |   |   |-- test_qa_remediation_part6.py
 |   |   |-- test_ranking.py
+|   |   |-- test_ranking_edge_cases.py
+|   |   |-- test_relevance.py
 |   |   |-- test_scanner_base.py
 |   |   |-- test_scanner_dependencies.py
+|   |   |-- test_scanner_dependencies_exhaustive.py
 |   |   |-- test_scanner_framework.py
 |   |   |-- test_scanner_language.py
 |   |   |-- test_scanner_patterns.py
-|   |   |-- test_stats_cmd.py
-|   |   `-- test_typescript_parser_exhaustive.py
+|   |   |-- test_security_limits.py
+|   |   `-- ... (3 more items)
 |   |-- CHANGELOG.md
 |   |-- pyproject.toml
 |   |-- README.md
 |   `-- uv.lock
 |-- frontend/
-|   |-- .tanstack/
-|   |   `-- tmp/
 |   |-- src/
 |   |   |-- components/
 |   |   |   |-- app/

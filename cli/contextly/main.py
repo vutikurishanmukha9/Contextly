@@ -49,6 +49,7 @@ app.command(name="impact", help="Analyze the blast radius of modifying a target 
 app.command(name="summary", help="Generate a human-readable repository summary")(summary.summary_cmd)
 
 def main():
+    print("START")
     try:
         app()
     except Exception as e:
@@ -156,6 +157,13 @@ def main():
                 # Exclude commands that manually save their own large payloads
                 if cmd not in ("explain", "export", "pack", "--help", "-h", "--version", "-v"):
                     text = console.export_text(clear=False)
+                    try:
+                        root_dir = find_project_root(Path.cwd())
+                        with open(root_dir / ".contextly" / "debug.log", "a") as f:
+                            f.write(f"CMD: {cmd}, ARGV: {sys.argv}, TEXT LEN: {len(text)}, TEXT: {repr(text[:50])}\n")
+                    except:
+                        pass
+                        
                     if text.strip():
                         if len(text) > 50000:
                             text = text[:50000] + "\n...[Truncated: Exceeded 50KB limit]..."
@@ -176,6 +184,6 @@ def main():
         except Exception as e:
             import traceback
             traceback.print_exc()
-        
+
 if __name__ == "__main__":
     main()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "contextly"
-version = "1.0.8"
+version = "1.0.9"
 description = "The ultimate context-engineering workspace CLI for LLMs."
 readme = "README.md"
 authors = [
@@ -42,4 +42,4 @@ dev = [
 ]
 
 [project.scripts]
-contextly = "contextly.main:app"
+contextly = "contextly.main:main"
