@@ -85,9 +85,9 @@ def discover_cmd(
         print(json.dumps([
             {
                 "name": p.name,
-                "category": p.category,
-                "confidence": p.confidence,
-                "description": p.description,
-                "evidence": p.evidence
+                "category": getattr(p, 'category', ''),
+                "confidence": getattr(p, 'confidence', 0.0),
+                "description": getattr(p, 'description', ''),
+                "evidence": getattr(p, 'evidence', [])
             } for p in patterns_result.patterns
         ], indent=2))
