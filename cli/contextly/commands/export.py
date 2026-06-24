@@ -29,10 +29,10 @@ def export_cmd(
         raise typer.Exit(code=1)
         
     if env:
+        import builtins
         try:
             content = export_path.read_text(encoding="utf-8")
             import shlex
-            import builtins
             # Print plain string to stdout without Rich formatting for eval
             builtins.print(f"export CONTEXTLY_PACK={shlex.quote(content)}")
         except Exception as e:

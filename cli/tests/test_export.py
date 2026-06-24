@@ -151,3 +151,44 @@ def test_export_cmd_context_read_error(temp_repo, monkeypatch):
     result = runner.invoke(app, ["export", "src"])
     assert result.exit_code == 1
     assert "Error reading files" in result.stdout
+
+def test_export_cmd_env(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["analyze"])
+    runner.invoke(app, ["pack", "src", "--name", "frontend"])
+
+    result = runner.invoke(app, ["export", "frontend", "--env"])
+    assert result.exit_code == 0
+    assert "export CONTEXTLY_PACK=" in result.stdout
+
+def test_export_cmd_env_read_error(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["analyze"])
+    runner.invoke(app, ["pack", "src", "--name", "frontend"])
+
+    def mock_read_text(*args, **kwargs):
+        raise OSError("Failed read")
+        
+    from pathlib import Path
+    monkeypatch.setattr(Path, "read_text", mock_read_text)
+
+    result = runner.invoke(app, ["export", "frontend", "--env"])
+    assert result.exit_code == 1
+    assert "Error generating env payload" in result.stderr
+
+def test_export_cmd_save_command_result_error(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["analyze"])
+    runner.invoke(app, ["pack", "src", "--name", "frontend"])
+
+    import contextly.commands.export as exp_mod
+    def mock_save(*args, **kwargs):
+        raise OSError("Save failed")
+    
+    monkeypatch.setattr(exp_mod, "save_command_result", mock_save)
+    import pyperclip
+    monkeypatch.setattr(pyperclip, "copy", lambda x: None)
+
+    result = runner.invoke(app, ["export", "frontend"])
+    assert result.exit_code == 0
+    assert "Warning: Could not save unified result file" in result.stdout

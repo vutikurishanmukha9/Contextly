@@ -77,10 +77,18 @@ def test_impact_command_success(mock_impact, mock_validator, mock_builder, mock_
     mock_validator.return_value.validate.return_value = mock_graph
     
     # Setup ImpactEngine mocks
+    class MockNode:
+        def __init__(self, path, name):
+            self.path = path
+            self.name = name
+
+    # Generate 12 HIGH impact files across domains
+    high_files = [MockNode(f"src/domain{i}/file{i}.py", f"file{i}.py") for i in range(12)]
+
     mock_impact.return_value.analyze_impact.return_value = {
-        "HIGH": {"files": [], "entities": []},
-        "MEDIUM": {"files": [], "entities": []},
-        "LOW": {"files": [], "entities": []}
+        "HIGH": {"files": high_files, "entities": []},
+        "MEDIUM": {"files": [MockNode("app/core/db.py", "db.py")], "entities": []},
+        "LOW": {"files": [MockNode("lib/utils.py", "utils.py"), MockNode("other/misc.py", "misc.py")], "entities": []}
     }
     
     monkeypatch.chdir(tmp_path)
@@ -92,3 +100,21 @@ def test_impact_command_success(mock_impact, mock_validator, mock_builder, mock_
     result = runner.invoke(app, ["impact", "src/b.py"])
     assert result.exit_code == 0
     assert "Blast Radius" in result.output
+    assert "Files Affected: 15" in result.output
+    assert "... and 2 more" in result.output # HIGH has 12 items
+    
+@patch("contextly.commands.impact.require_contextly_initialized")
+@patch("contextly.commands.impact.ImportGraphBuilder")
+@patch("contextly.commands.impact.GraphValidator")
+@patch("contextly.commands.impact.ImpactEngine")
+def test_impact_command_engine_error(mock_impact, mock_validator, mock_builder, mock_req, runner, tmp_path, monkeypatch):
+    mock_builder.return_value.build.side_effect = RuntimeError("Graph build failed")
+    
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "src").mkdir()
+    file_path = tmp_path / "src" / "c.py"
+    file_path.write_text("pass")
+    
+    result = runner.invoke(app, ["impact", "src/c.py"])
+    assert result.exit_code == 1
+    assert "Graph build failed" in result.output
