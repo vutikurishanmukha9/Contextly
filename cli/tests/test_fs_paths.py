@@ -27,4 +27,27 @@ def test_safe_resolve(tmp_path):
     with pytest.raises(ValidationError):
         safe_resolve(tmp_path / ".." / "outside.txt", tmp_path)
 
+def test_safe_resolve_symlink_cycle(tmp_path, monkeypatch):
+    p = tmp_path / "link"
+    
+    # Mock is_symlink and realpath to simulate a cycle
+    monkeypatch.setattr(Path, "is_symlink", lambda self: True)
+    monkeypatch.setattr(os.path, "realpath", lambda x: str(p))
+    
+    with pytest.raises(ValidationError, match="cycle"):
+        safe_resolve(p, tmp_path)
 
+def test_safe_resolve_symlink_depth(tmp_path, monkeypatch):
+    p = tmp_path / "link"
+    
+    # Mock is_symlink and realpath to simulate infinite depth without exact cycle
+    counter = [0]
+    def mock_realpath(x):
+        counter[0] += 1
+        return str(tmp_path / f"link_{counter[0]}")
+        
+    monkeypatch.setattr(Path, "is_symlink", lambda self: True)
+    monkeypatch.setattr(os.path, "realpath", mock_realpath)
+    
+    with pytest.raises(ValidationError, match="depth"):
+        safe_resolve(p, tmp_path)

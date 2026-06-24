@@ -32,13 +32,13 @@ The CLI acts as a persistent Context Memory Layer for your repository, enabling 
 - [Frontend Framework] Uses React for building user interfaces. [High confidence]
 - [Build Tool] Uses Vite as the frontend build tool. [High confidence]
 - [Language] Uses TypeScript for type-safe JavaScript. [High confidence]
-- [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Scanner/Plugin Architecture. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Generator Pattern. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Command Pattern. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Scanner/Plugin Architecture. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
 - [Architecture Hints] Found UI components directory structure. [Medium confidence]
 - [Advanced Architecture] Detected Command Query Responsibility Segregation (CQRS) node structures. [Medium confidence]
 - [Advanced Architecture] Detected Dependency Injection containers, providers, or injectors. [Medium confidence]
@@ -164,6 +164,7 @@ Contextly/
 |   |   |-- test_coverage_gap_5.py
 |   |   |-- test_coverage_main.py
 |   |   |-- test_discover.py
+|   |   |-- test_discover_extended.py
 |   |   |-- test_explain_cmd.py
 |   |   |-- test_explainer.py
 |   |   |-- test_export.py
@@ -177,11 +178,13 @@ Contextly/
 |   |   |-- test_impact_export_coverage.py
 |   |   |-- test_init.py
 |   |   |-- test_inspect.py
+|   |   |-- test_io.py
 |   |   |-- test_learn.py
 |   |   |-- test_main_coverage.py
 |   |   |-- test_memory.py
 |   |   |-- test_pack.py
 |   |   |-- test_packer_engine_edge_cases.py
+|   |   |-- test_packer_engine_edge_cases_2.py
 |   |   |-- test_packer_streaming.py
 |   |   |-- test_python_parser_exhaustive.py
 |   |   |-- test_qa_coverage.py
@@ -195,14 +198,11 @@ Contextly/
 |   |   |-- test_ranking.py
 |   |   |-- test_ranking_edge_cases.py
 |   |   |-- test_relevance.py
+|   |   |-- test_scanner_architecture.py
 |   |   |-- test_scanner_base.py
 |   |   |-- test_scanner_dependencies.py
 |   |   |-- test_scanner_dependencies_exhaustive.py
-|   |   |-- test_scanner_framework.py
-|   |   |-- test_scanner_language.py
-|   |   |-- test_scanner_patterns.py
-|   |   |-- test_security_limits.py
-|   |   `-- ... (3 more items)
+|   |   `-- ... (7 more items)
 |   |-- CHANGELOG.md
 |   |-- pyproject.toml
 |   |-- README.md
@@ -287,6 +287,7 @@ Contextly/
 |   `-- vite.config.ts
 |-- .contextlyignore
 |-- .gitignore
+|-- coverage_tmp.txt
 |-- LICENSE
 |-- README.md
 |-- SECURITY.md

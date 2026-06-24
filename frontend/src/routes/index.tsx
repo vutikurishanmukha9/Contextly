@@ -241,54 +241,123 @@ Language:
 Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`,
   },
   {
-    name: "summary",
-    shortDesc: "Generates a human-readable repository summary.",
+    name: "learn --auto",
+    shortDesc: "Converts discovered conventions into permanent project memory.",
     fullDesc:
-      "Provides a clean 'start here' output that gives scale, primary domains, likely entry points, and core hubs in one place.",
-    generates: null,
-    usage: "$ contextly summary",
-    output: `[bold green]Repository Summary[/bold green] (Contextly)
+      "Automatically saves all discovered architectural patterns, frameworks, and conventions into your project's .contextly/memory/rules.yaml.",
+    generates: {
+      file: ".contextly/memory/rules.yaml",
+      content: "Persistent memory layer of team rules and architectural conventions.",
+    },
+    usage: "$ contextly learn --auto",
+    output: `START
 
-[cyan]Scale[/cyan]
-Total Files:      179
-Total Classes:    97
-Total Functions:  331
+Discovered Conventions:
 
-Primary Domains / Modules:
-  - cli/contextly
-  - frontend/src
-
-Likely Entry Points (Executable / Routes):
-  - cli/contextly/main.py
-
-Core Hubs (Most Depended-Upon Files):
-  - frontend/src/lib/utils.ts (43 incoming imports)
-  - cli/contextly/utils/exceptions.py (20 incoming imports)`,
+[OK] Successfully saved 10 rules to persistent memory!
+Run contextly memory to view them.`,
   },
   {
-    name: "impact",
-    shortDesc: "Analyzes the blast radius of modifying a target file.",
+    name: "memory",
+    shortDesc: "Inspects all stored project memory and conventions.",
     fullDesc:
-      "Recursively traces dependencies to determine exactly which files, functions, and domains will be affected by your changes.",
-    generates: null,
-    usage: "$ contextly impact src/core/engine.py",
-    output: `Blast Radius
+      "Displays all saved rules, conventions, and architectural preferences currently remembered by Context-Ly.",
+    generates: {
+      file: "Terminal (stdout)",
+      content: "Outputs the currently saved memory rules directly to your terminal screen.",
+    },
+    usage: "$ contextly memory",
+    output: `START
+Stored Memory (Found 10 rules)
 
-HIGH Impact (Direct dependents):
-  - src/api/routes.py (Imports Engine)
-  - src/cli/main.py (Imports Engine)
+Architecture Hints
+  - [rule_1ecd239a] Found directory structure indicating Service Layer.
 
-MEDIUM Impact (Indirect dependents):
-  - src/api/middleware.py
+Build Tool
+  - [rule_1241fdad] Uses Vite as the frontend build tool.`,
+  },
+  {
+    name: "pack",
+    shortDesc: "Bundles a directory into an LLM-ready Context Pack.",
+    fullDesc:
+      "The core engine command. It fuses the graph intelligence, unwritten rules, and AST-compressed source code into a single, highly optimized token-efficient payload.",
+    generates: {
+      file: ".contextly/packs/<name>.contextpack.md",
+      content:
+        "A massive, perfectly formatted markdown file containing your structured codebase, ready to be attached to ChatGPT, Claude, or any LLM.",
+    },
+    usage: '$ contextly pack --task "authentication flow"',
+    output: `[OK] Context Pack 'authentication_flow' created!
 
-[WARNING] 3 total files affected across 2 domains.`,
+                             Pack Summary                              
+                     Source  '.'                                       
+               Files Packed  20                                        
+ Exact Tokens (cl100k_base)  1,119                                     
+            Output Location  .contextly\\packs\\authentication_flow.contextpack.md`,
+  },
+  {
+    name: "inspect",
+    shortDesc: "Analyzes repository complexity and token consumption.",
+    fullDesc:
+      "Provides visibility into large files and potential token-heavy directories that may negatively impact AI context quality.",
+    generates: {
+      file: "Terminal (stdout)",
+      content: "Outputs the token hogs and complexity metrics directly to the terminal.",
+    },
+    usage: "$ contextly inspect",
+    output: `START
+
+[OK] Inspection complete!
+
+               Top 5 Largest Files (Potential Token Hogs)                
++-----------------------------------------------------------------------+
+| Size (KB) | File Path                                                 |
++-----------------------------------------------------------------------+`,
+  },
+  {
+    name: "export",
+    shortDesc: "Fuses memory rules and a pack into a Context Payload.",
+    fullDesc:
+      "Combines your persistent project memory with a specific context pack, instantly copying the optimized payload to your clipboard for LLM usage.",
+    generates: {
+      file: ".contextly/exports/export_<name>_<date>.md",
+      content:
+        "A unified payload ready to be pasted directly into an LLM.",
+    },
+    usage: "$ contextly export cli",
+    output: `START
+
+[OK] Export Generation Complete!
+  - Intelligence: PROJECT_CONTEXT.md
+  - Context Pack: cli
+
+Successfully copied to clipboard!`,
+  },
+  {
+    name: "explain",
+    shortDesc: "Extracts a structural context payload for a specific domain.",
+    fullDesc:
+      "Generates a highly-optimized structural context based on the AST Knowledge Graph, helping the LLM understand architecture without raw files.",
+    generates: {
+      file: ".contextly/exports/contextly explain <domain>_result.md",
+      content:
+        "A domain-specific structural JSON payload.",
+    },
+    usage: "$ contextly explain core",
+    output: `START
+[OK] Context payload saved to: 
+.contextly\\exports\\contextly explain core\\contextly explain core_result.md
+Notice: Proprietary source architecture has also been copied to your OS clipboard.`,
   },
   {
     name: "stats",
     shortDesc: "Generates an enterprise repository health report.",
     fullDesc:
       "Provides a deep dive into your repository's complexity, identifying your most depended-upon files, orphaned code, and structural hotspots.",
-    generates: null,
+    generates: {
+      file: "Terminal (stdout)",
+      content: "Outputs the comprehensive health report and diagnostics directly to the terminal.",
+    },
     usage: "$ contextly stats",
     output: `+---------------------------------------+
 | Contextly Repository Health Report: . |
@@ -305,25 +374,6 @@ MEDIUM Impact (Indirect dependents):
   1. PackerEngine         (115 edges)
   2. runner.invoke        (101 edges)
   3. TypeScriptASTParser  (79 edges)`,
-  },
-  {
-    name: "pack",
-    shortDesc: "Bundles a directory into an LLM-ready Context Pack.",
-    fullDesc:
-      "The core engine command. It fuses the graph intelligence, unwritten rules, and AST-compressed source code into a single, highly optimized token-efficient payload.",
-    generates: {
-      file: ".contextly/packs/<name>.contextpack.md",
-      content:
-        "A massive, perfectly formatted markdown file containing your structured codebase, ready to be attached to ChatGPT, Claude, or any LLM.",
-    },
-    usage: '$ contextly pack --task "impact command"',
-    output: `[OK] Context Pack 'Contextly' created!
-
-                             Pack Summary                              
-                     Source  '.'                                       
-               Files Packed  81                                        
- Exact Tokens (cl100k_base)  8,354                                     
-            Output Location  .contextly\\packs\\Contextly.contextpack.md`,
   },
 ];
 
@@ -371,13 +421,17 @@ function HowToUse() {
                     {cmd.generates && (
                       <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5 mb-6 shadow-inner">
                         <div className="flex items-center gap-2 mb-3">
-                          <FileCode className="w-4 h-4 text-[#27C93F]" />
+                          {cmd.generates.file === "Terminal (stdout)" ? (
+                            <Terminal className="w-4 h-4 text-[#FFBD2E]" />
+                          ) : (
+                            <FileCode className="w-4 h-4 text-[#27C93F]" />
+                          )}
                           <span className="text-sm font-semibold tracking-wide text-white uppercase opacity-90">
-                            Generated Artifact
+                            Output Location
                           </span>
                         </div>
                         <div className="pl-6 border-l border-white/10 ml-2">
-                          <div className="font-mono text-sm text-[#27C93F] mb-2 bg-[#27C93F]/10 inline-block px-2 py-0.5 rounded">
+                          <div className={`font-mono text-sm mb-2 inline-block px-2 py-0.5 rounded ${cmd.generates.file === "Terminal (stdout)" ? "text-[#FFBD2E] bg-[#FFBD2E]/10" : "text-[#27C93F] bg-[#27C93F]/10"}`}>
                             {cmd.generates.file}
                           </div>
                           <p className="text-sm text-white/60 leading-relaxed">

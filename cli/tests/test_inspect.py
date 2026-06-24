@@ -98,3 +98,47 @@ def test_inspect_cmd_validation_error(temp_repo, monkeypatch):
     assert result.exit_code == 1
     assert "Error:" in result.stdout
 
+def test_inspect_cmd_validation_error_json(temp_repo, monkeypatch):
+    import contextly.commands.inspect as insp_mod
+    from contextly.utils.exceptions import ValidationError
+    
+    def mock_req(*args, **kwargs):
+        raise ValidationError("Invalid directory mock error")
+        
+    monkeypatch.setattr(insp_mod, "require_directory_exists", mock_req)
+    result = runner.invoke(app, ["inspect", "--format", "json"])
+    assert result.exit_code == 1
+    assert "Invalid directory mock error" in result.stdout
+    assert "error" in result.stdout
+
+def test_inspect_cmd_engine_error(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+    
+    import contextly.core.inspector.engine as eng_mod
+    def mock_inspect(self):
+        raise RuntimeError("Engine failed")
+        
+    monkeypatch.setattr(eng_mod.InspectorEngine, "inspect", mock_inspect)
+    result = runner.invoke(app, ["inspect"])
+    assert result.exit_code == 1
+    assert "Engine failed" in result.stdout
+
+def test_inspect_cmd_engine_error_json(temp_repo, monkeypatch):
+    runner.invoke(app, ["init"])
+    
+    import contextly.core.inspector.engine as eng_mod
+    def mock_inspect(self):
+        raise RuntimeError("Engine failed")
+        
+    monkeypatch.setattr(eng_mod.InspectorEngine, "inspect", mock_inspect)
+    result = runner.invoke(app, ["inspect", "--format", "json"])
+    assert result.exit_code == 1
+    assert "Engine failed" in result.stdout
+
+def test_inspect_cmd_success_json(temp_repo):
+    runner.invoke(app, ["init"])
+    (temp_repo / "src" / "test.js").write_text("a" * 1024)
+    
+    result = runner.invoke(app, ["inspect", "--format", "json"])
+    assert result.exit_code == 0
+    assert "size_bytes" in result.stdout
