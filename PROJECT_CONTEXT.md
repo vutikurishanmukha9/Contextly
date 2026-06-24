@@ -23,7 +23,7 @@ The CLI acts as a persistent Context Memory Layer for your repository, enabling 
 
 ## Team Conventions
 
-### Explicit Rules (Memory)
+### Inferred Conventions (Discovery)
 - [Styling] Uses TailwindCSS for styling. [High confidence]
 - [Data Validation] Uses Pydantic for data validation and parsing. [High confidence]
 - [Testing] Uses Pytest for unit testing. [High confidence]
@@ -32,14 +32,16 @@ The CLI acts as a persistent Context Memory Layer for your repository, enabling 
 - [Frontend Framework] Uses React for building user interfaces. [High confidence]
 - [Build Tool] Uses Vite as the frontend build tool. [High confidence]
 - [Language] Uses TypeScript for type-safe JavaScript. [High confidence]
-- [Architecture Hints] Found directory structure indicating Generator Pattern. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Scanner/Plugin Architecture. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Command Pattern. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
-- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
 - [Architecture Hints] Found directory structure indicating Core Module Architecture. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Test Suite. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Route-Based Architecture. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Utility Module. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Scanner/Plugin Architecture. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Generator Pattern. [Medium confidence]
+- [Architecture Hints] Found directory structure indicating Command Pattern. [Medium confidence]
 - [Architecture Hints] Found UI components directory structure. [Medium confidence]
+- [Advanced Architecture] Detected Command Query Responsibility Segregation (CQRS) node structures. [Medium confidence]
+- [Advanced Architecture] Detected Dependency Injection containers, providers, or injectors. [Medium confidence]
 
 
 ## Architecture Map
@@ -286,9 +288,9 @@ Contextly/
 |-- .contextlyignore
 |-- .gitignore
 |-- LICENSE
-|-- PROJECT_CONTEXT.md
 |-- README.md
-`-- SECURITY.md
+|-- SECURITY.md
+`-- test_finally.py
 ````
 
 ## Stack Identity

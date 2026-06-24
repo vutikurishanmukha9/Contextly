@@ -34,7 +34,7 @@ function Landing() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
             <span className="text-xs font-medium text-black/70 tracking-wide">
-              v1.0.7 now available
+              v1.1.0 now available
             </span>
           </div>
 
@@ -102,12 +102,12 @@ function Landing() {
             <div className="p-6 font-mono text-sm overflow-x-auto text-white/80 leading-relaxed">
               <div className="flex gap-4">
                 <span className="text-green-400">~/project</span>
-                <span className="text-white">$ contextly pack .</span>
+                <span className="text-white">$ contextly pack --task "authentication flow" .</span>
               </div>
-              <div className="mt-4 text-blue-400">Context-Ly Engine v1.0.7</div>
+              <div className="mt-4 text-blue-400">Context-Ly Engine v1.1.0</div>
               <div className="mt-2 text-white/50">Analyzing 1,420 files...</div>
+              <div className="mt-1 text-white/50">Building graph for task relevance...</div>
               <div className="mt-1 text-white/50">Applying AST compression...</div>
-              <div className="mt-1 text-white/50">Writing fenced Markdown context...</div>
 
               <div className="mt-4 text-white">
                 <span className="text-green-400">✔</span> Context pack generated successfully.
@@ -241,6 +241,49 @@ Language:
 Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`,
   },
   {
+    name: "summary",
+    shortDesc: "Generates a human-readable repository summary.",
+    fullDesc:
+      "Provides a clean 'start here' output that gives scale, primary domains, likely entry points, and core hubs in one place.",
+    generates: null,
+    usage: "$ contextly summary",
+    output: `[bold green]Repository Summary[/bold green] (Contextly)
+
+[cyan]Scale[/cyan]
+Total Files:      179
+Total Classes:    97
+Total Functions:  331
+
+Primary Domains / Modules:
+  - cli/contextly
+  - frontend/src
+
+Likely Entry Points (Executable / Routes):
+  - cli/contextly/main.py
+
+Core Hubs (Most Depended-Upon Files):
+  - frontend/src/lib/utils.ts (43 incoming imports)
+  - cli/contextly/utils/exceptions.py (20 incoming imports)`
+  },
+  {
+    name: "impact",
+    shortDesc: "Analyzes the blast radius of modifying a target file.",
+    fullDesc:
+      "Recursively traces dependencies to determine exactly which files, functions, and domains will be affected by your changes.",
+    generates: null,
+    usage: "$ contextly impact src/core/engine.py",
+    output: `Blast Radius
+
+HIGH Impact (Direct dependents):
+  - src/api/routes.py (Imports Engine)
+  - src/cli/main.py (Imports Engine)
+
+MEDIUM Impact (Indirect dependents):
+  - src/api/middleware.py
+
+[WARNING] 3 total files affected across 2 domains.`
+  },
+  {
     name: "stats",
     shortDesc: "Generates an enterprise repository health report.",
     fullDesc:
@@ -259,9 +302,9 @@ Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`,
 
 [ Architectural Hotspots (Top 3) ]
 • Most Connected:
-  1. str                  (93 edges)
-  2. runner.invoke        (92 edges)
-  3. PackerEngine         (80 edges)`,
+  1. PackerEngine         (115 edges)
+  2. runner.invoke        (101 edges)
+  3. TypeScriptASTParser  (79 edges)`,
   },
   {
     name: "pack",
@@ -273,13 +316,13 @@ Generated advanced PROJECT_CONTEXT.md (chatgpt format) in current directory.`,
       content:
         "A massive, perfectly formatted markdown file containing your structured codebase, ready to be attached to ChatGPT, Claude, or any LLM.",
     },
-    usage: "$ contextly pack",
+    usage: "$ contextly pack --task \"impact command\"",
     output: `[OK] Context Pack 'Contextly' created!
 
                              Pack Summary                              
                      Source  '.'                                       
-               Files Packed  194                                       
- Exact Tokens (cl100k_base)  16,873                                    
+               Files Packed  81                                        
+ Exact Tokens (cl100k_base)  8,354                                     
             Output Location  .contextly\\packs\\Contextly.contextpack.md`,
   },
 ];

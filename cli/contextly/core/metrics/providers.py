@@ -129,7 +129,15 @@ class ValidationMetricsProvider(MetricsProvider):
         
         orphans = sum(1 for m in messages if "Orphaned Entity" in m.message)
         
-        unresolved = sum(1 for n in graph.nodes if n.type == NodeType.UNRESOLVED_EXTERNAL)
+        BUILTIN_IGNORE = {
+            "str", "int", "float", "bool", "len", "print", "list", "dict", "set", "tuple",
+            "Exception", "ValueError", "TypeError", "super", "isinstance", "getattr", "setattr", "hasattr",
+            "open", "type", "range", "enumerate", "zip", "map", "filter", "any", "all",
+            "console", "console.log", "console.error", "console.warn", "String", "Number", 
+            "Boolean", "Array", "Object", "Math", "JSON", "Promise", "Error", "window", "document"
+        }
+        
+        unresolved = sum(1 for n in graph.nodes if n.type == NodeType.UNRESOLVED_EXTERNAL and n.name not in BUILTIN_IGNORE)
         
         return [
             MetricOutput(
@@ -186,15 +194,27 @@ class ComplexityMetricsProvider(MetricsProvider):
                 outgoing[r.source_id] += 1
                 incoming[r.target_id] += 1
                 
-        # Get node id -> name mapping
-        node_names = {n.id: n.name for n in graph.nodes}
+        BUILTIN_IGNORE = {
+            "str", "int", "float", "bool", "len", "print", "list", "dict", "set", "tuple",
+            "Exception", "ValueError", "TypeError", "super", "isinstance", "getattr", "setattr", "hasattr",
+            "open", "type", "range", "enumerate", "zip", "map", "filter", "any", "all",
+            "console", "console.log", "console.error", "console.warn", "String", "Number", 
+            "Boolean", "Array", "Object", "Math", "JSON", "Promise", "Error", "window", "document"
+        }
+        
+        # Get node id -> name mapping, excluding builtins
+        node_names = {}
+        for n in graph.nodes:
+            if n.type == NodeType.UNRESOLVED_EXTERNAL and n.name in BUILTIN_IGNORE:
+                continue
+            node_names[n.id] = n.name
         
         # Most connected (incoming + outgoing)
         total_connections = {node_id: incoming[node_id] + outgoing[node_id] for node_id in node_names.keys()}
-        most_connected = sorted(total_connections.items(), key=lambda x: x[1], reverse=True)
+        most_connected = sorted([(k, v) for k, v in total_connections.items() if v > 0], key=lambda x: x[1], reverse=True)
         
         # Most depended-on (incoming only)
-        most_depended_on = sorted(incoming.items(), key=lambda x: x[1], reverse=True)
+        most_depended_on = sorted([(k, incoming[k]) for k in node_names.keys() if incoming[k] > 0], key=lambda x: x[1], reverse=True)
         
         return [
             MetricOutput(
@@ -226,7 +246,14 @@ class HealthScoreProvider(MetricsProvider):
         cycles_critical = sum(1 for m in messages if "Circular dependency" in m.message and m.severity == "ERROR")
         cycles_warning = sum(1 for m in messages if "Circular dependency" in m.message and m.severity == "WARNING")
         orphans = sum(1 for m in messages if "Orphaned Entity" in m.message)
-        unresolved = sum(1 for n in graph.nodes if n.type == NodeType.UNRESOLVED_EXTERNAL)
+        BUILTIN_IGNORE = {
+            "str", "int", "float", "bool", "len", "print", "list", "dict", "set", "tuple",
+            "Exception", "ValueError", "TypeError", "super", "isinstance", "getattr", "setattr", "hasattr",
+            "open", "type", "range", "enumerate", "zip", "map", "filter", "any", "all",
+            "console", "console.log", "console.error", "console.warn", "String", "Number", 
+            "Boolean", "Array", "Object", "Math", "JSON", "Promise", "Error", "window", "document"
+        }
+        unresolved = sum(1 for n in graph.nodes if n.type == NodeType.UNRESOLVED_EXTERNAL and n.name not in BUILTIN_IGNORE)
         
         # Penalties
         score -= (cycles_critical * 5.0)
