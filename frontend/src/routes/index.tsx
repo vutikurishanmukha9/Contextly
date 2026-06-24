@@ -387,89 +387,67 @@ function HowToUse() {
           </p>
         </div>
 
-        <Tabs.Root
-          defaultValue={COMMANDS[0].name}
-          className="grid lg:grid-cols-12 gap-8 items-start"
-        >
-          {/* Tabs */}
-          <Tabs.List className="lg:col-span-4 flex flex-col gap-2">
-            {COMMANDS.map((cmd) => (
-              <Tabs.Trigger
-                key={cmd.name}
-                value={cmd.name}
-                className="text-left px-5 py-4 rounded-xl border transition-all bg-transparent border-transparent text-white/50 hover:bg-white/5 hover:text-white/80 data-[state=active]:bg-white/10 data-[state=active]:border-white/20 data-[state=active]:text-white data-[state=active]:shadow-sm focus:outline-none focus:ring-2 focus:ring-white/20"
-              >
-                <div className="font-mono text-sm font-semibold mb-1">contextly {cmd.name}</div>
-                <div className="text-xs line-clamp-2 leading-relaxed opacity-80">
-                  {cmd.shortDesc}
-                </div>
-              </Tabs.Trigger>
-            ))}
-          </Tabs.List>
+        <div className="flex flex-col gap-24 mt-16 max-w-4xl mx-auto">
+          {COMMANDS.map((cmd, index) => (
+            <div key={cmd.name} className="flex flex-col gap-6 relative">
+              {index > 0 && <div className="absolute -top-12 left-0 right-0 h-px bg-white/5" />}
 
-          {/* Details & Terminal View */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
-            {COMMANDS.map((cmd) => (
-              <Tabs.Content key={cmd.name} value={cmd.name} className="focus:outline-none">
-                <div className="flex flex-col gap-6">
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                    <h3 className="text-xl font-bold text-white mb-2">contextly {cmd.name}</h3>
-                    <p className="text-white/70 leading-relaxed mb-6">{cmd.fullDesc}</p>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8">
+                <h3 className="text-2xl font-bold text-white mb-3">contextly {cmd.name}</h3>
+                <p className="text-white/70 text-lg leading-relaxed mb-6">{cmd.fullDesc}</p>
 
-                    {cmd.generates && (
-                      <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5 mb-6 shadow-inner">
-                        <div className="flex items-center gap-2 mb-3">
-                          {cmd.generates.file === "Terminal (stdout)" ? (
-                            <Terminal className="w-4 h-4 text-[#FFBD2E]" />
-                          ) : (
-                            <FileCode className="w-4 h-4 text-[#27C93F]" />
-                          )}
-                          <span className="text-sm font-semibold tracking-wide text-white uppercase opacity-90">
-                            Output Location
-                          </span>
-                        </div>
-                        <div className="pl-6 border-l border-white/10 ml-2">
-                          <div
-                            className={`font-mono text-sm mb-2 inline-block px-2 py-0.5 rounded ${cmd.generates.file === "Terminal (stdout)" ? "text-[#FFBD2E] bg-[#FFBD2E]/10" : "text-[#27C93F] bg-[#27C93F]/10"}`}
-                          >
-                            {cmd.generates.file}
-                          </div>
-                          <p className="text-sm text-white/60 leading-relaxed">
-                            {cmd.generates.content}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-black overflow-hidden shadow-2xl relative">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/5">
-                      <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
-                        <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
-                        <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
-                      </div>
-                      <div className="ml-4 text-xs font-mono text-white/40">Terminal Output</div>
+                {cmd.generates && (
+                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5 shadow-inner">
+                    <div className="flex items-center gap-2 mb-3">
+                      {cmd.generates.file === "Terminal (stdout)" ? (
+                        <Terminal className="w-4 h-4 text-[#FFBD2E]" />
+                      ) : (
+                        <FileCode className="w-4 h-4 text-[#27C93F]" />
+                      )}
+                      <span className="text-sm font-semibold tracking-wide text-white uppercase opacity-90">
+                        Output Location
+                      </span>
                     </div>
-                    <div className="p-6 font-mono text-sm overflow-x-auto text-white/80 leading-relaxed min-h-[280px]">
-                      <div className="flex gap-4 mb-6">
-                        <span className="text-green-400">~/project</span>
-                        <span className="text-white">{cmd.usage}</span>
+                    <div className="pl-6 border-l border-white/10 ml-2">
+                      <div
+                        className={`font-mono text-sm mb-2 inline-block px-2 py-0.5 rounded ${cmd.generates.file === "Terminal (stdout)" ? "text-[#FFBD2E] bg-[#FFBD2E]/10" : "text-[#27C93F] bg-[#27C93F]/10"}`}
+                      >
+                        {cmd.generates.file}
                       </div>
-                      <pre className="text-white/70 whitespace-pre-wrap font-mono text-sm">
-                        {cmd.output}
-                      </pre>
-                      <div className="mt-6 flex gap-4">
-                        <span className="text-green-400">~/project</span>
-                        <span className="text-white/50 animate-pulse">_</span>
-                      </div>
+                      <p className="text-sm text-white/60 leading-relaxed">
+                        {cmd.generates.content}
+                      </p>
                     </div>
                   </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black overflow-hidden shadow-2xl relative">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/5">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
+                    <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
+                    <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
+                  </div>
+                  <div className="ml-4 text-xs font-mono text-white/40">Terminal Output</div>
                 </div>
-              </Tabs.Content>
-            ))}
-          </div>
-        </Tabs.Root>
+                <div className="p-6 font-mono text-sm overflow-x-auto text-white/80 leading-relaxed min-h-[280px]">
+                  <div className="flex gap-4 mb-6">
+                    <span className="text-green-400">~/project</span>
+                    <span className="text-white">{cmd.usage}</span>
+                  </div>
+                  <pre className="text-white/70 whitespace-pre-wrap font-mono text-sm">
+                    {cmd.output}
+                  </pre>
+                  <div className="mt-6 flex gap-4">
+                    <span className="text-green-400">~/project</span>
+                    <span className="text-white/50 animate-pulse">_</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
