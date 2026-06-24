@@ -321,8 +321,7 @@ Build Tool
       "Combines your persistent project memory with a specific context pack, instantly copying the optimized payload to your clipboard for LLM usage.",
     generates: {
       file: ".contextly/exports/export_<name>_<date>.md",
-      content:
-        "A unified payload ready to be pasted directly into an LLM.",
+      content: "A unified payload ready to be pasted directly into an LLM.",
     },
     usage: "$ contextly export cli",
     output: `START
@@ -340,8 +339,7 @@ Successfully copied to clipboard!`,
       "Generates a highly-optimized structural context based on the AST Knowledge Graph, helping the LLM understand architecture without raw files.",
     generates: {
       file: ".contextly/exports/contextly explain <domain>_result.md",
-      content:
-        "A domain-specific structural JSON payload.",
+      content: "A domain-specific structural JSON payload.",
     },
     usage: "$ contextly explain core",
     output: `START
@@ -431,7 +429,9 @@ function HowToUse() {
                           </span>
                         </div>
                         <div className="pl-6 border-l border-white/10 ml-2">
-                          <div className={`font-mono text-sm mb-2 inline-block px-2 py-0.5 rounded ${cmd.generates.file === "Terminal (stdout)" ? "text-[#FFBD2E] bg-[#FFBD2E]/10" : "text-[#27C93F] bg-[#27C93F]/10"}`}>
+                          <div
+                            className={`font-mono text-sm mb-2 inline-block px-2 py-0.5 rounded ${cmd.generates.file === "Terminal (stdout)" ? "text-[#FFBD2E] bg-[#FFBD2E]/10" : "text-[#27C93F] bg-[#27C93F]/10"}`}
+                          >
                             {cmd.generates.file}
                           </div>
                           <p className="text-sm text-white/60 leading-relaxed">
