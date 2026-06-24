@@ -91,4 +91,4 @@ def test_impact_command_success(mock_impact, mock_validator, mock_builder, mock_
     
     result = runner.invoke(app, ["impact", "src/b.py"])
     assert result.exit_code == 0
-    assert "Change Impact Analysis (Blast Radius)" in result.output
+    assert "Blast Radius" in result.output

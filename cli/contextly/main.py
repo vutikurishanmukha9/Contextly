@@ -34,6 +34,14 @@ def common(
 ):
     pass
 
+# =======================================================================
+# COMMAND FREEZE ENFORCEMENT
+# Context-Ly operates on a philosophy of "Few Commands, High Intelligence".
+# DO NOT add new commands to this file. Before proposing a new command,
+# determine how the capability can be absorbed into the intelligence layer
+# of an existing command (e.g. analyze, summary, impact).
+# =======================================================================
+
 # Add commands
 app.command(name="init", help="Initialize Context-as-Code in the current directory")(init.init_cmd)
 app.command(name="analyze", help="Automatically analyze and map the repository")(analyze.analyze_cmd)

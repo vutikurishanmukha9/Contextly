@@ -28,16 +28,21 @@ class ImpactEngine:
         # 1. Find all nodes that belong to the target_path
         # target_path might be an exact node ID, or part of a path
         start_nodes = []
-        target_path_lower = target_path.lower().replace('\\', '/')
-        
+        target_path_posix = target_path.replace('\\', '/').lower()
+        if target_path_posix.startswith('./'):
+            target_path_posix = target_path_posix[2:]
+            
         for node in self.graph.nodes:
             if node.path:
-                normalized_node_path = node.path.lower().replace('\\', '/')
-                if normalized_node_path == target_path_lower or normalized_node_path.endswith('/' + target_path_lower):
+                normalized_node_path = node.path.replace('\\', '/').lower()
+                if normalized_node_path == target_path_posix or normalized_node_path.endswith('/' + target_path_posix):
                     start_nodes.append(node.id)
                 
         if not start_nodes:
-            raise ContextlyError(f"Target file not found in graph: {target_path}")
+            # Provide a clearer error message since only supported extensions are added to the graph by default
+            from ..graph.parsers.registry import ParserRegistry
+            supported = ", ".join(ParserRegistry.supported_extensions())
+            raise ContextlyError(f"Target file not found in graph: {target_path}. Note: Only source files ({supported}) are currently tracked in the dependency graph.")
             
         # 2. BFS to find reverse dependencies and their depths
         queue = collections.deque()

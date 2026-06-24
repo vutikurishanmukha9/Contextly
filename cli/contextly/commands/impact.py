@@ -41,31 +41,58 @@ def impact_cmd(
         
     status_ctx.stop()
     
-    console.print(f"\n[bold]Change Impact Analysis (Blast Radius)[/bold]")
-    console.print(f"Target: [cyan]{target}[/cyan]\n")
+    console.print(f"\n[bold]Blast Radius[/bold]\n")
     
-    for risk, color in [("HIGH", "red"), ("MEDIUM", "yellow"), ("LOW", "green")]:
-        files = impact[risk]["files"]
-        entities = impact[risk]["entities"]
+    total_files = sum(len(impact[risk]["files"]) for risk in impact)
+    if total_files == 0:
+        console.print("[dim]No blast radius detected (no dependents found).[/dim]\n")
+        raise typer.Exit(0)
         
-        if files or entities:
-            console.print(f"[bold {color}]Risk Level: {risk}[/bold {color}]")
+    overall_risk = "LOW"
+    for r in ["HIGH", "MEDIUM", "LOW"]:
+        if impact[r]["files"]:
+            overall_risk = r
+            break
             
-            if files:
-                console.print(f"  [dim]Affected Files:[/dim]")
-                for f in files[:10]:
-                    try:
-                        rel = Path(f.path).relative_to(root_dir).as_posix()
-                    except ValueError:
-                        rel = f.path
-                    console.print(f"    - {rel}")
-                if len(files) > 10:
-                    console.print(f"    - ... and {len(files) - 10} more files")
-                    
-            if entities:
-                console.print(f"  [dim]Affected Entities:[/dim]")
-                for e in entities[:10]:
-                    console.print(f"    - {e.name} ({e.type.value})")
-                if len(entities) > 10:
-                    console.print(f"    - ... and {len(entities) - 10} more entities")
-            console.print("")
+    domains = set()
+    for risk in impact:
+        for f in impact[risk]["files"]:
+            try:
+                rel = Path(f.path).relative_to(root_dir).as_posix()
+                parts = rel.split('/')
+                if len(parts) > 1:
+                    if parts[0] in ('src', 'lib', 'app', 'packages') and len(parts) > 2:
+                        domains.add(parts[1])
+                    else:
+                        domains.add(parts[0])
+            except:
+                pass
+                
+    critical = impact["HIGH"]["files"]
+    if not critical:
+        critical = impact["MEDIUM"]["files"]
+        
+    console.print(f"[bold]Files Affected:[/bold] {total_files}\n")
+    
+    if domains:
+        console.print(f"[bold]Domains:[/bold]")
+        for d in sorted(domains)[:10]:
+            console.print(f"- {d}")
+        if len(domains) > 10:
+            console.print(f"- ... and {len(domains) - 10} more")
+        console.print("")
+        
+    color = {"HIGH": "red", "MEDIUM": "yellow", "LOW": "green"}[overall_risk]
+    console.print(f"[bold]Risk:[/bold]\n[{color}]{overall_risk}[/{color}]\n")
+    
+    if critical:
+        console.print(f"[bold]Most Critical Dependents:[/bold]")
+        for f in critical[:10]:
+            try:
+                rel = Path(f.path).relative_to(root_dir).name
+            except ValueError:
+                rel = f.name
+            console.print(f"- {rel}")
+        if len(critical) > 10:
+            console.print(f"- ... and {len(critical) - 10} more")
+        console.print("")

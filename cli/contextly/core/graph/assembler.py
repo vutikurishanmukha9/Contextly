@@ -49,6 +49,9 @@ class GraphAssembler:
         Returns the stable node ID of the file.
         """
         # 1. Create File Node
+        if dto.file_path in self._exact_to_node_id:
+            return self._exact_to_node_id[dto.file_path]
+            
         file_hash = hashlib.sha256(dto.file_path.encode("utf-8")).hexdigest()[:12]
         file_node_id = f"file_{file_hash}"
         
@@ -86,6 +89,9 @@ class GraphAssembler:
         module_path = self._get_module_path(dto.file_path)
         for entity in dto.entities:
             fqn = f"{module_path}.{entity.name}"
+            if fqn in self._fqn_to_node_id:
+                continue
+                
             entity_hash = hashlib.sha256(fqn.encode("utf-8")).hexdigest()[:12]
             entity_node_id = f"entity_{entity_hash}"
             

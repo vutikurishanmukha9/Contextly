@@ -53,11 +53,20 @@ class DiagnosticsContext:
 
     def report(self) -> None:
         """Prints all collected diagnostics to the console."""
+        import sys
+        is_verbose = "--verbose" in sys.argv or "-v" in sys.argv # NOTE: -v is currently mapped to version
+        
         with self._msg_lock:
             if not self._messages:
                 return
+                
+            msgs_to_print = [m for m in self._messages if m.severity == "ERROR" or is_verbose]
+            
+            if not msgs_to_print:
+                return
+                
             console.print("\n[bold]Diagnostic Report:[/bold]")
-            for msg in self._messages:
+            for msg in msgs_to_print:
                 if msg.severity == "ERROR":
                     console.print(f"[red][{msg.component}] ERROR:[/red] {msg.message}")
                 elif msg.severity == "WARNING":
