@@ -263,7 +263,7 @@ Likely Entry Points (Executable / Routes):
 
 Core Hubs (Most Depended-Upon Files):
   - frontend/src/lib/utils.ts (43 incoming imports)
-  - cli/contextly/utils/exceptions.py (20 incoming imports)`
+  - cli/contextly/utils/exceptions.py (20 incoming imports)`,
   },
   {
     name: "impact",
@@ -281,7 +281,7 @@ HIGH Impact (Direct dependents):
 MEDIUM Impact (Indirect dependents):
   - src/api/middleware.py
 
-[WARNING] 3 total files affected across 2 domains.`
+[WARNING] 3 total files affected across 2 domains.`,
   },
   {
     name: "stats",
@@ -316,7 +316,7 @@ MEDIUM Impact (Indirect dependents):
       content:
         "A massive, perfectly formatted markdown file containing your structured codebase, ready to be attached to ChatGPT, Claude, or any LLM.",
     },
-    usage: "$ contextly pack --task \"impact command\"",
+    usage: '$ contextly pack --task "impact command"',
     output: `[OK] Context Pack 'Contextly' created!
 
                              Pack Summary                              
