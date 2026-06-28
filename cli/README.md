@@ -212,6 +212,36 @@ contextly explain core
 
 It copies a JSON payload to your clipboard, allowing the LLM to understand the architecture without wasting tokens scanning raw files.
 
+### `contextly stats`
+
+Generates an enterprise repository health report.
+
+```bash
+contextly stats
+```
+
+Provides a deep dive into your repository's complexity, identifying your most depended-upon files, orphaned code, maintainability metrics, and structural hotspots.
+
+### `contextly impact <file>`
+
+Calculates the blast radius of a given file.
+
+```bash
+contextly impact cli/contextly/utils/fs.py
+```
+
+Analyzes the AST graph to find all downstream files that depend on the target file, assigning a risk level.
+
+### `contextly summary`
+
+Provides a high-level overview of the repository scale.
+
+```bash
+contextly summary
+```
+
+Analyzes the graph to detect core hubs, executable entry points, and primary domains within the codebase.
+
 ### Understanding Context-Ly Ignore Philosophies
 
 Context-Ly utilizes two distinct "ignore" policies depending on the operation:

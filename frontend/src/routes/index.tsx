@@ -361,17 +361,79 @@ Notice: Proprietary source architecture has also been copied to your OS clipboar
 | Contextly Repository Health Report: . |
 +---------------------------------------+
 
-[ Repository Health Score: 83.7/100 ]
+[ Repository Health Score: 75.0/100 ]
+  -15.0 points for 82 potential orphans
+  -10.0 points for 1099 unresolved external symbols
 
 [ Graph Topology ]
-• Files Analyzed:       179
-• Entities Discovered:  1302
+• Files Analyzed:       205
+• Entities Discovered:  1619
 
 [ Architectural Hotspots (Top 3) ]
 • Most Connected:
-  1. PackerEngine         (115 edges)
-  2. runner.invoke        (101 edges)
-  3. TypeScriptASTParser  (79 edges)`,
+  1. runner.invoke        (Hub Score: 224)
+  2. PackerEngine         (Hub Score: 136)
+
+[ Module Coupling (Top 3 Unstable) ]
+
+[ Maintainability ]
+• Avg Functions per File: 1.8
+• Fat Modules (Top 3):
+  1. models               (20 internal entities)`,
+  },
+  {
+    name: "impact <file>",
+    shortDesc: "Calculates the blast radius of a given file.",
+    fullDesc:
+      "Analyzes the AST graph to find all downstream files that depend on the target file, assigning a risk level.",
+    generates: {
+      file: "Terminal (stdout)",
+      content: "Outputs the blast radius and risk level directly to the terminal.",
+    },
+    usage: "$ contextly impact cli/contextly/utils/fs.py",
+    output: `START
+
+Blast Radius
+
+Files Affected: 17
+
+Risk:
+HIGH
+
+Most Critical Dependents:
+- analyze
+- discover
+- pack
+- export`,
+  },
+  {
+    name: "summary",
+    shortDesc: "Provides a high-level overview of the repository scale.",
+    fullDesc:
+      "Analyzes the graph to detect core hubs, executable entry points, and primary domains within the codebase.",
+    generates: {
+      file: "Terminal (stdout)",
+      content: "Outputs a concise architectural summary of the repository.",
+    },
+    usage: "$ contextly summary",
+    output: `START
+
+Repository Summary (Contextly)
+
++--------- Scale ---------+
+|  Total Files:      206  |
+|  Total Classes:    97   |
+|  Total Functions:  369  |
++-------------------------+
+
+Primary Domains / Modules:
+  - cli/contextly
+  - cli/tests
+  - frontend/src
+
+Core Hubs (Most Depended-Upon Files):
+  - frontend/src/lib/utils.ts (43 incoming imports)
+  - cli/contextly/utils/exceptions.py (20 incoming imports)`,
   },
 ];
 
