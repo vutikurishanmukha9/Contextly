@@ -16,6 +16,8 @@ from contextly.core.metrics import (
     ValidationMetricsProvider,
     ComplexityMetricsProvider,
     HealthScoreProvider,
+    ModularityMetricsProvider,
+    MaintainabilityMetricsProvider,
 )
 from contextly.core.diagnostics import DiagnosticsContext
 from contextly.utils.console import console
@@ -69,7 +71,9 @@ def stats_cmd(
         ResolutionQualityProvider(),
         ValidationMetricsProvider(),
         ComplexityMetricsProvider(),
-        HealthScoreProvider()
+        HealthScoreProvider(),
+        ModularityMetricsProvider(),
+        MaintainabilityMetricsProvider()
     ]
 
     all_metrics = []
@@ -118,6 +122,9 @@ def _render_rich_report(path: str, metrics: List[dict], time_sec: float, mem_mb:
     ))
 
     console.print(f"\n[bold {score_color}][ Repository Health Score: {score}/100 ][/bold {score_color}]")
+    if score_metric and "penalties" in score_metric.get("metadata", {}):
+        for penalty in score_metric["metadata"]["penalties"]:
+            console.print(f"  [dim]{penalty}[/dim]")
 
     console.print("\n[bold cyan][ Performance ][/bold cyan]")
     console.print(f"• Execution Time:       {time_sec:.2f}s")
@@ -160,11 +167,33 @@ def _render_rich_report(path: str, metrics: List[dict], time_sec: float, mem_mb:
         
         console.print("• Most Connected:")
         for idx, item in enumerate(connected["value"][:top]):
-            console.print(f"  {idx+1}. {item['name']:<20} ({item['edges']} edges)")
+            console.print(f"  {idx+1}. {item['name']:<20} (Hub Score: {item['hub_score']})")
             
         console.print("• Most Depended-On (Choke Points):")
         for idx, item in enumerate(depended["value"][:top]):
             console.print(f"  {idx+1}. {item['name']:<20} ({item['incoming_edges']} incoming edges)")
+
+    # Modularity
+    modularity = [m for m in metrics if m["provider"] == "Modularity"]
+    if modularity:
+        console.print(f"\n[bold cyan][ Module Coupling (Top {top} Unstable) ][/bold cyan]")
+        coupling = get_metric("module_coupling")
+        for idx, item in enumerate(coupling["value"][:top]):
+            console.print(f"  {idx+1}. {item['module']:<20} (In: {item['afferent']}, Out: {item['efferent']}, Instability: {item['instability']})")
+            
+    # Maintainability
+    maintainability = [m for m in metrics if m["provider"] == "Maintainability"]
+    if maintainability:
+        console.print("\n[bold cyan][ Maintainability ][/bold cyan]")
+        density = get_metric("component_density")
+        console.print(f"• Avg Functions per File: {density['value']['avg_functions']}")
+        console.print(f"• Avg Classes per File:   {density['value']['avg_classes']}")
+        
+        fat = get_metric("fat_modules")
+        if fat["value"]:
+            console.print(f"• Fat Modules (Top {top}):")
+            for idx, item in enumerate(fat["value"][:top]):
+                console.print(f"  {idx+1}. {item['file']:<20} ({item['entities']} internal entities)")
 
     # Validation
     console.print("\n[bold cyan][ Diagnostics & Quality Gate ][/bold cyan]")

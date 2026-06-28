@@ -26,10 +26,11 @@ class GraphTopologyProvider(MetricsProvider):
             
         total_edges = len(graph.relationships)
         
-        # Calculate graph density for logical entities (ignore FILES and CONTAINS edges if possible)
-        # We'll calculate simple density V and E
-        v = len(graph.nodes)
-        e = len(graph.relationships)
+        # Calculate graph density for logical entities (ignore FILES and CONTAINS edges)
+        logical_nodes = [n for n in graph.nodes if n.type != NodeType.FILE]
+        logical_edges = [r for r in graph.relationships if r.type != RelationshipType.CONTAINS]
+        v = len(logical_nodes)
+        e = len(logical_edges)
         density = e / (v * (v - 1)) if v > 1 else 0.0
         
         # Determine density label
@@ -186,13 +187,17 @@ class ComplexityMetricsProvider(MetricsProvider):
         # Exclude CONTAINS and IMPORTS for true logical complexity
         logical_edges = {RelationshipType.CALLS, RelationshipType.EXTENDS, RelationshipType.IMPLEMENTS, RelationshipType.RETURNS, RelationshipType.USES}
         
-        incoming = defaultdict(int)
-        outgoing = defaultdict(int)
+        # Use sets to count UNIQUE connections (prevent inflation from multiple calls)
+        incoming_sets = defaultdict(set)
+        outgoing_sets = defaultdict(set)
         
         for r in graph.relationships:
             if r.type in logical_edges:
-                outgoing[r.source_id] += 1
-                incoming[r.target_id] += 1
+                outgoing_sets[r.source_id].add(r.target_id)
+                incoming_sets[r.target_id].add(r.source_id)
+                
+        incoming = {k: len(v) for k, v in incoming_sets.items()}
+        outgoing = {k: len(v) for k, v in outgoing_sets.items()}
                 
         BUILTIN_IGNORE = {
             "str", "int", "float", "bool", "len", "print", "list", "dict", "set", "tuple",
@@ -210,17 +215,18 @@ class ComplexityMetricsProvider(MetricsProvider):
             node_names[n.id] = n.name
         
         # Most connected (incoming + outgoing)
-        total_connections = {node_id: incoming[node_id] + outgoing[node_id] for node_id in node_names.keys()}
+        # Hub score = incoming * 2 + outgoing to weight incoming dependencies higher
+        total_connections = {node_id: (incoming.get(node_id, 0) * 2) + outgoing.get(node_id, 0) for node_id in node_names.keys()}
         most_connected = sorted([(k, v) for k, v in total_connections.items() if v > 0], key=lambda x: x[1], reverse=True)
         
         # Most depended-on (incoming only)
-        most_depended_on = sorted([(k, incoming[k]) for k in node_names.keys() if incoming[k] > 0], key=lambda x: x[1], reverse=True)
+        most_depended_on = sorted([(k, incoming.get(k, 0)) for k in node_names.keys() if incoming.get(k, 0) > 0], key=lambda x: x[1], reverse=True)
         
         return [
             MetricOutput(
                 provider=self.name,
                 metric="most_connected",
-                value=[{"id": k, "name": node_names.get(k, k), "edges": v} for k, v in most_connected],
+                value=[{"id": k, "name": node_names.get(k, k), "hub_score": v} for k, v in most_connected],
                 severity="INFO",
                 metadata={}
             ),
@@ -256,19 +262,34 @@ class HealthScoreProvider(MetricsProvider):
         unresolved = sum(1 for n in graph.nodes if n.type == NodeType.UNRESOLVED_EXTERNAL and n.name not in BUILTIN_IGNORE)
         
         # Penalties
-        score -= (cycles_critical * 5.0)
-        score -= (cycles_warning * 2.0)
+        penalties = []
+        
+        if cycles_critical > 0:
+            deduction = cycles_critical * 5.0
+            score -= deduction
+            penalties.append(f"-{deduction} points for {cycles_critical} critical circular dependencies")
+            
+        if cycles_warning > 0:
+            deduction = cycles_warning * 2.0
+            score -= deduction
+            penalties.append(f"-{deduction} points for {cycles_warning} circular dependencies (warnings)")
+        
+        # Count strictly internal entities as denominator to avoid dilution by external libraries
+        internal_entities_count = len([n for n in graph.nodes if n.type not in (NodeType.FILE, NodeType.UNRESOLVED_EXTERNAL)])
         
         # Penalize orphans proportionally (max 15 points)
-        entities_count = len([n for n in graph.nodes if n.type != NodeType.FILE])
-        if entities_count > 0:
-            orphan_ratio = orphans / entities_count
-            score -= min(15.0, orphan_ratio * 100.0)
+        if internal_entities_count > 0 and orphans > 0:
+            orphan_ratio = orphans / internal_entities_count
+            deduction = min(15.0, orphan_ratio * 100.0)
+            score -= deduction
+            penalties.append(f"-{round(deduction, 1)} points for {orphans} potential orphans")
             
         # Penalize unresolved (max 10 points)
-        if entities_count > 0:
-            unresolved_ratio = unresolved / entities_count
-            score -= min(10.0, unresolved_ratio * 50.0)
+        if internal_entities_count > 0 and unresolved > 0:
+            unresolved_ratio = unresolved / internal_entities_count
+            deduction = min(10.0, unresolved_ratio * 50.0)
+            score -= deduction
+            penalties.append(f"-{round(deduction, 1)} points for {unresolved} unresolved external symbols")
             
         score = max(0.0, round(score, 1))
         
@@ -278,6 +299,117 @@ class HealthScoreProvider(MetricsProvider):
                 metric="repository_health_score",
                 value=score,
                 severity="CRITICAL" if score < 60 else "WARNING" if score < 80 else "INFO",
-                metadata={"max_score": 100}
+                metadata={"max_score": 100, "penalties": penalties}
+            )
+        ]
+
+class ModularityMetricsProvider(MetricsProvider):
+    @property
+    def name(self) -> str:
+        return "Modularity"
+
+    def compute(self, graph: KnowledgeGraph, diagnostics: DiagnosticsContext) -> List[MetricOutput]:
+        from pathlib import Path
+        
+        # Calculate module coupling based on directory
+        modules = defaultdict(lambda: {"in": set(), "out": set()})
+        
+        file_to_module = {}
+        for n in graph.nodes:
+            if n.type == NodeType.FILE:
+                try:
+                    path = Path(n.file_path)
+                    module = path.parent.name if path.parent.name else "root"
+                except:
+                    module = "unknown"
+                file_to_module[n.id] = module
+        
+        node_to_module = {}
+        for r in graph.relationships:
+            if r.type == RelationshipType.CONTAINS and r.source_id in file_to_module:
+                node_to_module[r.target_id] = file_to_module[r.source_id]
+                
+        logical_edges = {RelationshipType.CALLS, RelationshipType.EXTENDS, RelationshipType.IMPLEMENTS, RelationshipType.USES}
+        for r in graph.relationships:
+            if r.type in logical_edges:
+                src_mod = node_to_module.get(r.source_id)
+                dst_mod = node_to_module.get(r.target_id)
+                if src_mod and dst_mod and src_mod != dst_mod:
+                    modules[src_mod]["out"].add(dst_mod)
+                    modules[dst_mod]["in"].add(src_mod)
+                    
+        module_metrics = []
+        for mod, data in modules.items():
+            ca = len(data["in"])
+            ce = len(data["out"])
+            total = ca + ce
+            instability = (ce / total) if total > 0 else 0.0
+            module_metrics.append({
+                "module": mod,
+                "afferent": ca,
+                "efferent": ce,
+                "instability": round(instability, 2)
+            })
+            
+        module_metrics = sorted(module_metrics, key=lambda x: x["instability"], reverse=True)
+        
+        return [
+            MetricOutput(
+                provider=self.name,
+                metric="module_coupling",
+                value=module_metrics,
+                severity="INFO",
+                metadata={"total_modules": len(module_metrics)}
+            )
+        ]
+
+class MaintainabilityMetricsProvider(MetricsProvider):
+    @property
+    def name(self) -> str:
+        return "Maintainability"
+
+    def compute(self, graph: KnowledgeGraph, diagnostics: DiagnosticsContext) -> List[MetricOutput]:
+        file_entities = defaultdict(int)
+        functions = 0
+        classes = 0
+        
+        for r in graph.relationships:
+            if r.type == RelationshipType.CONTAINS:
+                file_entities[r.source_id] += 1
+                
+        files = sum(1 for n in graph.nodes if n.type == NodeType.FILE)
+        
+        for n in graph.nodes:
+            if n.type == NodeType.FUNCTION:
+                functions += 1
+            elif n.type == NodeType.CLASS:
+                classes += 1
+                
+        avg_funcs = (functions / files) if files > 0 else 0
+        avg_classes = (classes / files) if files > 0 else 0
+        
+        file_nodes = {n.id: n.name for n in graph.nodes if n.type == NodeType.FILE}
+        
+        fat_modules = []
+        for file_id, count in sorted(file_entities.items(), key=lambda x: x[1], reverse=True)[:3]:
+            fat_modules.append({
+                "file": file_nodes.get(file_id, "unknown"),
+                "entities": count
+            })
+            
+        return [
+            MetricOutput(
+                provider=self.name,
+                metric="component_density",
+                value={"avg_functions": round(avg_funcs, 1), "avg_classes": round(avg_classes, 1)},
+                severity="INFO",
+                metadata={}
+            ),
+            MetricOutput(
+                provider=self.name,
+                metric="fat_modules",
+                value=fat_modules,
+                severity="WARNING" if any(m["entities"] > 20 for m in fat_modules) else "INFO",
+                metadata={}
             )
         ]

@@ -5,6 +5,8 @@ from contextly.core.metrics.providers import (
     ValidationMetricsProvider,
     ComplexityMetricsProvider,
     HealthScoreProvider,
+    ModularityMetricsProvider,
+    MaintainabilityMetricsProvider,
 )
 
 __all__ = [
@@ -15,4 +17,6 @@ __all__ = [
     "ValidationMetricsProvider",
     "ComplexityMetricsProvider",
     "HealthScoreProvider",
+    "ModularityMetricsProvider",
+    "MaintainabilityMetricsProvider",
 ]
