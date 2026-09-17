@@ -14,6 +14,19 @@ from .formatter import KnowledgeFormatter
 from ..graph.builder import ImportGraphBuilder
 from ..graph.validator import GraphValidator
 
+def _cleanup_stale_temp_files(packs_dir: Path) -> None:
+    """Cleans up leftover .part and .tmp files from crashed or interrupted packing sessions."""
+    try:
+        for pattern in ("*.part", "*.tmp", ".tmp-*"):
+            for p in packs_dir.glob(pattern):
+                if p.is_file():
+                    try:
+                        p.unlink()
+                    except OSError:
+                        pass
+    except OSError:
+        pass
+
 class PackerEngine:
     def __init__(self, root_dir: Path, no_default_excludes: bool = False):
         self.root_dir = root_dir
@@ -81,6 +94,7 @@ class PackerEngine:
         """
         packs_dir = self.root_dir / ".contextly" / "packs"
         packs_dir.mkdir(parents=True, exist_ok=True)
+        _cleanup_stale_temp_files(packs_dir)
         
         safe_pack_name = Path(pack_name).name
         base_name = safe_pack_name
@@ -231,186 +245,239 @@ class PackerEngine:
                 domain_groups["root"].append(path)
             
         # Write to a temporary file and atomically rename on Windows
-        fd, temp_path_str = tempfile.mkstemp(dir=packs_dir, suffix=".tmp")
+        fd, temp_path_str = tempfile.mkstemp(dir=packs_dir, prefix=".tmp-pack-", suffix=".part")
         temp_path = Path(temp_path_str)
+        success = False
         
-        with os.fdopen(fd, "wb") as out_f:
-            out_f.write(header_text.encode("utf-8"))
-            
-            for domain, paths in domain_groups.items():
-                domain_header = f"## Domain: `{domain}`\n\n"
-                out_f.write(domain_header.encode("utf-8"))
-                current_tokens += self._estimate_tokens(domain_header)
-                
-                for path in paths:
-                    start_pos = None
-                    try:
-                        # Flush before recording position for reliable rollback
-                        out_f.flush()
-                        start_pos = out_f.tell()
-                    
-                        file_size = path.stat().st_size
-                        if file_size > self.max_file_size:
-                            skipped_files.append(path)
-                            continue
+        try:
+            try:
+                out_f = os.fdopen(fd, "wb")
+            except Exception:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+                raise
 
+            with out_f:
+                out_f.write(header_text.encode("utf-8"))
+                
+                for domain, paths in domain_groups.items():
+                    domain_header = f"## Domain: `{domain}`\n\n"
+                    domain_header_written = False
+                    
+                    for path in paths:
+                        start_pos = None
+                        header_was_written = domain_header_written
+                        try:
+                            # Flush before recording position for reliable rollback
+                            out_f.flush()
+                            start_pos = out_f.tell()
+                        
+                            file_size = path.stat().st_size
+                            if file_size > self.max_file_size:
+                                skipped_files.append(path)
+                                continue
+
+                            try:
+                                rel_path = path.relative_to(self.root_dir).as_posix()
+                            except ValueError:
+                                rel_path = path.name
+                            ext = path.suffix.replace('.', '')
+                        
+                            with open(path, "rb") as in_f:
+                                first_kb = in_f.read(1024)
+                                if self._is_binary_file(first_kb):
+                                    skipped_files.append(path)
+                                    continue
+                                in_f.seek(0)
+                            
+                                parser = None if raw else ParserRegistry.get_parser(ext)
+                                is_excluded = False
+                            
+                                if parser:
+                                    try:
+                                        raw_bytes = in_f.read(self.max_file_size + 1)
+                                        if len(raw_bytes) > self.max_file_size:
+                                            skipped_files.append(path)
+                                            from ...core.diagnostics import DiagnosticsContext
+                                            DiagnosticsContext().add_warning("PackerEngine", f"File grew beyond max size during read (TOCTOU prevention): {path.name}")
+                                            out_f.flush()
+                                            out_f.seek(start_pos)
+                                            out_f.truncate(start_pos)
+                                            domain_header_written = header_was_written
+                                            continue
+                                        raw_code = raw_bytes.decode("utf-8")
+                                    except UnicodeDecodeError:
+                                        skipped_files.append(path)
+                                        # Defensive flush before rollback
+                                        out_f.flush()
+                                        out_f.seek(start_pos)
+                                        out_f.truncate(start_pos)
+                                        domain_header_written = header_was_written
+                                        continue
+                                    
+                                    parsed_dto = parser.parse(str(path), raw_code, str(self.root_dir))
+                                    body = KnowledgeFormatter.format_file_knowledge(parsed_dto)
+                                
+                                    header_str = f"### File: `{rel_path}`\n```{ext}\n"
+                                    footer_str = "\n```\n\n"
+                                
+                                    domain_cost = self._estimate_tokens(domain_header) if not domain_header_written else 0
+                                    file_tokens = self._estimate_tokens(header_str) + self._estimate_tokens(body) + self._estimate_tokens(footer_str)
+                                    
+                                    if max_tokens and current_tokens + domain_cost + file_tokens > max_tokens:
+                                        excluded_files.append(path)
+                                        out_f.flush()
+                                        out_f.seek(start_pos)
+                                        out_f.truncate(start_pos)
+                                        domain_header_written = header_was_written
+                                        continue
+                                    
+                                    if not domain_header_written:
+                                        out_f.write(domain_header.encode("utf-8"))
+                                        current_tokens += domain_cost
+                                        domain_header_written = True
+                                        
+                                    out_f.write(header_str.encode("utf-8"))
+                                    out_f.write(body.encode("utf-8"))
+                                    out_f.write(footer_str.encode("utf-8"))
+                                    current_tokens += file_tokens
+                                    selected_files.append(path)
+                                
+                                elif not raw:
+                                    try:
+                                        raw_bytes = in_f.read(self.max_file_size + 1)
+                                        if len(raw_bytes) > self.max_file_size:
+                                            skipped_files.append(path)
+                                            out_f.flush()
+                                            out_f.seek(start_pos)
+                                            out_f.truncate(start_pos)
+                                            domain_header_written = header_was_written
+                                            continue
+                                        raw_code = raw_bytes.decode("utf-8")
+                                    except UnicodeDecodeError:
+                                        skipped_files.append(path)
+                                        out_f.flush()
+                                        out_f.seek(start_pos)
+                                        out_f.truncate(start_pos)
+                                        domain_header_written = header_was_written
+                                        continue
+                                    
+                                    body = KnowledgeFormatter.format_metadata_fallback(str(path), raw_code)
+                                
+                                    header_str = f"### File: `{rel_path}`\n"
+                                    footer_str = "\n\n"
+                                
+                                    domain_cost = self._estimate_tokens(domain_header) if not domain_header_written else 0
+                                    file_tokens = self._estimate_tokens(header_str) + self._estimate_tokens(body) + self._estimate_tokens(footer_str)
+                                
+                                    if max_tokens and current_tokens + domain_cost + file_tokens > max_tokens:
+                                        excluded_files.append(path)
+                                        out_f.flush()
+                                        out_f.seek(start_pos)
+                                        out_f.truncate(start_pos)
+                                        domain_header_written = header_was_written
+                                        continue
+                                    
+                                    if not domain_header_written:
+                                        out_f.write(domain_header.encode("utf-8"))
+                                        current_tokens += domain_cost
+                                        domain_header_written = True
+                                        
+                                    out_f.write(header_str.encode("utf-8"))
+                                    out_f.write(body.encode("utf-8"))
+                                    out_f.write(footer_str.encode("utf-8"))
+                                    current_tokens += file_tokens
+                                    selected_files.append(path)
+                                
+                                else:
+                                    header_str = f"## File: `{rel_path}`\n```{ext}\n"
+                                    domain_cost = self._estimate_tokens(domain_header) if not domain_header_written else 0
+                                    file_tokens = self._estimate_tokens(header_str)
+                                    
+                                    if max_tokens and current_tokens + domain_cost + file_tokens > max_tokens:
+                                        excluded_files.append(path)
+                                        out_f.flush()
+                                        out_f.seek(start_pos)
+                                        out_f.truncate(start_pos)
+                                        domain_header_written = header_was_written
+                                        continue
+                                        
+                                    if not domain_header_written:
+                                        out_f.write(domain_header.encode("utf-8"))
+                                        current_tokens += domain_cost
+                                        domain_header_written = True
+                                        
+                                    out_f.write(header_str.encode("utf-8"))
+                                
+                                    decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+                                    while True:
+                                        chunk = in_f.read(4096)
+                                        text_chunk = decoder.decode(chunk, final=not bool(chunk))
+                                        if text_chunk:
+                                            chunk_cost = self._estimate_tokens(text_chunk)
+                                            file_tokens += chunk_cost
+                                            if max_tokens and current_tokens + file_tokens > max_tokens:
+                                                is_excluded = True
+                                                break
+                                        
+                                            out_f.write(text_chunk.encode("utf-8"))
+                                        
+                                        if not chunk:
+                                            break
+                                    
+                                    if is_excluded:
+                                        excluded_files.append(path)
+                                        out_f.flush()
+                                        out_f.truncate(start_pos)
+                                        out_f.seek(start_pos)
+                                        domain_header_written = header_was_written
+                                        continue
+                                    
+                                    out_f.write(b"\n```\n\n")
+                                    current_tokens += file_tokens
+                                    selected_files.append(path)
+                                
+                        except Exception as e:
+                            # Roll back any partially written content to prevent stream corruption
+                            # Defensive flush before rollback
+                            if start_pos is not None:
+                                out_f.flush()
+                                out_f.seek(start_pos)
+                                out_f.truncate(start_pos)
+                                domain_header_written = header_was_written
+                            skipped_files.append(path)
+                            from ...core.diagnostics import DiagnosticsContext
+                            DiagnosticsContext().add_warning("PackerEngine", f"Failed to pack {path.name}: {type(e).__name__} - {str(e)}")
+
+                if excluded_files:
+                    out_f.write(b"## Excluded Files (Token Limit)\n")
+                    out_f.write(f"The following {len(excluded_files)} files were excluded to fit within the {max_tokens} token limit:\n".encode("utf-8"))
+                    for path in excluded_files:
                         try:
                             rel_path = path.relative_to(self.root_dir).as_posix()
                         except ValueError:
                             rel_path = path.name
-                        ext = path.suffix.replace('.', '')
-                    
-                        with open(path, "rb") as in_f:
-                            first_kb = in_f.read(1024)
-                            if self._is_binary_file(first_kb):
-                                skipped_files.append(path)
-                                continue
-                            in_f.seek(0)
-                        
-                            parser = None if raw else ParserRegistry.get_parser(ext)
-                            is_excluded = False
-                        
-                            if parser:
-                                try:
-                                    raw_bytes = in_f.read(self.max_file_size + 1)
-                                    if len(raw_bytes) > self.max_file_size:
-                                        skipped_files.append(path)
-                                        from ...core.diagnostics import DiagnosticsContext
-                                        DiagnosticsContext().add_warning("PackerEngine", f"File grew beyond max size during read (TOCTOU prevention): {path.name}")
-                                        out_f.flush()
-                                        out_f.seek(start_pos)
-                                        out_f.truncate(start_pos)
-                                        continue
-                                    raw_code = raw_bytes.decode("utf-8")
-                                except UnicodeDecodeError:
-                                    skipped_files.append(path)
-                                    # Defensive flush before rollback
-                                    out_f.flush()
-                                    out_f.seek(start_pos)
-                                    out_f.truncate(start_pos)
-                                    continue
-                                
-                                parsed_dto = parser.parse(str(path), raw_code, str(self.root_dir))
-                                body = KnowledgeFormatter.format_file_knowledge(parsed_dto)
-                            
-                                header_str = f"### File: `{rel_path}`\n```{ext}\n"
-                                footer_str = "\n```\n\n"
-                            
-                                file_tokens = self._estimate_tokens(header_str) + self._estimate_tokens(body) + self._estimate_tokens(footer_str)
-                                
-                                if max_tokens and current_tokens + file_tokens > max_tokens:
-                                    excluded_files.append(path)
-                                    out_f.flush()
-                                    out_f.seek(start_pos)
-                                    out_f.truncate(start_pos)
-                                    continue
-                                
-                                out_f.write(header_str.encode("utf-8"))
-                                out_f.write(body.encode("utf-8"))
-                                out_f.write(footer_str.encode("utf-8"))
-                                current_tokens += file_tokens
-                                selected_files.append(path)
-                            
-                            elif not raw:
-                                try:
-                                    raw_bytes = in_f.read(self.max_file_size + 1)
-                                    if len(raw_bytes) > self.max_file_size:
-                                        skipped_files.append(path)
-                                        out_f.flush()
-                                        out_f.seek(start_pos)
-                                        out_f.truncate(start_pos)
-                                        continue
-                                    raw_code = raw_bytes.decode("utf-8")
-                                except UnicodeDecodeError:
-                                    skipped_files.append(path)
-                                    out_f.flush()
-                                    out_f.seek(start_pos)
-                                    out_f.truncate(start_pos)
-                                    continue
-                                
-                                body = KnowledgeFormatter.format_metadata_fallback(str(path), raw_code)
-                            
-                                header_str = f"### File: `{rel_path}`\n"
-                                footer_str = "\n\n"
-                            
-                                file_tokens = self._estimate_tokens(header_str) + self._estimate_tokens(body) + self._estimate_tokens(footer_str)
-                            
-                                if max_tokens and current_tokens + file_tokens > max_tokens:
-                                    excluded_files.append(path)
-                                    out_f.flush()
-                                    out_f.seek(start_pos)
-                                    out_f.truncate(start_pos)
-                                    continue
-                                
-                                out_f.write(header_str.encode("utf-8"))
-                                out_f.write(body.encode("utf-8"))
-                                out_f.write(footer_str.encode("utf-8"))
-                                current_tokens += file_tokens
-                                selected_files.append(path)
-                            
-                            else:
-                                header_str = f"## File: `{rel_path}`\n```{ext}\n"
-                                out_f.write(header_str.encode("utf-8"))
-                            
-                                file_tokens = self._estimate_tokens(header_str)
-                                decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
-                                while True:
-                                    chunk = in_f.read(4096)
-                                    text_chunk = decoder.decode(chunk, final=not bool(chunk))
-                                    if text_chunk:
-                                        chunk_cost = self._estimate_tokens(text_chunk)
-                                        file_tokens += chunk_cost
-                                        if max_tokens and current_tokens + file_tokens > max_tokens:
-                                            is_excluded = True
-                                            break
-                                    
-                                        out_f.write(text_chunk.encode("utf-8"))
-                                    
-                                    if not chunk:
-                                        break
-                                
-                                if is_excluded:
-                                    excluded_files.append(path)
-                                    out_f.flush()
-                                    out_f.truncate(start_pos)
-                                    out_f.seek(start_pos)
-                                    continue
-                                
-                                out_f.write(b"\n```\n\n")
-                                current_tokens += file_tokens
-                                selected_files.append(path)
-                            
-                    except Exception as e:
-                        # Roll back any partially written content to prevent stream corruption
-                        # Defensive flush before rollback
-                        if start_pos is not None:
-                            out_f.flush()
-                            out_f.seek(start_pos)
-                            out_f.truncate(start_pos)
-                        skipped_files.append(path)
-                        from ...core.diagnostics import DiagnosticsContext
-                        DiagnosticsContext().add_warning("PackerEngine", f"Failed to pack {path.name}: {type(e).__name__} - {str(e)}")
+                        out_f.write(f"- `{rel_path}`\n".encode("utf-8"))
 
-            if excluded_files:
-                out_f.write(b"## Excluded Files (Token Limit)\n")
-                out_f.write(f"The following {len(excluded_files)} files were excluded to fit within the {max_tokens} token limit:\n".encode("utf-8"))
-                for path in excluded_files:
+            # SEC-002: Safely atomic rename without TOCTOU race
+            try:
+                os.replace(temp_path, output_file)
+                success = True
+            except OSError as e:
+                if temp_path.exists():
                     try:
-                        rel_path = path.relative_to(self.root_dir).as_posix()
-                    except ValueError:
-                        rel_path = path.name
-                    out_f.write(f"- `{rel_path}`\n".encode("utf-8"))
-
-        # SEC-002: Safely atomic rename without TOCTOU race
-        try:
-            os.replace(temp_path, output_file)
-        except OSError as e:
-            if temp_path.exists():
+                        temp_path.unlink()
+                    except OSError:
+                        pass
+                raise ContextlyError(f"Failed to write context pack to {output_file}: {e}")
+        finally:
+            if not success and temp_path.exists():
                 try:
                     temp_path.unlink()
                 except OSError:
                     pass
-            raise ContextlyError(f"Failed to write context pack to {output_file}: {e}")
 
         # Compute final exact token count from the completed output file
         if self.tokenizer:

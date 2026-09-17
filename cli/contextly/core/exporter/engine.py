@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from datetime import datetime
 import html
@@ -10,7 +11,7 @@ class ExporterEngine:
     def __init__(self, root_dir: Path):
         self.root_dir = root_dir
 
-    def export(self, pack_name: str) -> tuple[Path, bool]:
+    def export(self, pack_name: str, copy_to_clipboard: bool = True) -> tuple[Path, bool]:
         """
         Fuses intelligence and context packs.
         Returns a tuple of (export_path, clipboard_success).
@@ -60,10 +61,11 @@ class ExporterEngine:
         
         import re
         pattern = re.compile(r'</\s*context_pack\s*>', flags=re.IGNORECASE)
+        safe_intelligence_layer = pattern.sub('&lt;/context_pack&gt;', intelligence_layer)
         
         try:
             with open(export_path, "w", encoding="utf-8") as out_f:
-                out_f.write(intelligence_layer)
+                out_f.write(safe_intelligence_layer)
                 out_f.write(f'\n\n<context_pack name="{safe_pack_name}">\n')
                 
                 try:
@@ -96,16 +98,17 @@ class ExporterEngine:
         except Exception as e:
             raise ContextlyError(f"Error writing export file: {e}")
             
-        clipboard_success = True
-        try:
-            if export_path.stat().st_size <= 4 * 1024 * 1024:
-                with open(export_path, "r", encoding="utf-8") as f:
-                    pyperclip.copy(f.read())
-            else:
-                from ...core.diagnostics import DiagnosticsContext
-                DiagnosticsContext().add_warning("ExporterEngine", "Export exceeds 4MB clipboard limit, skipping clipboard copy.")
+        clipboard_success = False
+        if copy_to_clipboard and not os.environ.get("CI"):
+            try:
+                if export_path.stat().st_size <= 4 * 1024 * 1024:
+                    with open(export_path, "r", encoding="utf-8") as f:
+                        pyperclip.copy(f.read())
+                    clipboard_success = True
+                else:
+                    from ...core.diagnostics import DiagnosticsContext
+                    DiagnosticsContext().add_warning("ExporterEngine", "Export exceeds 4MB clipboard limit, skipping clipboard copy.")
+            except Exception:
                 clipboard_success = False
-        except Exception:
-            clipboard_success = False
             
         return export_path, clipboard_success

@@ -15,9 +15,13 @@ def analyze_cmd(
     target: str = typer.Argument(".", help="Directory to analyze"),
     model: str = typer.Option("chatgpt", "--model", "-m", help="Target LLM format ('chatgpt' or 'claude')"),
     no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)"),
-    output_format: str = typer.Option("text", "--format", help="Output format ('text' or 'json')")
+    output_format: str = typer.Option("text", "--format", help="Output format ('text' or 'json')"),
+    summary: bool = typer.Option(False, "--summary", "-s", help="Display entry points, core hubs, and domain topology"),
+    stats: bool = typer.Option(False, "--stats", "--health", help="Display enterprise repository health score and maintainability metrics"),
+    inspect: bool = typer.Option(False, "--inspect", "--deep", help="Inspect top largest files (token hogs) and complexity outliers"),
+    top: int = typer.Option(5, "--top", help="Number of hotspots or hubs to show")
 ):
-    """Analyze a repository and print intelligence summary"""
+    """Analyze a repository and print intelligence summary or deep architecture metrics"""
     root_dir = find_project_root(Path.cwd())
     
     try:
@@ -35,9 +39,25 @@ def analyze_cmd(
         else:
             console.print(f"\n[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
+
+    if summary:
+        from .summary import summary_cmd
+        return summary_cmd()
+
+    if stats:
+        from .stats import stats_cmd
+        return stats_cmd(path=str(root_dir), as_json=(output_format == "json"), top=top)
+
+    if inspect:
+        from .inspect import inspect_cmd
+        return inspect_cmd(no_default_excludes=no_default_excludes, output_format=output_format)
         
     try:
-        engine = AnalyzerEngine(root_dir, no_default_excludes=no_default_excludes)
+        engine = AnalyzerEngine(
+            root_dir,
+            target_dir=target_path,
+            no_default_excludes=no_default_excludes,
+        )
         
         intelligence = engine.analyze(model)
         

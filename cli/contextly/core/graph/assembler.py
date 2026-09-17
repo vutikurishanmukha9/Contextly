@@ -226,16 +226,9 @@ class GraphAssembler:
                     resolution_method="fuzzy_global_exact_name"
                 ))
                 return
-            else:
-                # Multiple candidates, we pick the first one but with lower confidence
-                self.graph.relationships.append(Relationship(
-                    source_id=source_id,
-                    target_id=self._fqn_to_node_id[candidates[0]],
-                    type=rel_type,
-                    confidence=0.5,
-                    resolution_method="fuzzy_global_multiple_candidates"
-                ))
-                return
+            # An unqualified symbol with multiple definitions is ambiguous. Linking it
+            # to an arbitrary insertion-order candidate produces false dependency and
+            # impact results, so keep it unresolved until import-aware resolution exists.
                 
         # 3. Handle dot-separated attributes (e.g. sqlalchemy.create_engine)
         if "." in target_name:

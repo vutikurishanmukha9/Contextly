@@ -1,3 +1,4 @@
+import os
 import typer
 from pathlib import Path
 from rich.console import Console
@@ -5,7 +6,6 @@ from rich.markdown import Markdown
 from typing import Optional
 
 from contextly.core.explainer.engine import ExplainerEngine
-from contextly.utils.fs import find_project_root
 from contextly.utils.io import save_command_result
 import pyperclip
 
@@ -14,14 +14,18 @@ app = typer.Typer(help="Explain repository architectural domains.")
 
 def explain_cmd(
     domain: str = typer.Argument(..., help="The domain name to explain (e.g. 'auth', 'payment')."),
-    path: str = typer.Option(".", "--path", "-p", help="Path to the repository")
+    path: str = typer.Option(".", "--path", "-p", help="Path to the repository"),
+    no_clipboard: bool = typer.Option(False, "--no-clipboard", help="Skip copying context to clipboard")
 ):
     """
     Generate an offline Domain Context Payload containing the isolated architecture of a specific domain.
     The generated context is copied directly to your clipboard to provide to an AI tool.
     Requires 'contextly analyze' to have been run first.
     """
-    root_dir = find_project_root(Path(path).resolve())
+    # --path names the repository explicitly. Resolving upward here can select a
+    # parent user's unrelated .contextly directory and write exports outside the
+    # requested project.
+    root_dir = Path(path).resolve()
         
     engine = ExplainerEngine(root_dir=root_dir)
     
@@ -31,11 +35,12 @@ def explain_cmd(
             out_file = save_command_result("explain", [domain], prompt, root_dir)
             console.print(f"[bold green][OK][/bold green] [bold]Context payload saved to: {out_file}[/bold]")
             
-            try:
-                pyperclip.copy(prompt)
-                console.print("[yellow]Notice: Proprietary source architecture has also been copied to your OS clipboard. Clear it when finished if on a shared/synced device.[/yellow]")
-            except Exception as e:
-                console.print(f"[yellow]Warning: Could not copy to clipboard. ({e})[/yellow]")
+            if not no_clipboard and not os.environ.get("CI"):
+                try:
+                    pyperclip.copy(prompt)
+                    console.print("[yellow]Notice: Proprietary source architecture has also been copied to your OS clipboard. Clear it when finished if on a shared/synced device.[/yellow]")
+                except Exception as e:
+                    console.print(f"[yellow]Warning: Could not copy to clipboard. ({e})[/yellow]")
                 
         except Exception as e:
             console.print(f"[red]Error saving result: {e}[/red]")

@@ -63,8 +63,7 @@ class MemoryEngine:
                 if not data:
                     return ProjectMemory()
                 if not isinstance(data, dict):
-                    console.print("[yellow]Warning: Memory file is corrupt (not a mapping). Falling back to empty memory.[/yellow]")
-                    return ProjectMemory()
+                    raise MemoryVaultCorruptionError("Memory file is corrupt (expected a mapping).")
                 return ProjectMemory.model_validate(data)
         except (yaml.YAMLError, ValueError) as e:
             raise MemoryVaultCorruptionError(f"Memory file is corrupt ({e}).") from e
@@ -123,3 +122,9 @@ class MemoryEngine:
             memory.rules.append(new_rule)
             self._save_memory(memory)
             return True
+
+    def save_memory(self, memory: ProjectMemory) -> None:
+        """Saves memory to disk."""
+        with self._lock():
+            self._save_memory(memory)
+

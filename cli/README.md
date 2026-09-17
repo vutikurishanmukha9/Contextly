@@ -1,297 +1,271 @@
-# Context-Ly CLI
+# Context-Ly
 
-Context-Ly CLI is a proprietary Context Intelligence Engine designed to help developers generate high-quality, token-efficient context for Large Language Models (LLMs).
+[![PyPI version](https://img.shields.io/pypi/v/contextly.svg)](https://pypi.org/project/contextly/)
+[![Python Version](https://img.shields.io/pypi/pyversions/contextly.svg)](https://pypi.org/project/contextly/)
+[![Test Suite](https://img.shields.io/badge/tests-328%20passed-success)](https://github.com/vutikurishanmukha9/Contextly)
+[![Coverage](https://img.shields.io/badge/coverage-90.54%25-brightgreen)](https://github.com/vutikurishanmukha9/Contextly)
+[![Security Status](https://img.shields.io/badge/security-0%20vulnerabilities-brightgreen)](https://github.com/vutikurishanmukha9/Contextly)
+[![License](https://img.shields.io/badge/license-Proprietary-blue)](https://github.com/vutikurishanmukha9/Contextly/blob/main/LICENSE)
 
-Rather than manually explaining your project to an AI assistant in every session, Context-Ly analyzes your repository, discovers conventions, learns team rules, and generates structured context files that help AI tools understand your codebase more effectively.
+> **The Ultimate Context-as-Code & Context Intelligence Engine for LLMs**  
+> Build context once. Eliminate hallucinations. Supercharge Claude 3.7, ChatGPT o3, DeepSeek, and Gemini with surgical repository intelligence.
 
-The CLI acts as a persistent Context Memory Layer for your repository, enabling consistent AI interactions across development workflows.
+---
 
-## Features
+## Why Context-Ly?
 
-* Repository analysis and context generation
-* Automatic framework and dependency detection
-* Architecture visualization through project structure analysis
-* Team convention discovery and memory management
-* Persistent project-specific context storage
-* LLM-ready Context Pack generation
-* Repository complexity and token usage inspection
-* Context-as-Code workflow with version-controlled project memory
+Modern AI coding assistants are only as good as the context you feed them. Dumping entire codebases into an LLM wastes thousands of tokens, blows through context windows, and drowns the model in irrelevant boilerplate. Explaining your codebase by hand in every new chat prompt is tedious and inconsistent.
+
+**Context-Ly solves this forever.** It turns your codebase into a living **Context Memory Layer**:
+- **Extracts Deep Structural Knowledge**: Uses native AST parsing and knowledge graph clustering to understand imports, call trees, and core architecture hubs.
+- **1-Step Prompt Synthesis**: Packs code and automatically fuses high-level repository context directly into your clipboard—ready to paste in 1 step.
+- **Pinpoint Blast Radius**: Calculates the exact downstream impact of modifying any file before you write code.
+- **Persistent Team Memory**: Discovers, learns, and remembers your team's coding conventions and architectural rules across sessions.
+- **Security Hardened**: Zero telemetry, prompt-injection resistant delimiters, and automated clipboard isolation for CI.
+
+---
 
 ## Installation
 
-Install Context-Ly directly from PyPI:
+Install Context-Ly directly via `pip` or `uv`:
 
 ```bash
+# Using pip
 pip install contextly
+
+# Using uv
+uv tool install contextly
 ```
 
-Verify the installation:
+Verify your installation:
 
 ```bash
 contextly --help
 ```
 
-## Prerequisites
+---
 
-* Python 3.9 or later
-* A local Git repository or project directory to analyze
+## Quick Start (in 30 Seconds)
 
-No external services or API keys are required for the core functionality.
-
-## Quick Start
-
-Initialize Context-Ly in your project:
+Get up and running in any project with 3 commands:
 
 ```bash
-contextly init
-```
+# 1. Initialize Context-as-Code with auto-detected tech stack profiles
+contextly init --quick
 
-Analyze your repository and generate a complete project context:
-
-```bash
+# 2. Analyze repository architecture & generate PROJECT_CONTEXT.md
 contextly analyze
-```
 
-This command automatically:
-
-* Reads your README documentation
-* Scans the project structure
-* Detects frameworks and dependencies
-* Discovers conventions and stored memory
-* Generates a comprehensive `PROJECT_CONTEXT.md`
-
-The generated file can be used directly with AI coding assistants and LLMs.
-
-## Commands
-
-### `contextly init`
-
-Initialize Context-Ly in the current project.
-
-```bash
-contextly init
-```
-
-Creates:
-
-```text
-.contextly/
-├── config.yaml
-├── memory/
-└── packs/
-```
-
-### `contextly analyze`
-
-Generate a complete repository context file.
-
-```bash
-contextly analyze
-```
-
-This command:
-
-* Reads project documentation
-* Analyzes repository structure
-* Detects frameworks and technologies
-* Loads stored team conventions
-* Generates `PROJECT_CONTEXT.md`
-
-Output:
-
-```text
-PROJECT_CONTEXT.md
-```
-
-### `contextly discover`
-
-Run the Pattern Discovery Engine.
-
-```bash
-contextly discover
-```
-
-Discovers repository conventions such as:
-
-* TailwindCSS usage
-* Zustand state management
-* React Query patterns
-* Service-layer architecture hints
-* Framework-specific conventions
-
-The command provides insight into patterns already present within the codebase.
-
-### `contextly learn --auto`
-
-Convert discovered conventions into permanent project memory.
-
-```bash
-contextly learn --auto
-```
-
-Example:
-
-```text
-Save convention: TailwindCSS (Uses TailwindCSS for styling.)? [y/N]
-```
-
-Approved conventions are stored in:
-
-```text
-.contextly/memory/rules.yaml
-```
-
-This creates a persistent memory layer that can be committed to source control and shared across teams.
-
-### `contextly memory`
-
-Inspect all stored project memory and conventions.
-
-```bash
-contextly memory
-```
-
-Displays all saved rules, conventions, and architectural preferences currently remembered by Context-Ly.
-
-### `contextly pack <directory>`
-
-Generate an LLM-ready Context Pack from a specific directory.
-
-```bash
+# 3. Pack your target code & automatically fuse intelligence to clipboard
 contextly pack src/components
 ```
 
-The command:
+**Done!** Your clipboard now contains a synthesized, token-optimized context prompt complete with architecture maps, team conventions, and target source code—ready to paste directly into ChatGPT, Claude, or any LLM.
 
-* Reads all files in the target directory
-* Calculates token usage
-* Bundles the content into a reusable Context Pack
+---
 
-Output location:
+## The 5 Core Powerhouse Commands
+
+Context-Ly consolidates repository intelligence into **5 powerhouse commands**:
 
 ```text
-.contextly/packs/
+Usage: contextly [OPTIONS] COMMAND [ARGS]...
+
+Context Intelligence Engine for LLMs
+
++- Commands ------------------------------------------------------------------+
+| init      Initialize Context-as-Code with auto-detected stack profiles      |
+| analyze   Analyze architecture, health scorecard, hubs, and complexity      |
+| pack      Bundle, optimize, and fuse repository context for instant LLM     |
+|           export                                                            |
+| impact    Analyze blast radius of modifying a target file or explain domain |
+|           architecture                                                      |
+| memory    Inspect, learn, and discover persistently stored team conventions |
++-----------------------------------------------------------------------------+
 ```
 
-Useful for sharing focused portions of a large codebase with an LLM.
+---
 
-### `contextly inspect`
+### 1. `contextly init` — Smart Context-as-Code Setup
 
-Analyze repository complexity and token consumption.
-
-```bash
-contextly inspect
-```
-
-Provides visibility into:
-
-* Large files
-* Potential token-heavy directories
-* Context window bottlenecks
-* Repository complexity hotspots
-
-This helps identify areas that may negatively impact AI context quality.
-
-### `contextly export <pack_name>`
-
-Fuses your memory rules and the specified context pack into a single, comprehensive Context Payload.
+Initializes Context-Ly in your repository with automatic framework detection and tailored packing profiles.
 
 ```bash
-contextly export cli
-```
-
-The output is instantly copied to your clipboard, ready to be pasted directly into an LLM.
-
-### `contextly explain <domain>`
-
-Extracts a highly-optimized structural context payload for a specific domain based on the AST Knowledge Graph.
-
-```bash
-contextly explain core
-```
-
-It copies a JSON payload to your clipboard, allowing the LLM to understand the architecture without wasting tokens scanning raw files.
-
-### `contextly stats`
-
-Generates an enterprise repository health report.
-
-```bash
-contextly stats
-```
-
-Provides a deep dive into your repository's complexity, identifying your most depended-upon files, orphaned code, maintainability metrics, and structural hotspots.
-
-### `contextly impact <file>`
-
-Calculates the blast radius of a given file.
-
-```bash
-contextly impact cli/contextly/utils/fs.py
-```
-
-Analyzes the AST graph to find all downstream files that depend on the target file, assigning a risk level.
-
-### `contextly summary`
-
-Provides a high-level overview of the repository scale.
-
-```bash
-contextly summary
-```
-
-Analyzes the graph to detect core hubs, executable entry points, and primary domains within the codebase.
-
-### Understanding Context-Ly Ignore Philosophies
-
-Context-Ly utilizes two distinct "ignore" policies depending on the operation:
-
-1. **Packing & Inspection (`contextly pack`, `contextly inspect`)**: These commands respect your `.gitignore` and `.contextlyignore` files. This ensures that generated packs and token counts omit irrelevant files (like `node_modules`, compiled binaries, etc.), producing concise, token-efficient context for the LLM.
-2. **Discovery & Intelligence (`contextly discover`, `contextly learn`)**: The Pattern Discovery Engine ignores your `.gitignore`. It uses a minimal, hardcoded skip-list (only completely toxic directories like `.git` or `.venv`). This allows Context-Ly to correctly discover architectural patterns and package dependencies in valid directories (like a `frontend/` folder) that you might have legitimately added to `.gitignore` to keep your root repository clean.
-
-## Example Workflow
-
-```bash
+# Interactive guided setup
 contextly init
 
-contextly discover
+# Non-interactive instant setup (perfect for CI or scripts)
+contextly init --quick
 
-contextly learn --auto
-
-contextly analyze
+# Force re-initialization
+contextly init --force
 ```
 
-Result:
+**Key Features:**
+- **Stack & Framework Detection**: Automatically detects React, Next.js, Vue, FastAPI, Flask, Django, Express, Go, Rust, and Python.
+- **Smart Profiles**: Automatically configures `.contextly/config.yaml` with workspace profiles (e.g., `frontend`, `backend`, `api`).
+
+---
+
+### 2. `contextly analyze` — Unified Architecture & Health Intelligence
+
+Analyzes repository structure, dependencies, and architectural complexity. Subsumes `summary`, `stats`, and `inspect`.
+
+```bash
+# Standard analysis: Generates PROJECT_CONTEXT.md and intelligence summary
+contextly analyze
+
+# High-level human-readable architecture summary & entry points
+contextly analyze --summary
+
+# Enterprise repository health scorecard, modularity, & hub hotspots
+contextly analyze --stats
+
+# Deep AST inspection, complexity hotspots, & token consumption
+contextly analyze --inspect
+
+# Target-specific formatting for Claude XML or ChatGPT Markdown
+contextly analyze --model claude
+contextly analyze --model chatgpt
+```
+
+**Generated Artifacts:**
+- `PROJECT_CONTEXT.md`: An AI-optimized architecture document detailing technologies, entry points, core abstractions, and conventions.
+
+---
+
+### 3. `contextly pack` — 1-Step Prompt & Intelligence Fusion
+
+Bundles a target directory into an LLM-ready Context Pack and automatically synthesizes high-level architectural intelligence. Subsumes `export`.
+
+```bash
+# Pack a directory with automatic PROJECT_CONTEXT.md clipboard fusion
+contextly pack src/auth --name auth-module
+
+# Pack without fusing the architecture layer (raw code pack only)
+contextly pack src/auth --standalone
+
+# Pack using a pre-configured profile from .contextly/config.yaml
+contextly pack --profile frontend
+
+# Task-focused packing: drops least relevant files to fit token budget
+contextly pack src/ --task "refactor payment webhooks" --max-tokens 32000
+
+# Export as an environment variable script for CI/terminal pipelines
+contextly pack src/auth --env
+```
+
+**Intelligence Fusion:**
+By default, `pack` fuses the repository intelligence layer with the target code pack in memory and copies the complete prompt to your clipboard with zero manual export steps.
+
+---
+
+### 4. `contextly impact` — Blast Radius & Domain Intelligence
+
+Calculates the ripple effect of changing a file before modifying it. Subsumes `explain`.
+
+```bash
+# Compute blast radius risk for a file
+contextly impact src/core/engine.py
+
+# Render a hierarchical visual cascade tree diagram
+contextly impact src/core/engine.py --visual
+
+# Explain a domain's architecture and entry points
+contextly impact auth --explain
+
+# Run without copying to clipboard (CI / privacy)
+contextly impact src/core/engine.py --no-clipboard
+```
+
+**Visual Cascade Tree Example:**
 
 ```text
-.contextly/
-PROJECT_CONTEXT.md
+* src/core/engine.py (Modified Target)
+  ├── [HIGH] src/api/routes.py
+  ├── [HIGH] src/services/worker.py
+  ├── ... and 2 more HIGH risk files
+  ├── [MEDIUM] src/models/schema.py
+  ├── ... and 3 more MEDIUM risk files
+  └── [LOW] tests/test_engine.py
 ```
 
-Your repository now has a persistent memory layer and an AI-ready context file generated from both repository analysis and learned team conventions.
+---
 
-## Why Context-Ly?
+### 5. `contextly memory` — Team Memory & Knowledge Vault
 
-Modern AI coding tools are powerful, but they often lack project-specific context.
+Maintains persistent team conventions, architectural rules, and coding standards. Subsumes `learn` and `discover`.
 
-Context-Ly bridges that gap by transforming repository knowledge, team conventions, and architectural patterns into structured context that can be consistently shared with LLMs.
+```bash
+# View all stored team conventions grouped by category
+contextly memory
 
-The goal is simple:
+# Teach a custom convention
+contextly memory --learn "All database queries must use async session context" --category "Database"
 
-Build context once. Use it everywhere.
+# Automatically discover emergent conventions from the codebase
+contextly memory --auto
 
-## Changelog
+# Non-interactively accept and persist all discovered conventions
+contextly memory --auto --apply-all
 
-For all release notes and version history, please see the CHANGELOG.md.
+# Delete a convention by ID
+contextly memory --delete c4a89f
 
-## Contributing
+# Clear the memory vault
+contextly memory --clear
+```
 
-Contributions, issues, and feature requests are welcome.
+**Persistent Vault:**
+Conventions are stored in version-controlled `.contextly/memory/rules.yaml`, ensuring that every team member and AI assistant follows identical guidelines.
 
-If you discover a bug, have an idea for improving repository intelligence, or want to contribute new scanners and analysis capabilities, please open an issue or submit a pull request.
+---
+
+## Backward Compatibility Matrix
+
+All 7 legacy commands remain active as hidden aliases (`hidden=True`). Existing scripts and workflows continue to work without breaking:
+
+| Legacy Command | Modern Equivalent | Status |
+| :--- | :--- | :--- |
+| `contextly export <pack>` | `contextly pack` *(automatic fusion)* | Active Alias |
+| `contextly stats` | `contextly analyze --stats` | Active Alias |
+| `contextly summary` | `contextly analyze --summary` | Active Alias |
+| `contextly inspect` | `contextly analyze --inspect` | Active Alias |
+| `contextly explain <domain>` | `contextly impact <domain> --explain` | Active Alias |
+| `contextly learn` | `contextly memory --auto` / `--learn` | Active Alias |
+| `contextly discover` | `contextly memory --auto` | Active Alias |
+
+---
+
+## Security & Privacy by Design
+
+Context-Ly is built for enterprise engineering environments:
+
+- **100% Local Execution**: All AST parsing, graph building, and analysis run locally on your CPU. No source code or telemetry is ever transmitted over the network.
+- **Prompt Injection Defense**: Encapsulates context layers and escapes closing tags (`</context_pack>` -> `&lt;/context_pack&gt;`) to prevent prompt boundary escaping attacks.
+- **Clipboard Isolation**: All clipboard operations respect the `--no-clipboard` flag and automatically disable clipboard access when running in CI environments (`CI=true`).
+- **Zero Vulnerabilities**: 100% clean security audit with zero known package vulnerabilities.
+
+---
+
+## Ignore Philosophy
+
+Context-Ly respects distinct ignore policies depending on the operation:
+1. **Packing & Inspection (`pack`, `analyze --inspect`)**: Strictly obeys `.gitignore` and `.contextlyignore` to prevent bundling `node_modules`, build artifacts, and vendor files into your prompt budget.
+2. **Architecture & Memory Discovery (`analyze`, `memory --auto`)**: Bypasses `.gitignore` for monorepo subpackages (e.g. `frontend/`) while enforcing minimal skip-lists (`.git`, `.venv`), ensuring valid application architecture is never missed.
+
+---
+
+## Tech Stack & Requirements
+
+- **Python**: `>= 3.9`
+- **CLI Framework**: Typer & Rich
+- **AST Parsing**: Tree-Sitter & Python `ast`
+- **Graph Engine**: Knowledge Graph with reverse adjacency traversal
+- **Packaging**: Setuptools & PyPI
+
+---
 
 ## License
 
-This project is proprietary and distributed under the Contextly End-User License Agreement (EULA).
-
-See the LICENSE file for details.
+This project is proprietary and distributed under the Contextly End-User License Agreement (EULA). See the [LICENSE](https://github.com/vutikurishanmukha9/Contextly/blob/main/LICENSE) file for details.

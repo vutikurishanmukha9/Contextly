@@ -9,7 +9,8 @@ from ..utils.exceptions import ValidationError, ContextlyError
 
 def export_cmd(
     pack_name: str = typer.Argument(..., help="The name of the context pack to export (e.g., 'frontend')"),
-    env: bool = typer.Option(False, "--env", help="Output as an environment variable export script for terminal injection")
+    env: bool = typer.Option(False, "--env", help="Output as an environment variable export script for terminal injection"),
+    no_clipboard: bool = typer.Option(False, "--no-clipboard", help="Skip copying output to clipboard")
 ):
     """Fuses intelligence and context packs, copying the result to your clipboard."""
     root_dir = find_project_root(Path.cwd())
@@ -23,7 +24,7 @@ def export_cmd(
     engine = ExporterEngine(root_dir)
     
     try:
-        export_path, clipboard_success = engine.export(pack_name)
+        export_path, clipboard_success = engine.export(pack_name, copy_to_clipboard=not no_clipboard)
     except ContextlyError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(code=1)

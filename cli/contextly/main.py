@@ -42,22 +42,30 @@ def common(
 # of an existing command (e.g. analyze, summary, impact).
 # =======================================================================
 
-# Add commands
-app.command(name="init", help="Initialize Context-as-Code in the current directory")(init.init_cmd)
-app.command(name="analyze", help="Automatically analyze and map the repository")(analyze.analyze_cmd)
-app.command(name="discover", help="Statically analyze the repository to discover conventions")(discover.discover_cmd)
-app.command(name="learn", help="Teach Context-Ly new conventions (use --auto to discover)")(learn.learn_cmd)
-app.command(name="memory", help="Inspect persistently stored team memory and conventions")(memory.memory_cmd)
-app.command(name="pack", help="Bundle a directory into an LLM-ready Context Pack")(pack.pack_cmd)
-app.command(name="export", help="Fuse intelligence and context packs into the clipboard")(export.export_cmd)
-app.command(name="inspect", help="Deep dive into repository complexity and structure")(inspect.inspect_cmd)
-app.command(name="explain", help="Explain repository concepts and structure")(explain.explain_cmd)
-app.command(name="stats", help="Generate an enterprise repository health report")(stats.stats_cmd)
-app.command(name="impact", help="Analyze the blast radius of modifying a target file")(impact.impact_cmd)
-app.command(name="summary", help="Generate a human-readable repository summary")(summary.summary_cmd)
+# =======================================================================
+# 5 POWERHOUSE COMMANDS CONSOLIDATION
+# Context-Ly operates on a philosophy of "Few Commands, High Intelligence".
+# The CLI exposes 5 core powerhouse commands. Legacy commands are preserved
+# as hidden aliases for seamless backward compatibility.
+# =======================================================================
+
+# 5 Core Powerhouse Commands
+app.command(name="init", help="Initialize Context-as-Code with auto-detected stack profiles")(init.init_cmd)
+app.command(name="analyze", help="Analyze architecture, health scorecard, hubs, and complexity")(analyze.analyze_cmd)
+app.command(name="pack", help="Bundle, optimize, and fuse repository context for instant LLM export")(pack.pack_cmd)
+app.command(name="impact", help="Analyze blast radius of modifying a target file or explain domain architecture")(impact.impact_cmd)
+app.command(name="memory", help="Inspect, learn, and discover persistently stored team conventions")(memory.memory_cmd)
+
+# Legacy Commands (Preserved as Hidden Aliases for 100% Backward Compatibility)
+app.command(name="export", hidden=True, help="Alias: Fuse intelligence and context packs into the clipboard")(export.export_cmd)
+app.command(name="explain", hidden=True, help="Alias: Explain repository concepts and structure")(explain.explain_cmd)
+app.command(name="stats", hidden=True, help="Alias: Generate an enterprise repository health report")(stats.stats_cmd)
+app.command(name="summary", hidden=True, help="Alias: Generate a human-readable repository summary")(summary.summary_cmd)
+app.command(name="inspect", hidden=True, help="Alias: Deep dive into repository complexity and structure")(inspect.inspect_cmd)
+app.command(name="learn", hidden=True, help="Alias: Teach Context-Ly new conventions")(learn.learn_cmd)
+app.command(name="discover", hidden=True, help="Alias: Statically analyze the repository to discover conventions")(discover.discover_cmd)
 
 def main():
-    print("START")
     try:
         app()
     except Exception as e:
@@ -167,9 +175,13 @@ def main():
                     text = console.export_text(clear=False)
                     try:
                         root_dir = find_project_root(Path.cwd())
-                        with open(root_dir / ".contextly" / "debug.log", "a") as f:
-                            f.write(f"CMD: {cmd}, ARGV: {sys.argv}, TEXT LEN: {len(text)}, TEXT: {repr(text[:50])}\n")
-                    except:
+                        debug_log = root_dir / ".contextly" / "debug.log"
+                        with open(debug_log, "a", encoding="utf-8") as f:
+                            f.write(f"CMD: {cmd}, ARGV: {args}, TEXT LEN: {len(text)}, TEXT: {repr(text[:50])}\n")
+                        if sys.platform != "win32":
+                            os.chmod(debug_log, 0o600)
+                    except OSError:
+                        # Debug logging must never change a command's result.
                         pass
                         
                     if text.strip():
@@ -189,9 +201,9 @@ def main():
                             os.chmod(exports_dir, 0o700)
                             
                         save_command_result(cmd, args, text, root_dir)
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            # Transcript persistence is best-effort; do not leak command details on failure.
+            pass
 
 if __name__ == "__main__":
     main()

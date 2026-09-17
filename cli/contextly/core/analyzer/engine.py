@@ -17,8 +17,14 @@ from ...utils.exceptions import ContextlyError
 from ...core.diagnostics import DiagnosticsContext
 
 class AnalyzerEngine:
-    def __init__(self, root_dir: Path, no_default_excludes: bool = False):
+    def __init__(
+        self,
+        root_dir: Path,
+        target_dir: Path | None = None,
+        no_default_excludes: bool = False,
+    ):
         self.root_dir = root_dir
+        self.target_dir = target_dir or root_dir
         self.no_default_excludes = no_default_excludes
         
         from ...utils.config import load_config_model
@@ -53,7 +59,7 @@ class AnalyzerEngine:
             return ignorer.is_ignored(path)
 
         walker = RepoWalker(
-            self.root_dir,
+            self.target_dir,
             max_depth=analyzer_depth,
             skip_predicate=file_skip_predicate,
             dir_skip_predicate=dir_skip_predicate

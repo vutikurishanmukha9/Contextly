@@ -158,6 +158,6 @@ def test_assembler_deep_relationships():
     # "auth.login" should hit fuzzy_suffix_match because auth exists
     assert "fuzzy_suffix_match" in methods
     
-    # "db" should hit fuzzy_global_multiple_candidates because there are two db entities
-    assert "fuzzy_global_multiple_candidates" in methods
-
+    # Ambiguous names must not produce an arbitrary dependency edge.
+    assert "fuzzy_global_multiple_candidates" not in methods
+    assert "unresolved_external" in methods

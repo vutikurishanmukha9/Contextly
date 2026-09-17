@@ -2,22 +2,27 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SiteHeader } from "./components/site/SiteHeader";
 import { SiteFooter } from "./components/site/SiteFooter";
+import { Route, Landing } from "./routes/index";
 
-vi.mock("@tanstack/react-router", () => ({
-  Link: ({
-    children,
-    to,
-    className,
-  }: {
-    children: React.ReactNode;
-    to: string;
-    className?: string;
-  }) => (
-    <a href={to} className={className}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    Link: ({
+      children,
+      to,
+      className,
+    }: {
+      children: React.ReactNode;
+      to: string;
+      className?: string;
+    }) => (
+      <a href={to} className={className}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 describe("Frontend UI Components", () => {
   it("renders SiteHeader correctly with PyPI link", () => {
@@ -31,5 +36,16 @@ describe("Frontend UI Components", () => {
     render(<SiteFooter />);
     const textElement = screen.getByText(/The operating system for AI/i);
     expect(textElement).toBeDefined();
+  });
+
+  it("renders the landing page and copies the install command", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    render(<Landing />);
+
+    await screen.getByTitle("Copy to clipboard").click();
+    expect(writeText).toHaveBeenCalledWith("pip install contextly");
+    expect(screen.getByText(/Context pack generated successfully/i)).toBeDefined();
   });
 });

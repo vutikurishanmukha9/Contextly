@@ -31,45 +31,24 @@ def test_memory_cmd_with_rules(temp_repo):
     # Verify memory lists the rules
     result = runner.invoke(app, ["memory"])
     assert result.exit_code == 0
+
     assert "Stored Memory" in result.stdout
     assert "Found" in result.stdout
     assert "[rule_" in result.stdout
     assert "TailwindCSS" in result.stdout or "React" in result.stdout
 
 
-def test_memory_cmd_corrupted_yaml(temp_repo):
-    """Tests that MemoryEngine loads safely if rules.yaml is corrupted or has bad format."""
-
-def test_memory_uninitialized(temp_repo):
-    """Verifies memory command fails when not initialized."""
-    res = runner.invoke(app, ["memory"])
-    assert res.exit_code == 1
-    assert "Context-Ly is not initialized" in res.stdout or "Error:" in res.stdout
-
-
-def test_memory_cmd_empty(temp_repo):
-    """Tests memory command initially when no conventions have been stored."""
+def test_memory_non_dict_yaml_raises_error(temp_repo):
+    """Verifies that non-mapping/scalar YAML raises MemoryVaultCorruptionError to prevent data loss."""
+    from contextly.utils.exceptions import MemoryVaultCorruptionError
     runner.invoke(app, ["init"])
+    rules_file = temp_repo / ".contextly" / "memory" / "rules.yaml"
+    rules_file.parent.mkdir(parents=True, exist_ok=True)
+    rules_file.write_text("just a raw string, not a dict", encoding="utf-8")
 
-    result = runner.invoke(app, ["memory"])
-    assert result.exit_code == 0
-    assert "memory is currently empty" in result.stdout
-
-
-def test_memory_cmd_with_rules(temp_repo):
-    """Tests memory command when rules of varying confidence levels are stored."""
-    runner.invoke(app, ["init"])
-
-    # Learn some rules
-    runner.invoke(app, ["learn", "--auto"], input="y\n")
-
-    # Verify memory lists the rules
-    result = runner.invoke(app, ["memory"])
-    assert result.exit_code == 0
-    assert "Stored Memory" in result.stdout
-    assert "Found" in result.stdout
-    assert "[rule_" in result.stdout
-    assert "TailwindCSS" in result.stdout or "React" in result.stdout
+    engine = MemoryEngine(temp_repo)
+    with pytest.raises(MemoryVaultCorruptionError, match="Memory file is corrupt"):
+        engine.load_memory()
 
 
 def test_memory_cmd_corrupted_yaml(temp_repo):

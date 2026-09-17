@@ -46,6 +46,19 @@ def test_analyze_cmd_chatgpt(temp_repo):
     assert "primary_language" in parsed
 
 
+def test_analyze_cmd_scopes_to_target_directory(temp_repo):
+    runner.invoke(app, ["init"])
+    (temp_repo / "outside.py").write_text("def outside(): pass")
+    (temp_repo / "src" / "inside.py").write_text("def inside(): pass")
+
+    result = runner.invoke(app, ["analyze", "src"])
+
+    assert result.exit_code == 0
+    knowledge = (temp_repo / ".contextly" / "repository.json").read_text(encoding="utf-8")
+    assert "src/inside.py" in knowledge
+    assert "outside.py" not in knowledge
+
+
 def test_analyze_cmd_python_deps(temp_python_repo):
     """Covers analyze.py line 80: table.add_row('Python Dependencies', ...) when py_count > 0."""
     runner.invoke(app, ["init"])

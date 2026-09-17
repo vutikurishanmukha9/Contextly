@@ -39,8 +39,12 @@ class ErrorBoundary extends Component<
             </p>
             <button
               onClick={() => {
-                localStorage.clear();
-                sessionStorage.clear();
+                for (const storage of [localStorage, sessionStorage]) {
+                  for (let index = storage.length - 1; index >= 0; index -= 1) {
+                    const key = storage.key(index);
+                    if (key?.startsWith("contextly:")) storage.removeItem(key);
+                  }
+                }
                 window.location.reload();
               }}
               className="mt-4 rounded bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-600 transition-colors"

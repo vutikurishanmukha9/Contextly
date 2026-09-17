@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { Terminal, HardDrive, Cpu, Shield, ArrowRight, FileCode, CheckCircle2 } from "lucide-react";
+import { Terminal, HardDrive, Cpu, Shield, ArrowRight, FileCode } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { toast } from "sonner";
 
@@ -20,7 +19,7 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-function Landing() {
+export function Landing() {
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-[#111111] font-sans antialiased selection:bg-[#111] selection:text-white">
       <SiteHeader />
@@ -34,7 +33,7 @@ function Landing() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
             <span className="text-xs font-medium text-black/70 tracking-wide">
-              v1.1.0 now available
+              v1.1.1 now available
             </span>
           </div>
 
@@ -104,13 +103,13 @@ function Landing() {
                 <span className="text-green-400">~/project</span>
                 <span className="text-white">$ contextly pack --task "authentication flow" .</span>
               </div>
-              <div className="mt-4 text-blue-400">Context-Ly Engine v1.1.0</div>
+              <div className="mt-4 text-blue-400">Context-Ly Engine v1.1.1</div>
               <div className="mt-2 text-white/50">Analyzing 1,420 files...</div>
               <div className="mt-1 text-white/50">Building graph for task relevance...</div>
               <div className="mt-1 text-white/50">Applying AST compression...</div>
 
               <div className="mt-4 text-white">
-                <span className="text-green-400">✔</span> Context pack generated successfully.
+                <span className="text-green-400">[OK]</span> Context pack generated successfully.
               </div>
               <div className="mt-4 grid grid-cols-2 gap-4 max-w-sm text-xs">
                 <div>

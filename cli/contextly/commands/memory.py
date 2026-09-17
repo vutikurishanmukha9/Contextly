@@ -7,8 +7,17 @@ from ..utils.validation import require_contextly_initialized
 from ..utils.fs import find_project_root
 import typer
 
-def memory_cmd():
-    """Inspect the persistently stored team memory and conventions."""
+from typing import Optional
+
+def memory_cmd(
+    auto: bool = typer.Option(False, "--auto", "--discover", help="Automatically discover and learn conventions from the repository"),
+    apply_all: bool = typer.Option(False, "--apply-all", help="Automatically accept and save all discovered conventions (non-interactive)"),
+    learn: Optional[str] = typer.Option(None, "--learn", "--add", help="Teach a custom convention to the memory vault"),
+    category: str = typer.Option("Architecture", "--category", "-c", help="Category for the custom convention"),
+    delete: Optional[str] = typer.Option(None, "--delete", help="Delete a convention by ID"),
+    clear: bool = typer.Option(False, "--clear", help="Clear all stored memory conventions")
+):
+    """Inspect and manage the persistently stored team memory and conventions."""
     root_dir = find_project_root(Path.cwd())
     
     try:
@@ -18,6 +27,48 @@ def memory_cmd():
         raise typer.Exit(code=1)
         
     engine = MemoryEngine(root_dir)
+
+    if auto or apply_all:
+        from .learn import learn_cmd
+        return learn_cmd(auto=True, apply_all=apply_all)
+
+    if learn:
+        try:
+            added = engine.add_rule(category=category, rule_text=learn, confidence=1.0, source="user-taught")
+            if added:
+                console.print(f"[bold green][OK][/bold green] Convention saved to memory vault under '{category}': {learn}")
+            else:
+                console.print("[yellow]A matching rule is already present in memory vault.[/yellow]")
+            return
+        except ContextlyError as e:
+            console.print(f"\n[bold red]Memory Error:[/bold red] {e}")
+            raise typer.Exit(code=1)
+
+    if delete:
+        try:
+            memory = engine.load_memory()
+            initial_count = len(memory.rules)
+            memory.rules = [r for r in memory.rules if r.id != delete]
+            if len(memory.rules) == initial_count:
+                console.print(f"[yellow]Rule ID '{delete}' not found in memory vault.[/yellow]")
+            else:
+                engine.save_memory(memory)
+                console.print(f"[bold green][OK][/bold green] Rule '{delete}' deleted from memory vault.")
+            return
+        except ContextlyError as e:
+            console.print(f"\n[bold red]Memory Error:[/bold red] {e}")
+            raise typer.Exit(code=1)
+
+    if clear:
+        try:
+            memory = engine.load_memory()
+            memory.rules = []
+            engine.save_memory(memory)
+            console.print("[bold green][OK][/bold green] Memory vault cleared.")
+            return
+        except ContextlyError as e:
+            console.print(f"\n[bold red]Memory Error:[/bold red] {e}")
+            raise typer.Exit(code=1)
     
     try:
         memory = engine.load_memory()

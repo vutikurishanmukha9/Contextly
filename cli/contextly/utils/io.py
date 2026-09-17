@@ -1,6 +1,6 @@
 import os
-import tempfile
 import time
+import uuid
 from pathlib import Path
 
 def _cleanup_stale_parts(parent_dir: Path) -> None:
@@ -30,7 +30,20 @@ def atomic_write(filepath: Path, content: str, encoding: str = "utf-8") -> None:
 
     # Use a temporary file in the exact same directory to ensure they are on the same filesystem
     # This guarantees that os.replace is an atomic operation.
-    fd, temp_path = tempfile.mkstemp(dir=parent_dir, prefix=".tmp-", suffix=".part")
+    # Avoid tempfile's unbounded name-retry loop on Windows network/virus-scanned
+    # directories. A UUID name plus O_EXCL remains collision-safe and bounded.
+    temp_path = None
+    fd = None
+    for _ in range(10):
+        candidate = parent_dir / f".tmp-{uuid.uuid4().hex}.part"
+        try:
+            fd = os.open(candidate, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            temp_path = str(candidate)
+            break
+        except FileExistsError:
+            continue
+    if fd is None or temp_path is None:
+        raise OSError(f"Could not reserve a temporary file in {parent_dir}")
     try:
         with os.fdopen(fd, 'w', encoding=encoding) as f:
             f.write(content)

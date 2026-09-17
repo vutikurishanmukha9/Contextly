@@ -32,11 +32,27 @@ class ImpactEngine:
         if target_path_posix.startswith('./'):
             target_path_posix = target_path_posix[2:]
             
+        exact_matches = []
+        suffix_matches = []
         for node in self.graph.nodes:
             if node.path:
                 normalized_node_path = node.path.replace('\\', '/').lower()
-                if normalized_node_path == target_path_posix or normalized_node_path.endswith('/' + target_path_posix):
-                    start_nodes.append(node.id)
+                if normalized_node_path == target_path_posix:
+                    exact_matches.append(node.id)
+                elif normalized_node_path.endswith('/' + target_path_posix):
+                    suffix_matches.append((node.path, node.id))
+                
+        if exact_matches:
+            start_nodes = exact_matches
+        elif suffix_matches:
+            distinct_files = {p for p, _ in suffix_matches}
+            if len(distinct_files) > 1:
+                matches_str = ", ".join(sorted(distinct_files))
+                raise ContextlyError(
+                    f"Ambiguous target '{target_path}'. Multiple matching files found: {matches_str}. "
+                    "Please specify the full relative path."
+                )
+            start_nodes = [nid for _, nid in suffix_matches]
                 
         if not start_nodes:
             # Provide a clearer error message since only supported extensions are added to the graph by default
@@ -110,3 +126,42 @@ class ImpactEngine:
             impact[risk]["files"] = list(unique_files.values())
             
         return impact
+
+    def generate_visual_tree(self, target_path: str, impact: Dict[str, Dict[str, List[KnowledgeNode]]]) -> str:
+        """Generates a hierarchical visual cascade tree of the blast radius."""
+        lines = [f"[bold red]*[/bold red] [bold white]{target_path}[/bold white] (Modified Target)"]
+        
+        high_files = impact.get("HIGH", {}).get("files", [])
+        med_files = impact.get("MEDIUM", {}).get("files", [])
+        low_files = impact.get("LOW", {}).get("files", [])
+        
+        if not high_files and not med_files and not low_files:
+            lines.append("  └── [dim](No dependent files affected - isolated component)[/dim]")
+            return "\n".join(lines)
+            
+        for i, hf in enumerate(high_files[:8]):
+            is_last_high = (i == len(high_files[:8]) - 1) and not med_files and not low_files
+            prefix = "└──" if is_last_high else "├──"
+            lines.append(f"  {prefix} [bold red][HIGH][/bold red] {hf.path or hf.name}")
+            
+        if len(high_files) > 8:
+            lines.append(f"  ├── [dim]... and {len(high_files) - 8} more HIGH risk files[/dim]")
+            
+        for j, mf in enumerate(med_files[:6]):
+            is_last_med = (j == len(med_files[:6]) - 1) and not low_files
+            prefix = "└──" if is_last_med else "├──"
+            lines.append(f"  {prefix} [bold yellow][MEDIUM][/bold yellow] {mf.path or mf.name}")
+            
+        if len(med_files) > 6:
+            lines.append(f"  ├── [dim]... and {len(med_files) - 6} more MEDIUM risk files[/dim]")
+            
+        for k, lf in enumerate(low_files[:4]):
+            is_last_low = (k == len(low_files[:4]) - 1)
+            prefix = "└──" if is_last_low else "├──"
+            lines.append(f"  {prefix} [bold cyan][LOW][/bold cyan] {lf.path or lf.name}")
+            
+        if len(low_files) > 4:
+            lines.append(f"  └── [dim]... and {len(low_files) - 4} more LOW risk files[/dim]")
+            
+        return "\n".join(lines)
+

@@ -182,6 +182,8 @@ class ImportGraphBuilder:
                             
                             if not done:
                                 diagnostics.add_error("ImportGraphBuilder", "File parsing exceeded global 120s timeout")
+                                for fut in future_to_fp:
+                                    fut.cancel()
                                 break
                                 
                             for future in done:

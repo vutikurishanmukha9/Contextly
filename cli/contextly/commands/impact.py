@@ -1,3 +1,4 @@
+import os
 import typer
 from pathlib import Path
 from rich.table import Table
@@ -9,11 +10,17 @@ from ..utils.validation import require_contextly_initialized
 from ..core.graph.builder import ImportGraphBuilder
 from ..core.graph.validator import GraphValidator
 from ..core.impact.engine import ImpactEngine
+from ..core.explainer.engine import ExplainerEngine
+from ..utils.io import save_command_result
+import pyperclip
 
 def impact_cmd(
-    target: str = typer.Argument(..., help="Target file or entity to analyze blast radius for"),
+    target: str = typer.Argument(..., help="Target file or entity to analyze blast radius for, or domain name to explain"),
+    explain: bool = typer.Option(False, "--explain", "-e", help="Generate an offline domain context payload for an AI tool"),
+    visual: bool = typer.Option(False, "--visual", "-v", help="Display visual cascade tree diagram of affected dependents"),
+    no_clipboard: bool = typer.Option(False, "--no-clipboard", help="Skip copying context to clipboard in explain mode")
 ):
-    """Analyze the blast radius of modifying a target file"""
+    """Analyze the blast radius of modifying a target file, or explain domain architecture"""
     root_dir = find_project_root(Path.cwd())
     
     try:
@@ -21,6 +28,23 @@ def impact_cmd(
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
+
+    if explain:
+        engine = ExplainerEngine(root_dir=root_dir)
+        try:
+            prompt = engine.explain(target)
+            out_file = save_command_result("explain", [target], prompt, root_dir)
+            console.print(f"[bold green][OK][/bold green] [bold]Context payload saved to: {out_file}[/bold]")
+            if not no_clipboard and not os.environ.get("CI"):
+                try:
+                    pyperclip.copy(prompt)
+                    console.print("[yellow]Notice: Proprietary source architecture has also been copied to your OS clipboard. Clear it when finished if on a shared/synced device.[/yellow]")
+                except Exception as e:
+                    console.print(f"[yellow]Warning: Could not copy to clipboard. ({e})[/yellow]")
+            return
+        except Exception as e:
+            console.print(f"[bold red]Error explaining domain '{target}':[/bold red] {e}")
+            raise typer.Exit(1)
         
     status_ctx = console.status("[dim]Building graph and calculating blast radius...[/dim]")
     status_ctx.start()
@@ -42,6 +66,11 @@ def impact_cmd(
     status_ctx.stop()
     
     console.print(f"\n[bold]Blast Radius[/bold]\n")
+    
+    if visual:
+        tree = engine.generate_visual_tree(target, impact)
+        console.print(Panel(tree, title="[bold]Blast Radius Dependency Cascade[/bold]", border_style="cyan"))
+        console.print()
     
     total_files = sum(len(impact[risk]["files"]) for risk in impact)
     if total_files == 0:

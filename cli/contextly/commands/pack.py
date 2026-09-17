@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import typer
 from rich.table import Table
@@ -20,7 +21,10 @@ def pack_cmd(
     no_default_excludes: bool = typer.Option(False, "--no-default-excludes", help="Do not exclude default skip lists (like node_modules, dist, etc.)"),
     output_format: str = typer.Option("text", "--format", help="Output format ('text' or 'json')"),
     task: str = typer.Option(None, "--task", "-t", help="Focus context around a specific task (e.g. 'add authentication')"),
-    force: bool = typer.Option(False, "--force", "-f", help="Force pack generation even if estimated size exceeds 100,000 tokens")
+    force: bool = typer.Option(False, "--force", "-f", help="Force pack generation even if estimated size exceeds 100,000 tokens"),
+    standalone: bool = typer.Option(False, "--standalone", help="Do not fuse with PROJECT_CONTEXT.md architecture layer"),
+    no_clipboard: bool = typer.Option(False, "--no-clipboard", help="Skip copying output to clipboard"),
+    env: bool = typer.Option(False, "--env", help="Output as an environment variable export script for terminal injection")
 ):
     """Bundle a directory into an LLM-ready Context Pack markdown file"""
     root_dir = find_project_root(Path.cwd())
@@ -149,5 +153,49 @@ def pack_cmd(
             "excluded_count": excluded_count,
             "skipped_count": len(skipped_files)
         }, indent=2))
+        
+    # Supercharged 1-Step Prompt Synthesis
+    final_payload_text = None
+    is_fused = False
+    proj_context_path = root_dir / "PROJECT_CONTEXT.md"
+    
+    if not standalone and proj_context_path.exists():
+        try:
+            intel = proj_context_path.read_text(encoding="utf-8").replace("</context_pack>", "&lt;/context_pack&gt;")
+            pack_content = output_file.read_text(encoding="utf-8")
+            final_payload_text = f"{intel}\n\n<context_pack name=\"{pack_name}\">\n\n{pack_content}\n\n</context_pack>\n"
+            is_fused = True
+        except Exception:
+            pass
+
+    if final_payload_text is None:
+        try:
+            final_payload_text = output_file.read_text(encoding="utf-8")
+        except Exception:
+            final_payload_text = ""
+
+    if env:
+        import builtins
+        import shlex
+        try:
+            builtins.print(f"export CONTEXTLY_PACK={shlex.quote(final_payload_text)}")
+        except Exception as e:
+            import sys
+            builtins.print(f"echo 'Error generating env payload: {e}'", file=sys.stderr)
+            raise typer.Exit(code=1)
+        return
+
+    if not no_clipboard and not os.environ.get("CI") and output_format != "json":
+        try:
+            import pyperclip
+            pyperclip.copy(final_payload_text)
+            if is_fused:
+                console.print(f"[bold green][OK][/bold green] Intelligence Fused with [cyan]PROJECT_CONTEXT.md[/cyan]")
+                console.print("[green]Prompt copied to clipboard! Ready to paste into ChatGPT or Claude.[/green]")
+            else:
+                console.print("[green]Context Pack copied to clipboard![/green]")
+        except Exception:
+            pass
+            
     console.print()
 

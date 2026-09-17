@@ -56,3 +56,21 @@ def test_explain_command_success(monkeypatch, tmp_path):
     result = runner.invoke(app, ["explain", "auth", "--path", str(tmp_path)])
     assert result.exit_code == 1
     assert "generic error" in result.stdout
+
+
+def test_explain_command_no_clipboard(monkeypatch, tmp_path):
+    class MockEngine:
+        def __init__(self, root_dir):
+            self.root_dir = root_dir
+        def explain(self, domain):
+            return f"Payload for {domain}"
+
+    monkeypatch.setattr("contextly.commands.explain.ExplainerEngine", MockEngine)
+    mock_clipboard = []
+    monkeypatch.setattr("contextly.commands.explain.pyperclip.copy", lambda text: mock_clipboard.append(text))
+    
+    result = runner.invoke(app, ["explain", "auth", "--path", str(tmp_path), "--no-clipboard"])
+    assert result.exit_code == 0
+    assert len(mock_clipboard) == 0
+    assert "Notice: Proprietary source architecture has also been copied" not in result.stdout
+

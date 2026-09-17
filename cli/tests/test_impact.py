@@ -118,3 +118,17 @@ def test_impact_command_engine_error(mock_impact, mock_validator, mock_builder, 
     result = runner.invoke(app, ["impact", "src/c.py"])
     assert result.exit_code == 1
     assert "Graph build failed" in result.output
+
+
+def test_impact_engine_ambiguous_target_error():
+    from contextly.types.models import KnowledgeGraph, KnowledgeNode
+    from contextly.utils.exceptions import ContextlyError
+
+    node_1 = KnowledgeNode(id="src/auth/service.py", name="service", path="src/auth/service.py", type="FILE", size=10)
+    node_2 = KnowledgeNode(id="pkg/auth/service.py", name="service", path="pkg/auth/service.py", type="FILE", size=10)
+    graph = KnowledgeGraph(nodes=[node_1, node_2])
+
+    engine = ImpactEngine(graph)
+    with pytest.raises(ContextlyError, match="Ambiguous target 'service.py'"):
+        engine.analyze_impact("service.py")
+

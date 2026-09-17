@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [1.1.1] - 2026-09-18
+
+#### Added
+- **5 Core Powerhouse Commands**: Streamlined the CLI interface into 5 core commands (`init`, `analyze`, `pack`, `impact`, `memory`) with 100% backward compatibility for all 7 legacy commands as hidden aliases (`hidden=True`).
+- **Tech-Stack Auto-Detection**: Added automated project scanner for React, Next.js, FastAPI, Flask, Django, Go, Rust, and Python in `contextly init` with smart profile generation (`frontend`, `backend`, `api`).
+- **1-Step Prompt & Intelligence Synthesis**: Integrated automatic high-level `PROJECT_CONTEXT.md` context fusion directly into `contextly pack` with clipboard and environment script (`--env`) export capabilities.
+- **Visual Dependency Cascade Tree**: Added `--visual` flag in `contextly impact` rendering hierarchical ASCII dependency blast-radius cascade trees with risk levels.
+- **Unified Architecture Diagnostics**: Consolidated health scorecards, AST complexity inspection, and architecture summaries into `contextly analyze` with `--stats`, `--inspect`, and `--summary` flags.
+- **Persistent Memory Vault**: Unified convention learning and automatic mining under `contextly memory` with `--learn`, `--auto`, and `--apply-all`.
+
+#### Fixed
+- **Prompt Injection Defense**: Sanitized `PROJECT_CONTEXT.md` context layer by escaping `</context_pack>` closing tags to prevent LLM context boundary breakouts.
+- **Clipboard Privacy**: Added `--no-clipboard` flag and automatic CI environment detection (`CI=true`) to prevent accidental source code leakage on shared clipboards.
+- **Memory Vault Corruption Protection**: Replaced silent empty-dict fallback with strict `MemoryVaultCorruptionError` when `rules.yaml` contains non-mapping YAML.
+- **Packer State Rollback & Cleanup**: Added automatic cleanup for orphaned temporary files (`.tmp-*`, `.part`) and fixed domain header state rollback on packing interruptions.
+- **Impact Blast Radius Ambiguity**: Fixed ambiguous target matching by requiring explicit paths when multiple files share the same suffix.
+- **Resource Leaks**: Resolved uncompleted async future leakage in `ImportGraphBuilder` on global timeout.
+- **Thread-Safety**: Removed thread-unsafe `scoped_recursion_limit` global mutation wrapper in TypeScript parser.
+- **Frontend Security Audit**: Upgraded dependencies and added overrides resolving all 10 npm advisory vulnerabilities to 0 vulnerabilities.
+
 ### [1.0.8] - 2026-06-23
 
 #### Added

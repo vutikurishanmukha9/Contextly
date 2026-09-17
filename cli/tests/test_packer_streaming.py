@@ -94,3 +94,53 @@ def test_packer_engine_toctou_exists(tmp_path):
     assert out_path.exists()
     assert out_path.name != "test_pack.contextpack.md"
     assert out_path.name.startswith("test_pack_")
+
+
+def test_packer_cleans_stale_part_files(tmp_path):
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    packs_dir = repo_dir / ".contextly" / "packs"
+    packs_dir.mkdir(parents=True)
+    
+    stale_part = packs_dir / "old_stale.contextpack.md.part"
+    stale_part.write_text("corrupted left-over content")
+    assert stale_part.exists()
+
+    txt_file = repo_dir / "test.txt"
+    txt_file.write_text("Hello")
+
+    engine = PackerEngine(repo_dir)
+    engine.ranker.rank_files = lambda paths: [txt_file]
+    engine.pack(
+        target_paths=[repo_dir],
+        pack_name="test_pack",
+        max_tokens=None,
+        raw=True
+    )
+
+    assert not stale_part.exists()
+
+
+def test_packer_cleans_temp_file_on_error(tmp_path):
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+
+    txt_file = repo_dir / "test.txt"
+    txt_file.write_text("Hello")
+
+    engine = PackerEngine(repo_dir)
+    engine.ranker.rank_files = lambda paths: [txt_file]
+    
+    with patch("os.fdopen", side_effect=OSError("Disk write failed")):
+        with pytest.raises(OSError, match="Disk write failed"):
+            engine.pack(
+                target_paths=[repo_dir],
+                pack_name="fail_pack",
+                max_tokens=None,
+                raw=True
+            )
+
+    packs_dir = repo_dir / ".contextly" / "packs"
+    part_files = list(packs_dir.glob("*.part")) + list(packs_dir.glob("*.tmp"))
+    assert len(part_files) == 0
+
