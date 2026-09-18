@@ -174,7 +174,13 @@ def test_export_cmd_env_read_error(temp_repo, monkeypatch):
 
     result = runner.invoke(app, ["export", "frontend", "--env"])
     assert result.exit_code == 1
-    assert "Error generating env payload" in result.stderr
+    output = result.output
+    try:
+        if hasattr(result, "stderr"):
+            output += result.stderr
+    except ValueError:
+        pass
+    assert "Error generating env payload" in output
 
 def test_export_cmd_save_command_result_error(temp_repo, monkeypatch):
     runner.invoke(app, ["init"])
