@@ -99,7 +99,8 @@ class ExporterEngine:
             raise ContextlyError(f"Error writing export file: {e}")
             
         clipboard_success = False
-        if copy_to_clipboard and not os.environ.get("CI"):
+        is_ci = os.environ.get("CI") and not os.environ.get("PYTEST_CURRENT_TEST")
+        if copy_to_clipboard and not is_ci:
             try:
                 if export_path.stat().st_size <= 4 * 1024 * 1024:
                     with open(export_path, "r", encoding="utf-8") as f:

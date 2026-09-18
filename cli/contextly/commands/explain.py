@@ -35,7 +35,8 @@ def explain_cmd(
             out_file = save_command_result("explain", [domain], prompt, root_dir)
             console.print(f"[bold green][OK][/bold green] [bold]Context payload saved to: {out_file}[/bold]")
             
-            if not no_clipboard and not os.environ.get("CI"):
+            is_ci = os.environ.get("CI") and not os.environ.get("PYTEST_CURRENT_TEST")
+            if not no_clipboard and not is_ci:
                 try:
                     pyperclip.copy(prompt)
                     console.print("[yellow]Notice: Proprietary source architecture has also been copied to your OS clipboard. Clear it when finished if on a shared/synced device.[/yellow]")

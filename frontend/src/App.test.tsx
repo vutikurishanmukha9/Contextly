@@ -5,7 +5,7 @@ import { SiteFooter } from "./components/site/SiteFooter";
 import { Route, Landing } from "./routes/index";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal<any>();
+  const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
     Link: ({

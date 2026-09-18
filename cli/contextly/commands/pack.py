@@ -185,12 +185,15 @@ def pack_cmd(
             raise typer.Exit(code=1)
         return
 
-    if not no_clipboard and not os.environ.get("CI") and output_format != "json":
+    if is_fused:
+        console.print(f"[bold green][OK][/bold green] Intelligence Fused with [cyan]PROJECT_CONTEXT.md[/cyan]")
+
+    is_ci = os.environ.get("CI") and not os.environ.get("PYTEST_CURRENT_TEST")
+    if not no_clipboard and not is_ci and output_format != "json":
         try:
             import pyperclip
             pyperclip.copy(final_payload_text)
             if is_fused:
-                console.print(f"[bold green][OK][/bold green] Intelligence Fused with [cyan]PROJECT_CONTEXT.md[/cyan]")
                 console.print("[green]Prompt copied to clipboard! Ready to paste into ChatGPT or Claude.[/green]")
             else:
                 console.print("[green]Context Pack copied to clipboard![/green]")
