@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Optional
 import uuid
 import yaml
 from pathlib import Path
@@ -74,7 +75,7 @@ class MemoryEngine:
             # Allow OS/IO errors to propagate and abort operations to prevent data destruction
             raise
             
-    def add_rule(self, category: str, rule_text: str, confidence: float, source: str, name: str | None = None) -> bool:
+    def add_rule(self, category: str, rule_text: str, confidence: float, source: str, name: Optional[str] = None) -> bool:
         """Adds a rule to memory, avoiding exact duplicates."""
         with self._lock():
             memory = self.load_memory()

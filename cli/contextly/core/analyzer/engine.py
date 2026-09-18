@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 import hashlib
 import os
 from importlib.metadata import PackageNotFoundError, version
@@ -20,7 +21,7 @@ class AnalyzerEngine:
     def __init__(
         self,
         root_dir: Path,
-        target_dir: Path | None = None,
+        target_dir: Optional[Path] = None,
         no_default_excludes: bool = False,
     ):
         self.root_dir = root_dir

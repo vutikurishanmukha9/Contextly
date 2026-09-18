@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
 
@@ -27,7 +27,7 @@ class PatternScanResult(BaseModel):
 
 class MemoryRule(BaseModel):
     id: str = Field(..., max_length=100)
-    name: str | None = Field(default=None, max_length=200)
+    name: Optional[str] = Field(default=None, max_length=200)
     category: str = Field(..., max_length=100)
     rule: str = Field(..., max_length=5000)
     confidence: float

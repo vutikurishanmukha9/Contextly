@@ -1,6 +1,6 @@
 from __future__ import annotations
 import json
-from typing import Optional, List, Dict, Set
+from typing import Optional, List, Dict, Set, Union
 from pathlib import Path
 
 from contextly.core.memory.engine import MemoryEngine
@@ -9,7 +9,7 @@ from contextly.utils.exceptions import ContextlyError
 
 class ExplainerEngine:
 
-    def __init__(self, root_dir: str | Path):
+    def __init__(self, root_dir: Union[str, Path]):
         self.root_dir = Path(root_dir)
         self.memory_engine = MemoryEngine(self.root_dir)
         
